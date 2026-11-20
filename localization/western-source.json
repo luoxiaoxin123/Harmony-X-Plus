@@ -361,7 +361,7 @@
   },
   {
     "name": "help_intro",
-    "value": "Find a place for questions, ideas, and ways to support this project."
+    "value": "Find keyboard shortcuts or send feedback on GitHub."
   },
   {
     "name": "help_feedback_title",
@@ -382,42 +382,6 @@
   {
     "name": "help_feedback_failed",
     "value": "Unable to open the feedback page. Please try again later."
-  },
-  {
-    "name": "help_group_title",
-    "value": "QQ group"
-  },
-  {
-    "name": "help_group_desc",
-    "value": "Join the group to discuss your experience, ideas, and creative suggestions."
-  },
-  {
-    "name": "help_group_action",
-    "value": "Join QQ group"
-  },
-  {
-    "name": "help_group_opened",
-    "value": "QQ group invite opened in your browser"
-  },
-  {
-    "name": "help_group_failed",
-    "value": "Unable to open the QQ group invite. Please try again later."
-  },
-  {
-    "name": "help_tg_group_desc",
-    "value": "Join the Telegram group for project updates and conversations with more users."
-  },
-  {
-    "name": "help_tg_group_action",
-    "value": "Join Telegram group"
-  },
-  {
-    "name": "help_tg_group_opened",
-    "value": "Telegram group invite opened in your browser"
-  },
-  {
-    "name": "help_tg_group_failed",
-    "value": "Unable to open the Telegram group invite. Please try again later."
   },
   {
     "name": "settings_account",

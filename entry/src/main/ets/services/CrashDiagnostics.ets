@@ -3,13 +3,13 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { fileIo, picker } from '@kit.CoreFileKit';
 import { hiAppEvent, hilog } from '@kit.PerformanceAnalysisKit';
 import { requestLog } from './RequestLog';
+import { PROJECT_NEW_ISSUE_URL } from '../utils/ProjectLinks';
 
 export const STORAGE_KEY_CRASH_DIAGNOSTICS: string = 'harmonyx.crash_diagnostics_revision';
 const MAX_REPORTS: number = 5;
 const MAX_ARCHIVE_BYTES: number = 4 * 1024 * 1024;
 const MAX_LOG_BYTES: number = 192 * 1024;
 const MAX_REPORT_CHARS: number = 256 * 1024;
-const DEVELOPER_URL: string = 'https://github.com/haohaoai0/HarmonyX/issues/new';
 
 interface CrashException {
   name?: string;
@@ -279,7 +279,7 @@ export class CrashDiagnostics {
 
   async contactDeveloper(context: common.UIAbilityContext): Promise<void> {
     await context.startAbility({ action: 'ohos.want.action.viewData',
-      entities: ['entity.system.browsable'], uri: DEVELOPER_URL });
+      entities: ['entity.system.browsable'], uri: PROJECT_NEW_ISSUE_URL });
   }
 
   private warn(message: string): void { hilog.warn(0xFF00, 'CrashDiagnostics', '%{public}s', message); }

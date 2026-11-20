@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "यहाँ सवाल पूछें, सुझाव दें और प्रोजेक्ट को सहयोग देने के तरीके जानें।"
+      "value": "कीबोर्ड शॉर्टकट देखें या GitHub पर सुझाव भेजें।"
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "फ़ीडबैक पेज नहीं खुला। बाद में कोशिश करें।"
-    },
-    {
-      "name": "help_group_title",
-      "value": "QQ ग्रुप"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "ऐप का अनुभव, सुझाव और नए विचार ग्रुप में साझा करें।"
-    },
-    {
-      "name": "help_group_action",
-      "value": "QQ ग्रुप से जुड़ें"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "QQ ग्रुप का निमंत्रण ब्राउज़र में खुल गया"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "QQ निमंत्रण नहीं खुला। बाद में कोशिश करें।"
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Telegram समूह"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "प्रोजेक्ट की खबरों और अन्य लोगों से बातचीत के लिए Telegram ग्रुप से जुड़ें।"
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "Telegram ग्रुप से जुड़ें"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "Telegram निमंत्रण ब्राउज़र में खुल गया"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "Telegram निमंत्रण नहीं खुला। बाद में कोशिश करें।"
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "एनिमेशन जारी रखें"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "आधिकारिक खाते"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "bilibili"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "Coolapk"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",

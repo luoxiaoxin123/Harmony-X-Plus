@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "질문과 아이디어를 나누고 프로젝트를 후원할 수 있어요."
+      "value": "키보드 단축키를 확인하거나 GitHub에서 의견을 보낼 수 있어요."
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "의견 페이지를 열 수 없어요. 나중에 다시 시도해 주세요."
-    },
-    {
-      "name": "help_group_title",
-      "value": "QQ 그룹"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "그룹에서 사용 경험과 아이디어를 나눠 보세요."
-    },
-    {
-      "name": "help_group_action",
-      "value": "QQ 그룹 가입"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "브라우저에서 QQ 그룹 초대를 열었어요"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "QQ 그룹 초대를 열 수 없어요. 나중에 다시 시도해 주세요."
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Telegram 그룹"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "Telegram 그룹에서 프로젝트 소식을 받고 다른 사용자와 이야기를 나눠 보세요."
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "Telegram 그룹 가입"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "브라우저에서 Telegram 그룹 초대를 열었어요"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "Telegram 그룹 초대를 열 수 없어요. 나중에 다시 시도해 주세요."
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "애니메이션 재개"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "공식 계정"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "bilibili"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "Coolapk"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",

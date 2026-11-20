@@ -17,12 +17,9 @@ import {
 } from '@kit.UIDesignKit';
 import { destinationTitleBarStyle } from '../utils/DestinationTitleBar';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
-import { cardSurfaceColor, fieldSurfaceColor, pageSurfaceColor } from '../utils/ThemeColors';
+import { cardSurfaceColor } from '../utils/ThemeColors';
 import { materialModifier } from '../utils/SystemMaterial';
-
-const FEEDBACK_URL: string = 'https://github.com/haohaoai0/HarmonyX/issues/new';
-const QQ_GROUP_URL: string = 'https://qm.qq.com/q/QGxbHyYXuI';
-const TELEGRAM_GROUP_URL: string = 'https://t.me/HarmonXH';
+import { PROJECT_NEW_ISSUE_URL } from '../utils/ProjectLinks';
 
 @Builder
 export function HelpCenterBuilder(): void {
@@ -78,25 +75,9 @@ struct HelpCenter {
 
   private openFeedback(): void {
     this.openExternalLink(
-      FEEDBACK_URL,
+      PROJECT_NEW_ISSUE_URL,
       $r('app.string.help_feedback_opened'),
       $r('app.string.help_feedback_failed')
-    );
-  }
-
-  private openQqGroup(): void {
-    this.openExternalLink(
-      QQ_GROUP_URL,
-      $r('app.string.help_group_opened'),
-      $r('app.string.help_group_failed')
-    );
-  }
-
-  private openTelegramGroup(): void {
-    this.openExternalLink(
-      TELEGRAM_GROUP_URL,
-      $r('app.string.help_tg_group_opened'),
-      $r('app.string.help_tg_group_failed')
     );
   }
 
@@ -165,58 +146,6 @@ struct HelpCenter {
               .onClick((): void => {
                 this.openFeedback();
               })
-            Divider().color($r('app.color.divider'))
-            Row({ space: 14 }) {
-              SymbolGlyph($r('sys.symbol.person_2'))
-                .fontSize(24)
-                .fontColor([this.accentColor])
-              Column({ space: 4 }) {
-                Text($r('app.string.help_group_title')).fontFamily(this.appFontFamily)
-                  .fontSize($r('sys.float.Subtitle_L'))
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.themeDisplayMode, this.themeDarkSurface), this.pageBackgroundValue)))
-                Text($r('app.string.help_group_desc')).fontFamily(this.appFontFamily)
-                  .fontSize($r('sys.float.Body_M'))
-                  .lineHeight(21)
-                  .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.themeDisplayMode, this.themeDarkSurface), this.pageBackgroundValue)))
-              }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
-            }
-            Button($r('app.string.help_group_action'), { stateEffect: true })
-              .width('100%')
-              .backgroundColor(fieldSurfaceColor(this.themeDisplayMode, this.themeDarkSurface))
-              .fontColor(pageTextColor($r('app.color.text_accent'), this.pageBackgroundValue, fieldSurfaceColor(this.themeDisplayMode, this.themeDarkSurface)))
-              .border({ width: 1, color: this.accentColor })
-              .onClick((): void => {
-                this.openQqGroup();
-              })
-            Divider().color($r('app.color.divider'))
-            Row({ space: 14 }) {
-              SymbolGlyph($r('sys.symbol.person_2'))
-                .fontSize(24)
-                .fontColor([this.accentColor])
-              Column({ space: 4 }) {
-                Text($r('app.string.help_tg_group_title')).fontFamily(this.appFontFamily)
-                  .fontSize($r('sys.float.Subtitle_L'))
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.themeDisplayMode, this.themeDarkSurface), this.pageBackgroundValue)))
-                Text($r('app.string.help_tg_group_desc')).fontFamily(this.appFontFamily)
-                  .fontSize($r('sys.float.Body_M'))
-                  .lineHeight(21)
-                  .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.themeDisplayMode, this.themeDarkSurface), this.pageBackgroundValue)))
-              }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
-            }
-            Button($r('app.string.help_tg_group_action'), { stateEffect: true })
-              .width('100%')
-              .backgroundColor(fieldSurfaceColor(this.themeDisplayMode, this.themeDarkSurface))
-              .fontColor(pageTextColor($r('app.color.text_accent'), this.pageBackgroundValue, fieldSurfaceColor(this.themeDisplayMode, this.themeDarkSurface)))
-              .border({ width: 1, color: this.accentColor })
-              .onClick((): void => {
-                this.openTelegramGroup();
-              })
           }
           .width('100%')
           .padding(18)
@@ -232,7 +161,7 @@ struct HelpCenter {
       .height('100%')
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-    
+
       }.width('100%').height('100%')
     }
     .scale({ x: this.pageMotion.scale, y: this.pageMotion.scale })

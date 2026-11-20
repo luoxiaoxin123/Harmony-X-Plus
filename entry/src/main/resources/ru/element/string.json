@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "Здесь можно задать вопрос, поделиться идеей и поддержать проект."
+      "value": "Посмотрите сочетания клавиш или отправьте отзыв на GitHub."
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "Не удалось открыть страницу отзывов. Попробуйте позже."
-    },
-    {
-      "name": "help_group_title",
-      "value": "Группа QQ"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "Обсуждайте приложение, делитесь идеями и впечатлениями в группе."
-    },
-    {
-      "name": "help_group_action",
-      "value": "Вступить в группу QQ"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "Приглашение в группу QQ открыто в браузере"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "Не удалось открыть приглашение QQ. Попробуйте позже."
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Группа в Telegram"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "Вступите в группу Telegram, чтобы узнавать новости проекта и общаться с пользователями."
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "Вступить в группу Telegram"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "Приглашение в Telegram открыто в браузере"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "Не удалось открыть приглашение Telegram. Попробуйте позже."
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "Продолжить анимацию"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "Официальные аккаунты"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "bilibili"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "Coolapk"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",

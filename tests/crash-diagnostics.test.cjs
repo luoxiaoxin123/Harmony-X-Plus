@@ -56,7 +56,8 @@ function fixture(t) {
     } } },
     '@kit.PerformanceAnalysisKit': { hiAppEvent: { domain: { OS: 'OS' }, event: { APP_CRASH: 'APP_CRASH' },
       addWatcher: watcher => watchers.push(watcher) }, hilog: { warn() {} } },
-    './RequestLog': request
+    './RequestLog': request,
+    '../utils/ProjectLinks': evaluate('entry/src/main/ets/utils/ProjectLinks.ets', {})
   };
   const globals = { AppStorage: { setOrCreate: (key, value) => values.set(key, value) },
     setTimeout: callback => { timers.set(++timer, callback); return timer; }, clearTimeout: id => timers.delete(id) };
@@ -171,10 +172,25 @@ test('bounded journal batches successful requests and flushes errors without unb
 test('developer contact opens a feedback draft without transmitting report data', async t => {
   const f = fixture(t); f.emit(event('contact'));
   await f.service.contactDeveloper(f.context);
-  assert.equal(f.links[0].uri, 'https://github.com/haohaoai0/HarmonyX/issues/new');
+  assert.equal(f.links[0].uri, 'https://github.com/luoxiaoxin123/HarmonyX/issues/new');
   assert.equal(f.service.pendingReport().id, 'contact');
   f.failLink(true);
   await assert.rejects(f.service.contactDeveloper(f.context), /No browser/);
+});
+
+test('Help and About use the current project for feedback, releases and the homepage', () => {
+  const links = evaluate('entry/src/main/ets/utils/ProjectLinks.ets', {});
+  assert.equal(links.PROJECT_URL, 'https://github.com/luoxiaoxin123/HarmonyX');
+  assert.equal(links.PROJECT_RELEASES_URL, links.PROJECT_URL + '/releases');
+  assert.equal(links.PROJECT_NEW_ISSUE_URL, links.PROJECT_URL + '/issues/new');
+  const help = fs.readFileSync('entry/src/main/ets/pages/HelpCenter.ets', 'utf8');
+  const about = fs.readFileSync('entry/src/main/ets/pages/About.ets', 'utf8');
+  assert.match(help, /this\.openExternalLink\(\s*PROJECT_NEW_ISSUE_URL,/);
+  assert.match(about, /this\.openLink\(PROJECT_URL\)/);
+  assert.match(about, /this\.openLink\(PROJECT_RELEASES_URL\)/);
+  assert.doesNotMatch(help + about, /qm\.qq\.com|t\.me\/|AuthorAccounts|about_official_accounts/);
+  const manifest = ts.parseConfigFileTextToJson('app.json5', fs.readFileSync('AppScope/app.json5', 'utf8')).config;
+  assert.equal(manifest.app.vendor, 'luoxiaoxin123');
 });
 
 test('all locales contain diagnostic actions and the existing HDS destination remains in use', () => {

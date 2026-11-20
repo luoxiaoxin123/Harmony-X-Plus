@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "質問やアイデアを共有したり、このプロジェクトを支援したりできます。"
+      "value": "キーボードショートカットを確認したり、GitHub でフィードバックを送ったりできます。"
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "フィードバックページを開けません。時間をおいて再試行してください。"
-    },
-    {
-      "name": "help_group_title",
-      "value": "QQグループ"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "グループに参加して、使い心地やアイデアを共有しましょう。"
-    },
-    {
-      "name": "help_group_action",
-      "value": "QQグループに参加"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "ブラウザーでQQグループの招待を開きました"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "QQグループの招待を開けません。時間をおいて再試行してください。"
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Telegram グループ"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "Telegramグループでプロジェクトの最新情報を受け取り、他のユーザーと交流できます。"
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "Telegramグループに参加"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "ブラウザーでTelegramグループの招待を開きました"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "Telegramグループの招待を開けません。時間をおいて再試行してください。"
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "アニメーションを再開"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "公式アカウント"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "bilibili"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "Coolapk"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",

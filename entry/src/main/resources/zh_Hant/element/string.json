@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "遇到問題、想提出建議，或願意支援專案，都可以在這裡找到入口。"
+      "value": "查看快速鍵，或在 GitHub 提交意見回饋。"
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "無法開啟回饋頁面，請稍後再試。"
-    },
-    {
-      "name": "help_group_title",
-      "value": "QQ 群交流"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "進群交流使用體驗，分享想法與創意。"
-    },
-    {
-      "name": "help_group_action",
-      "value": "加入 QQ 群"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "已在瀏覽器中開啟 QQ 群邀請"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "無法開啟 QQ 群邀請，請稍後重試"
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Telegram 群交流"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "加入 Telegram 群，獲取專案動態並與更多使用者交流。"
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "加入 Telegram 群"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "已在瀏覽器中開啟 Telegram 群邀請"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "無法開啟 Telegram 群邀請，請稍後重試"
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "繼續動畫"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "官方帳號"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "嗶哩嗶哩"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "酷安"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",

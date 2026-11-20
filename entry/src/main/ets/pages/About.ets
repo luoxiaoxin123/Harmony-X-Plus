@@ -8,14 +8,10 @@ import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from 
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { destinationTitleBarStyle } from '../utils/DestinationTitleBar';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
-import { cardSurfaceColor, pageSurfaceColor, secondaryButtonSurfaceColor } from '../utils/ThemeColors';
+import { cardSurfaceColor } from '../utils/ThemeColors';
 import { effectiveAppLocale, isAppRtl, STORAGE_KEY_APP_LOCALE } from '../utils/AppLocale';
 
-const PROJECT_URL: string = 'https://github.com/haohaoai0/HarmonyX';
-const RELEASES_URL: string = 'https://github.com/luoxiaoxin123/HarmonyX/releases';
-const AUTHOR_BILIBILI_URL: string = 'https://b23.tv/LHFUSzV';
-const AUTHOR_COOLAPK_URL: string = 'https://www.coolapk.com/u/3309989';
-const AUTHOR_MEOW_URL: string = 'https://api.chuckfang.com/';
+import { PROJECT_RELEASES_URL, PROJECT_URL } from '../utils/ProjectLinks';
 
 @Builder
 export function AboutBuilder(): void {
@@ -169,61 +165,6 @@ struct About {
   }
 
   @Builder
-  private AccountButton(icon: Resource, label: Resource, url: string, id: string, monochrome: boolean): void {
-    Button({ type: ButtonType.Normal, stateEffect: true }) {
-      if (monochrome) {
-        Image(icon)
-          .width($r('app.float.about_account_icon_size'))
-          .height($r('app.float.about_account_icon_size'))
-          .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.text_primary'))
-          .accessibilityLevel('no')
-      } else {
-        Image(icon)
-          .width($r('app.float.about_account_icon_size'))
-          .height($r('app.float.about_account_icon_size'))
-          .objectFit(ImageFit.Contain)
-          .borderRadius($r('app.float.about_account_image_radius'))
-          .accessibilityLevel('no')
-      }
-    }
-    .width($r('app.float.about_account_button_size'))
-    .height($r('app.float.about_account_button_size'))
-    .padding(0)
-    .borderRadius($r('app.float.about_account_button_radius'))
-    .backgroundColor(secondaryButtonSurfaceColor(this.displayMode, this.darkSurface))
-    .accessibilityText(label)
-    .id(id)
-    .onClick((): void => { this.openLink(url); })
-  }
-
-  @Builder
-  private AuthorAccounts(): void {
-    Row({ space: $r('app.float.about_account_gap') }) {
-      SymbolGlyph($r('sys.symbol.person'))
-        .fontSize($r('app.float.about_symbol_size'))
-        .fontColor([pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue))])
-        .accessibilityLevel('no')
-      Text($r('app.string.about_official_accounts')).fontFamily(this.appFontFamily)
-        .fontSize($r('sys.float.Body_L'))
-        .fontWeight(FontWeight.Medium)
-        .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue)))
-        .layoutWeight(1)
-      this.AccountButton($r('app.media.about_bilibili'), $r('app.string.about_account_bilibili'),
-        AUTHOR_BILIBILI_URL, 'about-account-bilibili', true)
-      this.AccountButton($r('app.media.about_coolapk'), $r('app.string.about_account_coolapk'),
-        AUTHOR_COOLAPK_URL, 'about-account-coolapk', false)
-      this.AccountButton($r('app.media.about_meow'), $r('app.string.about_account_meow'),
-        AUTHOR_MEOW_URL, 'about-account-meow', false)
-    }
-    .width('100%')
-    .padding($r('app.float.about_card_inset'))
-    .backgroundColor(pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue))
-    .borderRadius($r('app.float.about_card_radius'))
-    .id('about-author-accounts')
-  }
-
-  @Builder
   private ActionRow(icon: Resource, title: Resource, detail: Resource, action: () => void): void {
     Button({ type: ButtonType.Normal, stateEffect: true }) {
       Row({ space: $r('app.float.about_row_gap') }) {
@@ -276,10 +217,9 @@ struct About {
           .borderRadius($r('app.float.about_card_radius'))
           .id('about-version-info')
 
-          this.AuthorAccounts()
           Column() {
             this.ActionRow($r('sys.symbol.doc_text'), $r('app.string.about_releases'),
-              $r('app.string.about_releases_desc'), (): void => { this.openLink(RELEASES_URL); })
+              $r('app.string.about_releases_desc'), (): void => { this.openLink(PROJECT_RELEASES_URL); })
             Divider().color($r('app.color.divider'))
             this.ActionRow($r('sys.symbol.link'), $r('app.string.about_project'),
               $r('app.string.about_project_desc'), (): void => { this.openLink(PROJECT_URL); })
@@ -312,7 +252,7 @@ struct About {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .align(Alignment.Top)
-    
+
       }.width('100%').height('100%')
     }
     .scale({ x: this.pageMotion.scale, y: this.pageMotion.scale })

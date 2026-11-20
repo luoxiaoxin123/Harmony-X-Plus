@@ -1338,7 +1338,7 @@
     },
     {
       "name": "help_intro",
-      "value": "Trova uno spazio per domande, idee e modi per sostenere questo progetto."
+      "value": "Consulta le scorciatoie da tastiera o invia un commento su GitHub."
     },
     {
       "name": "help_feedback_title",
@@ -1359,46 +1359,6 @@
     {
       "name": "help_feedback_failed",
       "value": "Impossibile aprire la pagina di feedback. Riprova più tardi."
-    },
-    {
-      "name": "help_group_title",
-      "value": "Gruppo QQ"
-    },
-    {
-      "name": "help_group_desc",
-      "value": "Unisciti al gruppo per parlare della tua esperienza, delle tue idee e dei tuoi suggerimenti."
-    },
-    {
-      "name": "help_group_action",
-      "value": "Unisciti al gruppo QQ"
-    },
-    {
-      "name": "help_group_opened",
-      "value": "Invito al gruppo QQ aperto nel browser"
-    },
-    {
-      "name": "help_group_failed",
-      "value": "Impossibile aprire l'invito al gruppo QQ. Riprova più tardi."
-    },
-    {
-      "name": "help_tg_group_title",
-      "value": "Gruppo Telegram"
-    },
-    {
-      "name": "help_tg_group_desc",
-      "value": "Unisciti al gruppo Telegram per aggiornamenti sul progetto e conversazioni con altri utenti."
-    },
-    {
-      "name": "help_tg_group_action",
-      "value": "Unisciti al gruppo Telegram"
-    },
-    {
-      "name": "help_tg_group_opened",
-      "value": "Invito al gruppo Telegram aperto nel browser"
-    },
-    {
-      "name": "help_tg_group_failed",
-      "value": "Impossibile aprire l'invito al gruppo Telegram. Riprova più tardi."
     },
     {
       "name": "settings_account",
@@ -10210,7 +10170,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · haohaoai0/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/HarmonyX"
     },
     {
       "name": "logo_universe_title",
@@ -10231,22 +10191,6 @@
     {
       "name": "logo_motion_play",
       "value": "Riprendi l’animazione"
-    },
-    {
-      "name": "about_official_accounts",
-      "value": "Account ufficiali"
-    },
-    {
-      "name": "about_account_bilibili",
-      "value": "bilibili"
-    },
-    {
-      "name": "about_account_coolapk",
-      "value": "Coolapk"
-    },
-    {
-      "name": "about_account_meow",
-      "value": "MeoW"
     },
     {
       "name": "logo_join",
