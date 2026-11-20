@@ -2,12 +2,10 @@ import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFon
 import common from '@ohos.app.ability.common';
 import webview from '@ohos.web.webview';
 import { HdsSceneController, HdsSceneType, HdsVisualComponent } from '@kit.UIDesignKit';
-import { WebProxyCredential, proxyStore } from '../services/ProxyStore';
 import { XPrivateStore, XSession, xPrivateStore } from '../services/XPrivateStore';
 import { XAccount, accountStore } from '../services/AccountStore';
 import { xWebCookieBridge } from '../services/XWebCookieBridge';
-import { xUserAgent } from '../services/XUserAgent';
-import { DISPLAY_MODE_DARK, DISPLAY_MODE_LIGHT, DISPLAY_MODE_SYSTEM } from '../services/AppearanceStore';
+import { DISPLAY_MODE_SYSTEM } from '../services/AppearanceStore';
 import { linkSettingsStore, STORAGE_KEY_LINK_IN_APP } from '../services/LinkSettingsStore';
 import { mediaSettingsStore, STORAGE_KEY_HOME_VIDEO_MUTED, STORAGE_KEY_VIDEO_AUTO_PIP } from '../services/MediaSettingsStore';
 import { notificationSettingsStore, STORAGE_KEY_NOTIFICATION_ALERTS } from '../services/NotificationSettingsStore';
@@ -15,11 +13,11 @@ import { ResponsiveLayout } from '../utils/ResponsiveLayout';
 import { SystemMaterialUtil } from '../utils/SystemMaterial';
 import { DEFAULT_SHEET_MATERIAL_ENABLED, STORAGE_KEY_SHEET_MATERIAL_ENABLED } from '../services/SheetMaterialSettingsStore';
 import { sheetMaterialActive } from '../utils/SheetMaterial';
-import { fieldSurfaceColor, pageSurfaceColor } from '../utils/ThemeColors';
+import { fieldSurfaceColor } from '../utils/ThemeColors';
 import { materialModifier } from '../utils/SystemMaterial';
+import { XLoginWebContent } from './XLoginWebContent';
 
 const LAST_GUIDE_PAGE: number = 7;
-const X_LOGIN_URL: string = 'https://x.com/i/flow/login';
 
 @Component
 export struct OnboardingGuide {
@@ -43,12 +41,11 @@ export struct OnboardingGuide {
   @StorageLink(STORAGE_KEY_HOME_VIDEO_MUTED) private homeVideoMuted: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) private videoAutoPip: boolean = true;
   @StorageLink(STORAGE_KEY_NOTIFICATION_ALERTS) private notificationAlerts: boolean = true;
-  private webController: webview.WebviewController = new webview.WebviewController();
   private swiperController: SwiperController = new SwiperController();
   private pollTimer: number = -1;
   private checkingCookies: boolean = false;
   private loginSaved: boolean = false;
-  private readonly userAgent: string = xUserAgent.value();
+  private alive: boolean = false;
   private brandGlowController: HdsSceneController = new HdsSceneController().setSceneParams({
     backgroundMaskColors: ['#18007DFF', '#1400C8FF'],
     firstEdgeFlowLight: { startPos: 0, endPos: 0.5, color: '#67D7FF' },
@@ -57,6 +54,7 @@ export struct OnboardingGuide {
   private brandGlowActive: boolean = false;
 
   aboutToAppear(): void {
+    this.alive = true;
     const context: common.Context | undefined = this.getUIContext().getHostContext();
     if (context !== undefined) {
       const active: XAccount | null = accountStore.active(context);
@@ -69,6 +67,7 @@ export struct OnboardingGuide {
   }
 
   aboutToDisappear(): void {
+    this.alive = false;
     this.stopLoginPolling();
     this.updateBrandGlow(false);
     if (this.loginOnly && this.addAccount && !this.loginSaved) {
@@ -91,16 +90,6 @@ export struct OnboardingGuide {
 
   private isCompact(): boolean {
     return ResponsiveLayout.isSmall(this.breakpoint);
-  }
-
-  private webDarkMode(): WebDarkMode {
-    if (this.displayMode === DISPLAY_MODE_DARK) {
-      return WebDarkMode.On;
-    }
-    if (this.displayMode === DISPLAY_MODE_LIGHT) {
-      return WebDarkMode.Off;
-    }
-    return WebDarkMode.Auto;
   }
 
   private nextPage(): void {
@@ -181,14 +170,14 @@ export struct OnboardingGuide {
   }
 
   private async checkSessionCookies(): Promise<void> {
-    if ((!this.loginOnly && this.currentPage !== LAST_GUIDE_PAGE) || this.finishing || this.checkingCookies) {
+    if (!this.alive || !this.visible || this.currentPage !== LAST_GUIDE_PAGE || this.finishing || this.checkingCookies) {
       return;
     }
     this.checkingCookies = true;
     try {
       const cookie: string = await webview.WebCookieManager.fetchCookie('https://x.com');
       const session: XSession = XPrivateStore.parseCookieString(cookie);
-      if (!session.isUsable() || this.finishing) {
+      if (!session.isUsable() || !this.alive || !this.visible || this.currentPage !== LAST_GUIDE_PAGE || this.finishing) {
         return;
       }
       const context: common.Context | undefined = this.getUIContext().getHostContext();
@@ -515,40 +504,12 @@ export struct OnboardingGuide {
         .width('100%')
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Center)
-      } else {
+      } else if (this.currentPage === LAST_GUIDE_PAGE) {
         Text($r('app.string.onboarding_login_notice')).fontFamily(this.appFontFamily)
           .fontSize($r('sys.float.Body_S'))
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
-        Web({ src: X_LOGIN_URL, controller: this.webController })
-        .width('100%')
-        .layoutWeight(1)
-        .javaScriptAccess(true)
-        .domStorageAccess(true)
-        .userAgent(this.userAgent)
-        .darkMode(this.webDarkMode())
-        .forceDarkAccess(this.displayMode === DISPLAY_MODE_DARK)
-        .backgroundColor(pageSurfaceColor(this.displayMode, this.darkSurface))
-        .onHttpAuthRequest((event): boolean => {
-          if (event === undefined || event === null) {
-            return false;
-          }
-          const credential: WebProxyCredential = proxyStore.webCredential();
-          if (!credential.usable) {
-            event.handler.cancel();
-            return false;
-          }
-          return event.handler.confirm(credential.username, credential.password);
-        })
-        .onPageEnd((): void => {
-          this.checkSessionCookies();
-        })
-        .onAppear((): void => {
-          if (this.loginOnly) {
-            this.startLoginPolling();
-            this.checkSessionCookies();
-          }
-        })
+        XLoginWebContent({ insideSheet: true, onPageLoaded: (): void => { void this.checkSessionCookies(); } })
       }
     }
     .width('100%')

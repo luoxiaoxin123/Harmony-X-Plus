@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Google 로그인 대신 이메일을 직접 입력해 주세요. 네트워크가 정상인데도 화면이 하얗게 표시되면 잠시 기다려 주세요."
+      "value": "Google 로그인 대신 이메일 주소를 입력하세요."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X 로그인 화면이 표시되지 않았습니다. 다시 시도하거나 브라우저에서 연결을 확인하세요."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "브라우저에서 X 테스트"
     },
     {
       "name": "auth_web_load_failed",

@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Don't use Google sign-in. Enter your email directly. If the page stays blank while your network is working, please wait."
+      "value": "Enter your email directly and avoid Google sign-in."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "The X sign-in page hasn’t appeared. Try again or test the connection in your browser."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Test X in browser"
     },
     {
       "name": "auth_web_load_failed",

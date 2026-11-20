@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Jangan masuk dengan Google; masukkan email secara langsung. Jika jaringan berfungsi tetapi halaman tetap kosong, harap tunggu."
+      "value": "Masukkan alamat email alih-alih masuk dengan Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Halaman masuk X belum muncul. Coba lagi atau periksa koneksi di browser."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Uji X di browser"
     },
     {
       "name": "auth_web_load_failed",

@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Não entre com o Google; digite seu e-mail diretamente. Se a página ficar em branco e a conexão estiver funcionando, aguarde."
+      "value": "Introduz o teu endereço de e-mail em vez de iniciares sessão com o Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "A página de início de sessão do X não foi apresentada. Tenta novamente ou testa a ligação no navegador."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Testar o X no navegador"
     },
     {
       "name": "auth_web_load_failed",

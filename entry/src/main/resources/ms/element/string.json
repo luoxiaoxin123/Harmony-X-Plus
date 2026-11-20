@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Jangan log masuk dengan Google; masukkan e-mel secara terus. Jika rangkaian berfungsi tetapi halaman masih kosong, sila tunggu."
+      "value": "Masukkan alamat e-mel tanpa menggunakan log masuk Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Halaman log masuk X belum dipaparkan. Cuba lagi atau semak sambungan dalam pelayar."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Uji X dalam pelayar"
     },
     {
       "name": "auth_web_load_failed",

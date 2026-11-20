@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "N’utilisez pas la connexion Google ; saisissez directement votre adresse e-mail. Si la page reste blanche malgré une connexion fonctionnelle, veuillez patienter."
+      "value": "Saisissez votre adresse e-mail sans passer par la connexion Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "La page de connexion à X ne s’est pas affichée. Réessayez ou vérifiez la connexion dans votre navigateur."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Tester X dans le navigateur"
     },
     {
       "name": "auth_web_load_failed",

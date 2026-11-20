@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Google से साइन इन न करें; अपना ईमेल सीधे दर्ज करें। नेटवर्क ठीक होने पर भी पेज खाली दिखे तो कृपया प्रतीक्षा करें।"
+      "value": "Google से लॉगिन करने के बजाय अपना ईमेल पता दर्ज करें।"
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X का लॉगिन पेज दिखाई नहीं दिया। फिर से कोशिश करें या ब्राउज़र में कनेक्शन जाँचें।"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "ब्राउज़र में X जाँचें"
     },
     {
       "name": "auth_web_load_failed",

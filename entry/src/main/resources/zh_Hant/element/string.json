@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "請勿使用 Google 登入，請直接輸入電子郵件；網路正常時若出現白畫面，請耐心等候。"
+      "value": "請勿使用 Google 登入，請直接輸入電子郵件。"
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "在本次應用程式執行期間切換影片時，沿用上次手動選擇的倍速。"
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X 登入頁面長時間沒有顯示。請重試，或用瀏覽器測試 X 能否開啟。"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "用瀏覽器測試 X"
     },
     {
       "name": "auth_web_load_failed",
