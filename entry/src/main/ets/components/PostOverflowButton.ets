@@ -277,7 +277,7 @@ export struct PostOverflowButton {
           })
           this.Action($r('sys.symbol.picture'), $r('app.string.post_share_screenshot'), (): void => {
             this.showing = false;
-            const params: PostShareRoute = { post: this.tweet, includeReplies: false, preview: true };
+            const params: PostShareRoute = { post: this.tweet, includeReplies: false };
             this.pageStack.pushPath({ name: 'PostShare', param: params });
           })
           if (this.menuVisible('post.report')) {

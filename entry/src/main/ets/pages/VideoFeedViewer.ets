@@ -89,7 +89,8 @@ import { VideoRecommendationStream, VideoRecommendationPage } from '../services/
 import { postModerationStore } from '../services/PostModerationStore';
 import { isAdPost } from '../utils/PostDisclosure';
 import { VideoFeedDataSource, VideoFeedItem } from '../services/VideoFeedDataSource';
-import { postShareUrl, sharePost } from '../utils/SharePost';
+import { postShareUrl } from '../utils/SharePost';
+import { openPostShare } from '../services/PostShareRequest';
 import { pageSurfaceColor } from '../utils/ThemeColors';
 import {
   DEFAULT_CONTENT_FONT_FAMILY,
@@ -1104,8 +1105,7 @@ export struct VideoFeedViewer {
   }
 
   private share(tweet: Tweet): void {
-    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
-    sharePost(context, tweet);
+    openPostShare(tweet, this.pageStack);
   }
 
   private async dismissCurrent(): Promise<void> {

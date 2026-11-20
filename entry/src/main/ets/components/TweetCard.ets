@@ -1,6 +1,6 @@
 import { POST_SWIPE_BOOKMARK, POST_SWIPE_LIKE, POST_SWIPE_NOT_INTERESTED, POST_SWIPE_OFF, POST_SWIPE_REPLY, POST_SWIPE_REPOST, POST_SWIPE_SHARE } from '../services/TimelineSettingsStore';
 import { POST_CARD_CLASSIC, POST_CARD_COMPACT, POST_CARD_WIDE, STORAGE_KEY_POST_CARD_LAYOUT, STORAGE_KEY_POST_MEDIA_SCALE } from '../services/PostDisplaySettingsStore';
-import type { PostShareRoute } from '../pages/PostShare';
+import { openPostShare } from '../services/PostShareRequest';
 import { PostLinkMenu } from '../components/PostLinkMenu';
 import type { PostCardReadingState } from '../services/PostCardReadingState';
 import { PostTranslationInfo } from '../components/PostTranslationInfo';
@@ -621,8 +621,7 @@ export struct TweetCard {
   }
 
   private openPostShare(): void {
-    const params: PostShareRoute = { post: this.tweet };
-    this.pageStack.pushPath({ name: 'PostShare', param: params });
+    openPostShare(this.tweet, this.pageStack);
   }
 
   private swipeAction(offset: number): number {
