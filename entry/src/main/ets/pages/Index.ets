@@ -41,7 +41,6 @@ import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
 import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '../services/PageTransitionSettingsStore';
 import { pageSystemTransition, PageTransitionMotion, officialPageTransition } from '../utils/PageTransition';
 import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED, STORAGE_KEY_SYSTEM_DARK } from '../services/AppearanceStore';
-import { XXAuthPopupHost } from '../components/XXAuthPopupHost';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 import { DEFAULT_SHEET_MATERIAL_ENABLED, DEFAULT_SHEET_MATERIAL_LEVEL, STORAGE_KEY_SHEET_MATERIAL_ENABLED, STORAGE_KEY_SHEET_MATERIAL_LEVEL } from '../services/SheetMaterialSettingsStore';
 import { sheetContentBackground, sheetMaterialOptions } from '../utils/SheetMaterial';
@@ -1491,17 +1490,6 @@ struct Index {
 
   private isLargeScreen(): boolean {
     return ResponsiveLayout.isLarge(this.videoLayoutBreakpoint || this.breakpoint);
-  }
-
-  private popupHostBlocked(): boolean {
-    if (crashDiagnostics.pendingReport()) { return true; }
-    // A large-screen rail is persistent navigation, not a modal surface. It
-    // must not suppress the announcement sheet while the narrow overlay
-    // drawer still needs to keep the sheet behind it.
-    return this.showStartupCover || !this.homeFeedPresented || this.showOnboardingGuide || this.showLoginSheet || this.showMidAutumnGreeting ||
-      this.showChatUnlock || this.showLinkPreview || (this.showSideDrawer && !this.isLargeScreen()) ||
-      this.contentDestinationOpen || this.photoOverlayOpen || this.showSpacePreview ||
-      this.showPauseTopics || this.showFollowingOrder || this.showHomeSourceOptions;
   }
 
   private sideDrawerWidth(): number {
@@ -7567,7 +7555,6 @@ struct Index {
       // 所以登录、引导与中秋弹窗各挂一个零尺寸宿主节点，根节点只保留链接预览。
       PostTranslationOptionsHost()
       SecureMediaSaveHost()
-      XXAuthPopupHost({ blocked: this.popupHostBlocked() })
       Column().width(0).height(0)
         .bindSheet($$this.showSpacePreview, this.SpacePreviewContent(), sheetMaterialOptions({
           width: 560,

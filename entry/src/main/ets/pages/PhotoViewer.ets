@@ -648,7 +648,7 @@ struct ZoomablePhoto {
         else if (this.loadFailed) {
           Column({ space: 12 }) {
             Text($r('app.string.image_edit_load_failed')).fontColor(Color.White).fontSize($r('sys.float.Body_M'))
-            Button($r('app.string.xxauth_retry')).onClick((): void => this.resolveSource())
+            Button($r('app.string.common_retry')).onClick((): void => this.resolveSource())
           }.padding(20)
         }
       }

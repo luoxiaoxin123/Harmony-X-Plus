@@ -401,50 +401,6 @@
       "value": "最近閱讀"
     },
     {
-      "name": "xxauth_close",
-      "value": "關閉"
-    },
-    {
-      "name": "xxauth_announcements",
-      "value": "應用公告"
-    },
-    {
-      "name": "xxauth_announcements_desc",
-      "value": "查看開發者發布的最新消息"
-    },
-    {
-      "name": "xxauth_articles",
-      "value": "使用指南"
-    },
-    {
-      "name": "xxauth_articles_desc",
-      "value": "查看教學與應用說明"
-    },
-    {
-      "name": "xxauth_versions",
-      "value": "版本歷史"
-    },
-    {
-      "name": "xxauth_versions_desc",
-      "value": "查看最新版本與更新記錄"
-    },
-    {
-      "name": "xxauth_update_desc",
-      "value": "檢查適用於 HarmonyOS 的更新"
-    },
-    {
-      "name": "xxauth_empty",
-      "value": "暫無內容"
-    },
-    {
-      "name": "xxauth_load_failed",
-      "value": "內容載入失敗，請稍後重試"
-    },
-    {
-      "name": "xxauth_retry",
-      "value": "重試"
-    },
-    {
       "name": "settings_app_icon_milk_frog_white",
       "value": "奶蛙·白"
     },
@@ -12129,32 +12085,12 @@
       "value": "聊天裝扮"
     },
     {
-      "name": "chat_decoration_subtitle",
-      "value": "頭像掛件與聊天氣泡，按需下載。"
-    },
-    {
       "name": "chat_decoration_frame",
       "value": "頭像掛件"
     },
     {
       "name": "chat_decoration_bubble",
       "value": "聊天氣泡"
-    },
-    {
-      "name": "chat_decoration_free",
-      "value": "免費"
-    },
-    {
-      "name": "chat_decoration_download_preview",
-      "value": "下載後可預覽"
-    },
-    {
-      "name": "chat_decoration_download",
-      "value": "下載"
-    },
-    {
-      "name": "chat_decoration_downloading",
-      "value": "下載中…"
     },
     {
       "name": "chat_decoration_use",
@@ -12169,16 +12105,8 @@
       "value": "取消使用"
     },
     {
-      "name": "chat_decoration_installed",
-      "value": "已下載"
-    },
-    {
       "name": "chat_decoration_applied",
       "value": "裝扮已套用"
-    },
-    {
-      "name": "chat_decoration_download_failed",
-      "value": "下載失敗，請稍後再試"
     },
     {
       "name": "chat_decoration_reset",
@@ -12189,16 +12117,8 @@
       "value": "已恢復預設"
     },
     {
-      "name": "chat_decoration_note",
-      "value": "素材僅保存在本機；對方看到的樣式仍取決於其自己的用戶端和裝扮。"
-    },
-    {
-      "name": "chat_decoration_loading",
-      "value": "正在取得裝扮…"
-    },
-    {
-      "name": "chat_decoration_unavailable",
-      "value": "暫時無法取得裝扮，請檢查網路後再試。"
+      "name": "chat_decoration_empty",
+      "value": "尚未安裝聊天裝扮。"
     },
     {
       "name": "chat_decoration_sample_text",

@@ -401,50 +401,6 @@
       "value": "Recently read"
     },
     {
-      "name": "xxauth_close",
-      "value": "关闭"
-    },
-    {
-      "name": "xxauth_announcements",
-      "value": "应用公告"
-    },
-    {
-      "name": "xxauth_announcements_desc",
-      "value": "查看开发者发布的最新消息"
-    },
-    {
-      "name": "xxauth_articles",
-      "value": "使用指南"
-    },
-    {
-      "name": "xxauth_articles_desc",
-      "value": "查看教程与应用说明"
-    },
-    {
-      "name": "xxauth_versions",
-      "value": "版本历史"
-    },
-    {
-      "name": "xxauth_versions_desc",
-      "value": "查看最新版本与更新记录"
-    },
-    {
-      "name": "xxauth_update_desc",
-      "value": "检查适用于 HarmonyOS 的更新"
-    },
-    {
-      "name": "xxauth_empty",
-      "value": "暂无内容"
-    },
-    {
-      "name": "xxauth_load_failed",
-      "value": "内容加载失败，请稍后重试"
-    },
-    {
-      "name": "xxauth_retry",
-      "value": "重试"
-    },
-    {
       "name": "settings_app_icon_milk_frog_white",
       "value": "奶蛙·白"
     },
@@ -6245,32 +6201,12 @@
       "value": "聊天装扮"
     },
     {
-      "name": "chat_decoration_subtitle",
-      "value": "头像挂件与聊天气泡，按需下载。"
-    },
-    {
       "name": "chat_decoration_frame",
       "value": "头像挂件"
     },
     {
       "name": "chat_decoration_bubble",
       "value": "聊天气泡"
-    },
-    {
-      "name": "chat_decoration_free",
-      "value": "免费"
-    },
-    {
-      "name": "chat_decoration_download_preview",
-      "value": "下载后可预览"
-    },
-    {
-      "name": "chat_decoration_download",
-      "value": "下载"
-    },
-    {
-      "name": "chat_decoration_downloading",
-      "value": "下载中…"
     },
     {
       "name": "chat_decoration_use",
@@ -6285,16 +6221,8 @@
       "value": "取消使用"
     },
     {
-      "name": "chat_decoration_installed",
-      "value": "已下载"
-    },
-    {
       "name": "chat_decoration_applied",
       "value": "装扮已应用"
-    },
-    {
-      "name": "chat_decoration_download_failed",
-      "value": "下载失败，请稍后重试"
     },
     {
       "name": "chat_decoration_reset",
@@ -6305,16 +6233,8 @@
       "value": "已恢复默认"
     },
     {
-      "name": "chat_decoration_note",
-      "value": "素材仅保存在本机；对方看到的样式仍取决于其自己的客户端和装扮。"
-    },
-    {
-      "name": "chat_decoration_loading",
-      "value": "正在获取装扮…"
-    },
-    {
-      "name": "chat_decoration_unavailable",
-      "value": "暂时无法获取装扮，请检查网络后重试。"
+      "name": "chat_decoration_empty",
+      "value": "尚未安装聊天装扮。"
     },
     {
       "name": "chat_decoration_sample_text",

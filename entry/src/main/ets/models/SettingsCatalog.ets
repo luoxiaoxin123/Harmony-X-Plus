@@ -161,8 +161,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     ]),
   new SettingsCategory('about', 'support', '', $r('app.string.about_title'),
     $r('app.string.about_tagline'), $r('sys.symbol.info_circle'), 'About', [
-      $r('app.string.about_version'), $r('app.string.xxauth_announcements'),
-      $r('app.string.xxauth_articles'), $r('app.string.xxauth_versions'), $r('app.string.settings_check_update')
+      $r('app.string.about_version'), $r('app.string.about_releases'), $r('app.string.settings_check_update')
     ]),
   new SettingsCategory('theme', 'experience', 'display', $r('app.string.settings_category_theme'),
     $r('app.string.settings_category_theme_desc'), $r('sys.symbol.sun_max'), '', [

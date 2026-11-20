@@ -401,50 +401,6 @@
       "value": "Recently read"
     },
     {
-      "name": "xxauth_close",
-      "value": "Close"
-    },
-    {
-      "name": "xxauth_announcements",
-      "value": "Announcements"
-    },
-    {
-      "name": "xxauth_announcements_desc",
-      "value": "Read the latest news from the developer"
-    },
-    {
-      "name": "xxauth_articles",
-      "value": "User guide"
-    },
-    {
-      "name": "xxauth_articles_desc",
-      "value": "Read tutorials and app information"
-    },
-    {
-      "name": "xxauth_versions",
-      "value": "Version history"
-    },
-    {
-      "name": "xxauth_versions_desc",
-      "value": "View the latest version and release notes"
-    },
-    {
-      "name": "xxauth_update_desc",
-      "value": "Check for HarmonyOS updates"
-    },
-    {
-      "name": "xxauth_empty",
-      "value": "No content yet"
-    },
-    {
-      "name": "xxauth_load_failed",
-      "value": "Unable to load content. Please try again later."
-    },
-    {
-      "name": "xxauth_retry",
-      "value": "Retry"
-    },
-    {
       "name": "settings_app_icon_milk_frog_white",
       "value": "ضفدع الحليب · أبيض"
     },
@@ -12129,32 +12085,12 @@
       "value": "Chat decorations"
     },
     {
-      "name": "chat_decoration_subtitle",
-      "value": "Avatar frames and chat bubbles, downloaded only when you choose them."
-    },
-    {
       "name": "chat_decoration_frame",
       "value": "Avatar frames"
     },
     {
       "name": "chat_decoration_bubble",
       "value": "Chat bubbles"
-    },
-    {
-      "name": "chat_decoration_free",
-      "value": "Free"
-    },
-    {
-      "name": "chat_decoration_download_preview",
-      "value": "Download to preview"
-    },
-    {
-      "name": "chat_decoration_download",
-      "value": "Download"
-    },
-    {
-      "name": "chat_decoration_downloading",
-      "value": "Downloading..."
     },
     {
       "name": "chat_decoration_use",
@@ -12169,16 +12105,8 @@
       "value": "Stop using"
     },
     {
-      "name": "chat_decoration_installed",
-      "value": "Downloaded"
-    },
-    {
       "name": "chat_decoration_applied",
       "value": "Decoration applied"
-    },
-    {
-      "name": "chat_decoration_download_failed",
-      "value": "Download failed. Try again later."
     },
     {
       "name": "chat_decoration_reset",
@@ -12189,16 +12117,8 @@
       "value": "Defaults restored"
     },
     {
-      "name": "chat_decoration_note",
-      "value": "Decorations stay on this device. Other people see styles supported by their client."
-    },
-    {
-      "name": "chat_decoration_loading",
-      "value": "Loading decorations..."
-    },
-    {
-      "name": "chat_decoration_unavailable",
-      "value": "Decorations are unavailable. Check your connection and retry."
+      "name": "chat_decoration_empty",
+      "value": "لا توجد زينة دردشة مثبّتة."
     },
     {
       "name": "chat_decoration_sample_text",

@@ -1,3 +1,5 @@
+import { common } from '@kit.AbilityKit';
+import { preferences } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { asset } from '@kit.AssetStoreKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -6,6 +8,16 @@ import { BusinessError } from '@kit.BasicServicesKit';
 // only so existing sign-in credentials and other asset secrets are never read.
 const LEGACY_ALIAS: RegExp = /^harmonyx_supporter_(?:v1|account_v2_\d+)$/;
 const PAGE_SIZE: number = 32;
+
+export function removeLegacyInstallId(context: common.Context): void {
+  try {
+    const store: preferences.Preferences = preferences.getPreferencesSync(context, { name: 'harmonyx_update' });
+    if (store.hasSync('device_id')) {
+      store.deleteSync('device_id');
+      store.flushSync();
+    }
+  } catch (error) { }
+}
 
 export async function removeLegacySupportData(): Promise<void> {
   const decoder: util.TextDecoder = util.TextDecoder.create('utf-8');

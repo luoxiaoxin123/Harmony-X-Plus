@@ -58,7 +58,7 @@ struct Startup {
         StartupAnimation({ mode: this.startupMode, initialFrame: true })
       }
       if (this.failed) {
-        Button($r('app.string.xxauth_retry'))
+        Button($r('app.string.common_retry'))
           .onClick((): void => this.openHome())
           .margin({ bottom: 48 })
       }

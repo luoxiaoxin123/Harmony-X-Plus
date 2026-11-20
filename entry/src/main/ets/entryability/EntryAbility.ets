@@ -1,5 +1,4 @@
-import { xxAuthPopupStore } from '../services/XXAuthPopupStore';
-import { removeLegacySupportData } from '../services/LegacySupportData';
+import { removeLegacyInstallId, removeLegacySupportData } from '../services/LegacySupportData';
 import { sidebarSettingsStore, SidebarSettings, STORAGE_KEY_SIDEBAR_ORDER, STORAGE_KEY_SIDEBAR_HIDDEN, STORAGE_KEY_SIDEBAR_SEARCH_CAPSULE } from '../services/SidebarSettingsStore';
 import { STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON } from '../services/MediaSettingsStore';
 import { tabOrderSettingsStore, STORAGE_KEY_BOTTOM_TAB_ORDER, STORAGE_KEY_HOME_TAB_ORDER } from '../services/TabOrderSettingsStore';
@@ -204,7 +203,7 @@ export default class EntryAbility extends UIAbility {
     crashDiagnostics.initialize(this.context);
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
     startupSession.cancel();
-    xxAuthPopupStore.removeLegacyInstallId(this.context);
+    removeLegacyInstallId(this.context);
     removeLegacySupportData().catch((): void => {});
     this.startupIconReady = this.appIconScheduleStore.applyIfEnabled(this.context);
     try { huaweiCloudSyncService.initialize(this.context); }

@@ -49,7 +49,6 @@ function rootFixture() {
   const parsed = ts.createSourceFile(filename + '.ts', source, ts.ScriptTarget.Latest, true);
   const rootClass = parsed.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'Index');
   const methods = ['onBreakpointChange', 'onDesktopLayoutChanged', 'updateNavigationMode', 'contentDestinationUsesFullPage',
-    'popupHostBlocked',
     'openContentDestination',
     'rootTitleBarOptions', 'syncDesktopRoute', 'effectiveTimelineColumns', 'useTimelineWaterFlow', 'useNarrowTimelineCards', 'syncThreePartWaterFlowSections',
     'desktopAsideVisible', 'closeDesktopRail', 'openDesktopRail', 'onDesktopRailSwipe',
@@ -74,7 +73,7 @@ function rootFixture() {
     videoLayoutBreakpoint: '', videoFullscreenOwner: '', scheduleVideoLayoutRelease() {},
     desktopRailAutoHide: true, desktopRailSwipe: true, desktopRailOpen: false, desktopModalOpen: false,
     fullscreenDesktopPhoto: () => false,
-    currentTab: 0, desktopRoute: '', showSideDrawer: false, homeFeedPresented: true,
+    currentTab: 0, desktopRoute: '', showSideDrawer: false,
     showOnboardingGuide: false, showLoginSheet: false, showMidAutumnGreeting: false,
     showChatUnlock: false, showLinkPreview: false, photoOverlayOpen: false,
     showSpacePreview: false, showPauseTopics: false, showFollowingOrder: false, showHomeSourceOptions: false,
@@ -139,18 +138,6 @@ test('phone drawer remains below 72 percent of the viewport and 280vp after resi
   }
   root.breakpoint = 'lg';
   assert.equal(root.sideDrawerWidth(), 300);
-});
-
-test('large-screen persistent rail does not block the recommendation popup', () => {
-  const { root, storage, responsive } = rootFixture();
-  root.showSideDrawer = true;
-  root.breakpoint = 'lg';
-  assert.equal(root.popupHostBlocked(), false);
-  root.breakpoint = 'sm';
-  assert.equal(root.popupHostBlocked(), true);
-  root.breakpoint = 'lg';
-  storage.set(responsive.CONTENT_DESTINATION_OPEN_KEY, true);
-  assert.equal(root.popupHostBlocked(), true);
 });
 
 test('the existing large-screen rail returns after resizing and switching desktop layout off', () => {

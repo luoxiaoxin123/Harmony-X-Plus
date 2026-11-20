@@ -4,7 +4,6 @@ import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
 import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '../services/PageTransitionSettingsStore';
 import { pageSystemTransition, PageTransitionMotion } from '../utils/PageTransition';
 import { bundleManager, common } from '@kit.AbilityKit';
-import { requestXXAuthPopup } from '../services/XXAuthPopupStore';
 import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { destinationTitleBarStyle } from '../utils/DestinationTitleBar';
@@ -13,7 +12,7 @@ import { cardSurfaceColor, pageSurfaceColor, secondaryButtonSurfaceColor } from 
 import { effectiveAppLocale, isAppRtl, STORAGE_KEY_APP_LOCALE } from '../utils/AppLocale';
 
 const PROJECT_URL: string = 'https://github.com/haohaoai0/HarmonyX';
-const RELEASES_URL: string = PROJECT_URL + '/releases';
+const RELEASES_URL: string = 'https://github.com/luoxiaoxin123/HarmonyX/releases';
 const AUTHOR_BILIBILI_URL: string = 'https://b23.tv/LHFUSzV';
 const AUTHOR_COOLAPK_URL: string = 'https://www.coolapk.com/u/3309989';
 const AUTHOR_MEOW_URL: string = 'https://api.chuckfang.com/';
@@ -279,18 +278,6 @@ struct About {
 
           this.AuthorAccounts()
           Column() {
-            this.ActionRow($r('sys.symbol.info_circle'), $r('app.string.xxauth_announcements'),
-              $r('app.string.xxauth_announcements_desc'), (): void => { requestXXAuthPopup('announcements'); })
-            Divider().color($r('app.color.divider'))
-            this.ActionRow($r('sys.symbol.doc_text'), $r('app.string.xxauth_articles'),
-              $r('app.string.xxauth_articles_desc'), (): void => { requestXXAuthPopup('articles'); })
-            Divider().color($r('app.color.divider'))
-            this.ActionRow($r('sys.symbol.info_circle'), $r('app.string.settings_check_update'),
-              $r('app.string.xxauth_update_desc'), (): void => { requestXXAuthPopup('update'); })
-            Divider().color($r('app.color.divider'))
-            this.ActionRow($r('sys.symbol.doc_text'), $r('app.string.xxauth_versions'),
-              $r('app.string.xxauth_versions_desc'), (): void => { requestXXAuthPopup('versions'); })
-            Divider().color($r('app.color.divider'))
             this.ActionRow($r('sys.symbol.doc_text'), $r('app.string.about_releases'),
               $r('app.string.about_releases_desc'), (): void => { this.openLink(RELEASES_URL); })
             Divider().color($r('app.color.divider'))

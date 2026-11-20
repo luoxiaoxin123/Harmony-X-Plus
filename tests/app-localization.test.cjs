@@ -17,7 +17,7 @@ const tokens = value => value.match(/%(?:\d+\$)?(?:\d+)?[sdif]/g) || [];
 const legacyFallbackLocales = new Set(['ru', 'uk', 'fa', 'ar', 'id', 'ms', 'tr', 'vi', 'th',
   'ja', 'ko', 'de', 'fr', 'es', 'pt', 'it', 'hi']);
 const legacyEnglishFallbacks = new Set([
-  'settings_component_hdr_enabled_desc', 'xxauth_load_failed', 'xxauth_retry',
+  'settings_component_hdr_enabled_desc',
   'settings_title_bar_logo_auto_contrast_desc', 'settings_desktop_rail_auto_hide_desc',
   'compose_schedule_invalid', 'compose_schedule_conflict', 'sidebar_swipe_desc',
   'sidebar_handle_style_desc', 'sidebar_handle_image_spec', 'chat_group_invite_hint',
@@ -30,7 +30,7 @@ const legacyEnglishFallbacks = new Set([
   'motion_symbol_desc', 'motion_haptics_desc', 'motion_intensity_desc',
   'storage_chat_retention_desc', 'scene_intro', 'scene_reading_desc', 'scene_saver_desc',
   'scene_media_desc', 'scene_restore_desc', 'scene_failed', 'offline_intro',
-  'offline_partial_saved', 'reader_partial', 'chat_decoration_note', 'settings_tab_order_desc',
+  'offline_partial_saved', 'reader_partial', 'settings_tab_order_desc',
   'settings_post_actions_desc', 'dns_scope', 'dns_endpoint_desc', 'dns_test_desc',
   'dns_failure_note', 'dns_x_test_desc'
 ]);
