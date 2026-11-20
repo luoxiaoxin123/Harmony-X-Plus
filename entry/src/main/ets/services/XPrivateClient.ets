@@ -85,6 +85,16 @@ export class XPrivateResult {
   // X answers a write that its account-level throttle refuses with GraphQL
   // error 344 ("You have reached your daily limit for sending Tweets and
   // messages"). The HTTP status stays 200, so this is the only signal.
+  isBlockedByAuthor(): boolean {
+    const message: string = this.errorText.toLowerCase();
+    if (message.includes('has blocked you') || message.includes('have been blocked by')) { return true; }
+    try {
+      const payload: Record<string, Object> = JSON.parse(this.body) as Record<string, Object>;
+      const errors: Record<string, Object>[] = (payload['errors'] ?? []) as Record<string, Object>[];
+      return errors.some((error: Record<string, Object>): boolean => String(error['code']) === '136');
+    } catch (error) { return false; }
+  }
+
   isWriteLimit(): boolean {
     return this.errorText.indexOf('(344)') >= 0 ||
       this.errorText.indexOf('daily limit') >= 0 ||
@@ -2929,6 +2939,20 @@ export class XPrivateClient {
     const body: ArrayBuffer = XPrivateClient.multipartBody(boundary, bytes, mimeType, category, altText);
     return await this.postBinary(UPLOAD_BASE + '/1.1/media/upload.json', body,
       'multipart/form-data; boundary=' + boundary, 'media/upload');
+  }
+
+  async setPostMediaDescription(mediaId: string, description: string): Promise<XPrivateResult> {
+    const operation: string = 'media/metadata/create';
+    if (!this.session.isUsable() || !/^[1-9][0-9]*$/.test(mediaId)) {
+      return new XPrivateResult(false, 0, '', 'invalid_media_session', operation);
+    }
+    const altText: Record<string, string> = { 'text': description };
+    const payload: Record<string, Object> = { 'media_id': mediaId, 'alt_text': altText };
+    const bytes: Uint8Array = new util.TextEncoder().encodeInto(JSON.stringify(payload));
+    const result: XPrivateResult = await this.postBinary(UPLOAD_BASE + '/1.1/media/metadata/create.json',
+      bytes.buffer as ArrayBuffer, 'application/json', operation);
+    if (result.ok && XPrivateClient.graphqlErrorSummary(result.body).length > 0) { result.ok = false; }
+    return result;
   }
 
   // Profile photos use account endpoints, not tweet media uploads. Decode from

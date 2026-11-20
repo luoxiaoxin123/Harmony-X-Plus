@@ -293,7 +293,7 @@ test('history stores bounded local previews, retains them when reopened, and upg
 
 test('history detail replaces the preview with the complete fetched post while ordinary shared-element routes preserve their hero', () => {
   const enriched=[];
-  const Detail=methods('pages/PostDetail','PostDetail',['applyLivePostState'],{
+  const Detail=methods('pages/PostDetail','PostDetail',['applyLivePostState', 'positionFocalReply', 'focalAncestors'],{
     browsingHistoryStore:{enrich:(_ctx,post)=>enriched.push(post)},getContext:()=>({}),postViewCounts:{remember(){}},
     refreshedPostPresentation:()=>null,
     refreshedPostMetrics:require('./post-card-fixture.cjs').load('utils/PostMetadata').refreshedPostMetrics

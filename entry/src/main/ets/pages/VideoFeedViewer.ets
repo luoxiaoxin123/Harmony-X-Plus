@@ -1,3 +1,5 @@
+import { VideoDownloadChoice, videoDownloadChoices } from '../services/VideoDownloadChoice';
+import type { VideoClipRoute } from './VideoClip';
 import { MediaViewerNavigationReturn } from '../utils/MediaViewerNavigation';
 import { ProfileVideoStream } from '../services/ProfileVideoStream';
 import { VideoSourceAttribution } from '../components/VideoSourceAttribution';
@@ -243,6 +245,7 @@ export struct VideoFeedViewer {
   // Set while the reader holds the playing video: the rate capsule sits just
   // below the back/more row, exactly where the press started.
   @State private holdSpeedActive: boolean = false;
+  @State private viewerZoomLocked: boolean = false;
   @State private holdSpeedRate: number = 2;
   @StorageLink(STORAGE_KEY_VIDEO_AUTO_ADVANCE) private autoAdvance: boolean = true;
   @State private qualityExpanded: boolean = false;
@@ -694,6 +697,7 @@ export struct VideoFeedViewer {
     this.fullscreenAdvanceFrom = -1;
     this.preloadActive = false;
     this.holdSpeedActive = false;
+    this.viewerZoomLocked = false;
     this.current = index;
     const viewed: Tweet | null = this.currentTweet();
     if (viewed !== null) {
@@ -1786,6 +1790,28 @@ export struct VideoFeedViewer {
     })
   }
 
+  private clipRoute(): VideoClipRoute | null {
+    const post: Tweet | null = this.currentTweet();
+    const video: MediaAttachment | null = this.currentVideo();
+    if (post === null || video === null || post.attachments?.length !== 1 || video.type !== 'video' ||
+      (video.durationMs ?? 0) < 1000 || !xPrivateClient.isSignedIn()) { return null; }
+    try {
+      if (!canIUse('SystemCapability.Multimedia.Media.Spliter') || !canIUse('SystemCapability.Multimedia.Media.Muxer')) {
+        return null;
+      }
+    } catch (error) { return null; }
+    const source: VideoDownloadChoice | undefined = videoDownloadChoices(video).find((choice: VideoDownloadChoice): boolean => /^https:\/\//i.test(choice.url) &&
+      /\.mp4(?:[?#]|$)/i.test(choice.url));
+    return source === undefined ? null : { url: source.url, durationMs: video.durationMs ?? 0 };
+  }
+
+  private openClip(): void {
+    const route: VideoClipRoute | null = this.clipRoute();
+    if (route === null) { return; }
+    this.showMoreSheet = false;
+    this.pageStack.pushPath({ name: 'VideoClip', param: route });
+  }
+
   @Builder
   private MoreSheet(): void {
     Scroll() {
@@ -1818,6 +1844,9 @@ export struct VideoFeedViewer {
           }
           .width('100%')
         }, (revision: string): string => revision)
+        if (this.clipRoute() !== null) {
+          this.MoreMenuRow($r('sys.symbol.square_and_pencil'), $r('app.string.video_clip_title'), '', (): void => this.openClip())
+        }
         if (this.menuVisible('video.caption_opacity')) {
           this.CaptionOpacityRow()
         }
@@ -1984,6 +2013,9 @@ export struct VideoFeedViewer {
       onViewerDanmakuToggle: (): void => { this.danmakuEnabled = !this.danmakuEnabled; },
       onViewerDanmakuSend: (): void => { this.showDanmakuSheet = true; },
       mediaViewerLayout: true,
+      onViewerZoomChanged: (locked: boolean): void => {
+        if (this.feedItem(item).index === this.current) { this.viewerZoomLocked = locked; }
+      },
 
       viewerFullscreenRequest: this.feedItem(item).index === this.current ? this.fullscreenRequest : 0,
       viewerDanmakuContent: (): void => this.FullscreenDanmaku(this.feedItem(item)),
@@ -2979,7 +3011,7 @@ export struct VideoFeedViewer {
     // Cached XComponents must render so their surfaces can prepare and decode.
     .cachedCount(1, true)
     .indicator(false)
-    .disableSwipe(this.postSheetActive || this.showDanmakuSheet || this.danmakuSending)
+    .disableSwipe(this.viewerZoomLocked || this.postSheetActive || this.showDanmakuSheet || this.danmakuSending)
     .width('100%')
     .height('100%')
     .clip(true)
@@ -3140,6 +3172,7 @@ export struct VideoFeedViewer {
     })
     .hideTitleBar(this.closing || !this.isVideoChromeVisible(this.current))
     .hideBackButton(false)
+    .systemBarStyle({ statusBarContentColor: '#FFFFFF' }, { statusBarContentColor: '#FFFFFF' })
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .onShown((): void => {

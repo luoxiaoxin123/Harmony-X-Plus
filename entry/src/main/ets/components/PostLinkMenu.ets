@@ -5,8 +5,13 @@ import { openExternalLink } from '../utils/PostEntities';
 
 // The containing Text owns bindMenu; Span only selects the tapped destination.
 @Builder
-export function PostLinkMenu(context: UIContext, url: string): void {
+export function PostLinkMenu(context: UIContext, url: string, stack: NavPathStack): void {
   Menu() {
+    if (/^https?:\/\//i.test(url)) {
+      MenuItem({ content: $r('app.string.external_article_read'),
+        symbolStartIcon: new SymbolGlyphModifier($r('sys.symbol.bookmark')) })
+        .onClick((): void => { stack.pushPath({ name: 'ExternalArticle', param: url }); })
+    }
     MenuItem({ content: $r('app.string.post_link_copy'),
       symbolStartIcon: new SymbolGlyphModifier($r('sys.symbol.plus_square_on_square')) })
       .onClick((): void => {

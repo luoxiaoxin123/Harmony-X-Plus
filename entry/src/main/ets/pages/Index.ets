@@ -1,3 +1,8 @@
+import { VideoClipBuilder } from './VideoClip';
+import { PostShareBuilder } from './PostShare';
+import { DeviceTimeline } from '../components/DeviceTimeline';
+import { ExternalArticleBuilder } from './ExternalArticle';
+import { POST_SWIPE_OFF, STORAGE_KEY_POST_SWIPE_LEFT, STORAGE_KEY_POST_SWIPE_RIGHT } from '../services/TimelineSettingsStore';
 import { STORAGE_KEY_SIDEBAR_SEARCH_CAPSULE } from '../services/SidebarSettingsStore';
 import { CrashRecoveryNotice } from '../components/CrashRecoveryNotice';
 import { crashDiagnostics } from '../services/CrashDiagnostics';
@@ -654,6 +659,8 @@ struct Index {
   private topicPresentationPending: boolean = false;
   @StorageLink('harmonyx.default_home_feed') @Watch('onDefaultHomeFeedChanged')
   defaultHomeFeedMode: number = 0;
+  @StorageProp(STORAGE_KEY_POST_SWIPE_LEFT) private postSwipeLeft: number = POST_SWIPE_OFF;
+  @StorageProp(STORAGE_KEY_POST_SWIPE_RIGHT) private postSwipeRight: number = POST_SWIPE_OFF;
   @State @Watch('onTimelineChanged') timeline: Tweet[] = [];
   @State private homeFeedPresented: boolean = false;
   private homePresentationPending: boolean = false;
@@ -727,6 +734,9 @@ struct Index {
   @State private onboardingLoginOnly: boolean = false;
   @State private onboardingAddAccount: boolean = false;
   @State private showLoginSheet: boolean = false;
+  @State private deviceFullFeatures: boolean = false;
+  private deviceFocusedId: string = '';
+  private readonly deviceType: string = deviceInfo.deviceType;
   @State private loginAccounts: XAccount[] = [];
   @State private loginActiveAccountId: string = '';
   // The compose button morphs into jump-to-top once the reader has scrolled
@@ -895,7 +905,7 @@ struct Index {
   @StorageLink(STORAGE_KEY_NATIVE_BOTTOM_BAR) @Watch('onClassicBottomBarChanged')
   nativeBottomBar: boolean = false;
   @StorageLink(STORAGE_KEY_ROOT_TAB_LABELS_VISIBLE) rootTabLabelsVisible: boolean = true;
-  @StorageLink(STORAGE_KEY_ROOT_LIQUID_TAB_INDICATOR_ENABLED) rootLiquidTabIndicatorEnabled: boolean = true;
+  @StorageLink(STORAGE_KEY_ROOT_LIQUID_TAB_INDICATOR_ENABLED) rootLiquidTabIndicatorEnabled: boolean = false;
   @StorageLink(STORAGE_KEY_ROOT_TAB_GRADIENT_MASK_ENABLED) rootTabGradientMaskEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_AUTO_HIDE_FAB) @Watch('onAutoHideFabChanged')
   autoHideFab: boolean = true;
@@ -4459,6 +4469,7 @@ struct Index {
   // The reason for a refused write lives in the payload: X wraps a posting
   // limit in an HTTP 200, so the status alone cannot tell the two apart.
   private privateFailMsg(action: string, result: XPrivateResult): string {
+    if (result.isBlockedByAuthor()) { return this.text($r('app.string.post_blocked_by_author')); }
     if (result.status === 401 || result.status === 403) {
       return this.text($r('app.string.private_session_expired'));
     }
@@ -4539,24 +4550,15 @@ struct Index {
   }
 
   private appendTimeline(posts: Tweet[]): number {
-    const combined: Tweet[] = [];
+    const combined: Tweet[] = this.timeline.slice();
+    const seen: Set<string> = new Set<string>(combined.map((post: Tweet): string => post.id));
     let addedCount: number = 0;
-    for (let i: number = 0; i < this.timeline.length; i++) {
-      combined.push(this.timeline[i]);
-    }
     for (let i: number = 0; i < posts.length; i++) {
       const candidate: Tweet = posts[i];
-      let exists: boolean = false;
-      for (let j: number = 0; j < combined.length; j++) {
-        if (combined[j].id === candidate.id) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists) {
-        combined.push(candidate);
-        addedCount += 1;
-      }
+      if (seen.has(candidate.id)) { continue; }
+      seen.add(candidate.id);
+      combined.push(candidate);
+      addedCount += 1;
     }
     this.timeline = combined;
     this.rememberTimelinePosts();
@@ -5736,7 +5738,7 @@ struct Index {
     const scope: string = state.replyToId.length > 0 ? 'reply_' + state.replyToId : 'compose';
     if (state.draftText.length > 0) {
       composerDraftStore.save(context, scope,
-        new ComposerDraft(state.draftText, [], '', '', Date.now()));
+        new ComposerDraft(state.draftText, [], Date.now()));
     }
     this.openComposer(state.draftText, state.replyToId, state.replyToUser);
   }
@@ -6147,6 +6149,7 @@ struct Index {
     }
     if (feature === 'messages') { this.goMessages(); return; }
     if (feature === 'grok') { this.openRootContent({ name: 'Grok' }); return; }
+    if (feature === 'storage') { this.openRootContent({ name: 'DataStorage' }); return; }
     if (feature === 'groups') { this.openRootContent({ name: 'AccountGroups' }); return; }
     if (feature === 'history') {
       this.openRootContent({ name: 'BrowsingHistory' });
@@ -7511,10 +7514,56 @@ struct Index {
         .id('system-sidebar-host')
   }
 
+  private showDeviceTimeline(): boolean {
+    return !this.deviceFullFeatures && (this.deviceType === 'wearable' || this.deviceType === 'tv');
+  }
+
+  private openDeviceSection(section: string): void {
+    switch (section) {
+      case 'login': this.goLogin(); break;
+      case 'bookmarks': this.openRootContent({ name: 'Bookmarks' }); break;
+      case 'spaces': this.openRootContent({ name: 'Spaces' }); break;
+      case 'compose': this.openComposer('', '', ''); break;
+      case 'search':
+      case 'alerts':
+      case 'messages':
+        this.deviceFullFeatures = true;
+        this.onTabChange(section === 'search' ? EXPLORE_TAB_INDEX :
+          section === 'alerts' ? NOTIFICATIONS_TAB_INDEX : MESSAGES_TAB_INDEX);
+        break;
+      default: this.deviceFullFeatures = true; break;
+    }
+  }
+
+  @Builder
+  private DeviceNavigation(): void {
+    Navigation(this.navPathStack) {
+      DeviceTimeline({ watch: this.deviceType === 'wearable', signedIn: this.hasAnySession(),
+        activeFeed: this.homeFeedMode, posts: this.timeline, refreshing: this.refreshing || this.loadingMore,
+        onFocusItem: (id: string): void => { this.deviceFocusedId = id; },
+        onFeed: (mode: number): void => { this.applyHomeFeedMode(mode); },
+        onOpen: (post: Tweet): void => this.openPost(post),
+        onVideo: (post: Tweet, item: MediaAttachment): void => this.openVideoFeed(post, item),
+        onSection: (section: string): void => this.openDeviceSection(section),
+        onMore: (): void => this.requestMoreTimeline() })
+    }.navDestination(this.NavigationBuilder).mode(NavigationMode.Stack).hideTitleBar(true)
+      .id(MAIN_NAVIGATION_ID).systemBarStyle(this.rootSystemBarStyle())
+      .onNavBarStateChange((visible: boolean): void => {
+        if (!visible || this.deviceFocusedId.length === 0) { return; }
+        this.getUIContext().postFrameCallback(new HomeViewportFrameCallback((): void => {
+          if (this.showDeviceTimeline() && this.navPathStack.size() === 0) {
+            this.getUIContext().getFocusController().requestFocus(this.deviceFocusedId);
+          }
+        }));
+      })
+  }
+
   build(): void {
     Stack() {
       appPageBackground()
-      if (this.isDesktopLayout()) {
+      if (this.showDeviceTimeline()) {
+        this.DeviceNavigation()
+      } else if (this.isDesktopLayout()) {
         this.DesktopShell()
       } else if (this.supportsHdsNavigation()) {
         Stack() {
@@ -7906,6 +7955,12 @@ struct Index {
       PostDetailBuilder(param);
     } else if (name === 'PostArticle') {
       PostArticleBuilder();
+    } else if (name === 'ExternalArticle') {
+      ExternalArticleBuilder();
+    } else if (name === 'PostShare') {
+      PostShareBuilder();
+    } else if (name === 'VideoClip') {
+      VideoClipBuilder();
     } else if (name === 'Grok') {
       GrokBuilder();
     } else if (name === 'AccountGroups') {
@@ -8825,6 +8880,7 @@ struct Index {
       narrowColumn: this.useNarrowTimelineCards(),
       videoFeedEnabled: true,
       homeTimelineVideo: true,
+      swipeLeftAction: this.postSwipeLeft, swipeRightAction: this.postSwipeRight,
       recordRecommendationSeen: this.homeModeAt(index) === 0 || (homeTimelineStore.topicById(this.tabKey(index))?.tag.length ?? 0) > 0,
       naturalVideoSize: true,
       onLikeChanged: (tt: Tweet, liked: boolean) => this.onLike(tt, liked),
@@ -9007,7 +9063,7 @@ struct Index {
           else { this.HomeList(index) }
         }, (item: IconTabItem): string => item.key)
       }.width('100%').height('100%').index(this.homeTabIndex()).loop(false).indicator(false).cachedCount(1)
-        .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing)
+        .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing || this.postSwipeLeft !== POST_SWIPE_OFF || this.postSwipeRight !== POST_SWIPE_OFF)
         .onAppear((): void => { this.homeTabPosition = this.homeTabIndex(); })
         .onChange((index: number): void => {
           this.selectHomeTabAt(index);

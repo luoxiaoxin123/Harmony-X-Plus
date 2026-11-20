@@ -1,5 +1,6 @@
 .hvigor/
 entry/build/
+entry/.cxx/
 build/
 oh_modules/
 /server/node_modules/

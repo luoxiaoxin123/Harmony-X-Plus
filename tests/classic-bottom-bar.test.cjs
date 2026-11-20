@@ -113,7 +113,7 @@ test('a failed label preference write keeps the previous visible labels', () => 
 
 test('the liquid indicator defaults on and persists independently of labels and bar style', () => {
   const f = fixture(), store = new f.api.HdsTabsSettingsStore();
-  assert.equal(store.loadRootLiquidTabIndicatorEnabled({}), true);
+  assert.equal(store.loadRootLiquidTabIndicatorEnabled({}), false);
   assert.equal(store.saveRootLiquidTabIndicatorEnabled({}, false), true);
   store.saveRootTabLabelsVisible({}, false);
   store.saveClassicBottomBar({}, true);

@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { accountStore } from './AccountStore';
 
+export const STORAGE_KEY_SPACE_TONES: string = 'harmonyx.space_tones';
 export const STORAGE_KEY_HOME_SPACE_CAPSULE_ENABLED: string = 'harmonyx.home_space_capsule_enabled';
 export const STORAGE_KEY_HOME_SPACE_CAPSULE_HIDDEN_FOR_SESSION: string = 'harmonyx.home_space_capsule_hidden_for_session';
 
@@ -18,9 +19,25 @@ class SpacePreferencesStore {
     let enabled: boolean = true;
     try { enabled = this.store(context).getSync('home_capsule_enabled', true) as boolean; }
     catch (error) { }
+    AppStorage.setOrCreate<boolean>(STORAGE_KEY_SPACE_TONES, this.loadTones(context));
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_HOME_SPACE_CAPSULE_ENABLED, enabled);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_HOME_SPACE_CAPSULE_HIDDEN_FOR_SESSION, false);
   }
+  private loadTones(context: common.Context): boolean {
+    try { return this.store(context).getSync('room_tones', false) === true; }
+    catch (error) { return false; }
+  }
+
+  saveTones(context: common.Context, enabled: boolean): boolean {
+    try {
+      const store: preferences.Preferences = this.store(context);
+      store.putSync('room_tones', enabled);
+      store.flushSync();
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_SPACE_TONES, enabled);
+      return true;
+    } catch (error) { return false; }
+  }
+
   hideHomeCapsuleForSession(): void {
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_HOME_SPACE_CAPSULE_HIDDEN_FOR_SESSION, true);
   }

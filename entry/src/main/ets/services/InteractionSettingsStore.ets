@@ -7,6 +7,7 @@ export const STORAGE_KEY_HOME_HEADER_ACTION: string = 'harmonyx.home_header_acti
 export const STORAGE_KEY_HOME_FOLLOW_SUGGESTIONS: string = 'harmonyx.home_follow_suggestions';
 export const HOME_HEADER_SEARCH: string = 'search';
 export const HOME_HEADER_FOLLOW: string = 'follow';
+export const STORAGE_KEY_PROFILE_REPLY_BUTTON: string = 'harmonyx.profile_reply_button';
 export const STORAGE_KEY_ME_FLOATING_ACTION: string = 'harmonyx.me_floating_action';
 export const STORAGE_KEY_FLOATING_COMPOSE_MATERIAL_TINT: string = 'harmonyx.floating_compose_material_tint';
 export const STORAGE_KEY_REFRESH_ON_FOREGROUND: string = 'harmonyx.refresh_on_foreground';
@@ -26,6 +27,7 @@ export const ME_FLOATING_HELP: string = 'help';
 export const ME_FLOATING_HIDDEN: string = 'hidden';
 
 export class InteractionSettings {
+  profileReplyButton: boolean = true;
   photoFullscreen: boolean = true;
   homeFloatingAction: string = HOME_FLOATING_COMPOSE;
   homeHeaderAction: string = HOME_HEADER_SEARCH;
@@ -43,6 +45,10 @@ export class InteractionSettings {
 export class InteractionSettingsStore {
   private store(context: common.Context): preferences.Preferences {
     return preferences.getPreferencesSync(context, { name: 'harmonyx_interaction' });
+  }
+
+  saveProfileReplyButton(context: common.Context, enabled: boolean): boolean {
+    return this.saveBoolean(context, 'profile_reply_button', STORAGE_KEY_PROFILE_REPLY_BUTTON, enabled);
   }
 
   private normaliseAction(value: string): string {
@@ -64,6 +70,7 @@ export class InteractionSettingsStore {
     const settings: InteractionSettings = new InteractionSettings();
     try {
       const store: preferences.Preferences = this.store(context);
+      settings.profileReplyButton = store.getSync('profile_reply_button', true) === true;
       settings.photoFullscreen = store.getSync('photo_fullscreen', true) as boolean;
       settings.homeFloatingAction = this.normaliseAction(store.getSync('home_floating_action', HOME_FLOATING_COMPOSE) as string);
       settings.homeHeaderAction = store.getSync('home_header_action', HOME_HEADER_SEARCH) === HOME_HEADER_FOLLOW ?
@@ -83,6 +90,7 @@ export class InteractionSettingsStore {
   }
 
   publish(settings: InteractionSettings): void {
+    AppStorage.setOrCreate<boolean>(STORAGE_KEY_PROFILE_REPLY_BUTTON, settings.profileReplyButton);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_PHOTO_FULLSCREEN, settings.photoFullscreen);
     AppStorage.setOrCreate<string>(STORAGE_KEY_HOME_FLOATING_ACTION, this.normaliseAction(settings.homeFloatingAction));
     AppStorage.setOrCreate<string>(STORAGE_KEY_HOME_HEADER_ACTION,

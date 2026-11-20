@@ -12923,6 +12923,298 @@
     {
       "name": "grok_chat_hint",
       "value": "Grok에 질문하여 대화를 시작하세요."
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "This post exceeds the character limit. Edit it to continue."
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "Remember playback speed"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "Couldn’t load the X sign-in page."
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "The author has blocked your account."
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "Post card layout"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "Post detail layout"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "Classic"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "Wide"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "Compact"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "Post media size"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "Post swipe gestures"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "Swipe left"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "Swipe right"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "Disabled"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "You can add one GIF per post."
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "Image description (ALT)"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "Describe this image for people who use a screen reader."
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "Apply description"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "Couldn’t save the description. Your draft is still available."
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "Remove attachment"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "Open color picker"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "Profile reply button"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "Show the floating reply button on user profiles."
+    },
+    {
+      "name": "external_article_read",
+      "value": "Read article"
+    },
+    {
+      "name": "external_article_save",
+      "value": "Save offline"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "Saved offline"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "Smaller text"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "Larger text"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "Couldn’t extract the article. You can still open the original page."
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "Preview profile"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "Continue editing"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "Photo file names"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "Fields appear in the order you turn them on."
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "Post date"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "Author username"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "Photo number"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "Original image code"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "Post ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "Full interface"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces sounds"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "Play a short sound when you join or leave a live Space."
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "Brightness"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "Contrast"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "Saturation"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "Eraser"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "Mosaic"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "Free crop"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "Apply crop"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "Split vertically"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "Add photo sticker"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "Edit photos in order"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "Make collage"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "Horizontal row"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "Vertical column"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "Grid"
+    },
+    {
+      "name": "post_share_message",
+      "value": "Add a message"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "Find a direct message recipient"
+    },
+    {
+      "name": "post_share_system",
+      "value": "System share"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "Post screenshot"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "Copy screenshot"
+    },
+    {
+      "name": "post_share_email",
+      "value": "Email"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "Copy post text"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "Open in X"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "Clip video"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "Start"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "Length"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "Preview start"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "Create preview"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "Continue to post"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "Couldn’t create the clip. Try a different start or length."
     }
   ]
 }

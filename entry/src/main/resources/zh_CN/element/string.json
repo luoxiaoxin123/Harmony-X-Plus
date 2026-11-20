@@ -802,7 +802,7 @@
     },
     {
       "name": "compose_media_limit",
-      "value": "最多选择 4 张图片"
+      "value": "每条帖子最多添加 20 个媒体附件，其中最多一个 GIF。"
     },
     {
       "name": "compose_character_count",
@@ -8770,7 +8770,7 @@
     },
     {
       "name": "share_post_media_limit",
-      "value": "发帖支持最多四张图片（含一个 GIF），或一个视频。请减少附件或选择私信。"
+      "value": "每条帖子最多添加 20 个媒体附件，其中最多一个 GIF。"
     },
     {
       "name": "share_receive_failed",
@@ -12923,6 +12923,298 @@
     {
       "name": "grok_chat_hint",
       "value": "直接向 Grok 提问，开始新的对话。"
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "帖子超过字符上限，请编辑后再发布。"
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "记住播放倍速"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "在本次应用运行期间切换视频时，沿用上次手动选择的倍速。"
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "无法加载 X 登录页。"
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "帖子作者已屏蔽你的账号。"
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "帖子卡片布局"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "帖子详情布局"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "经典"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "宽版"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "紧凑"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "帖子媒体大小"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "帖子滑动手势"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "向左滑动"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "向右滑动"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "关闭"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "每条帖子只能添加一个 GIF。"
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "图片说明（ALT）"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "为使用屏幕阅读器的人描述这张图片。"
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "应用说明"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "图片说明提交失败，草稿已保留。"
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "移除附件"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "打开颜色选择器"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "个人主页回复按钮"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "在用户个人主页显示悬浮回复按钮。"
+    },
+    {
+      "name": "external_article_read",
+      "value": "阅读文章"
+    },
+    {
+      "name": "external_article_save",
+      "value": "保存离线副本"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "已保存离线副本"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "缩小字号"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "放大字号"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "无法提取文章，可继续查看原网页。"
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "预览个人资料"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "继续编辑"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "图片文件名"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "字段按开启顺序组合。"
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "发帖日期"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "作者用户名"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "图片序号"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "原始图片代码"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "帖子 ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "完整功能"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces 提示音"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "成功加入或主动离开直播时播放短提示音。"
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "亮度"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "对比度"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "饱和度"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "橡皮擦"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "马赛克"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "自由裁剪"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "应用裁剪"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "切成竖条"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "添加图片贴纸"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "依次编辑图片"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "拼接图片"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "横排"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "竖排"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "网格"
+    },
+    {
+      "name": "post_share_message",
+      "value": "附留言"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "搜索私信收件人"
+    },
+    {
+      "name": "post_share_system",
+      "value": "系统分享"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "帖子长图"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "复制截图"
+    },
+    {
+      "name": "post_share_email",
+      "value": "邮件"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "复制正文"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "在 X 中打开"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "剪辑视频"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "起点"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "长度"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "预览起点"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "生成预览"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "继续发帖"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "无法生成片段，请试试其他起点或长度。"
     }
   ]
 }

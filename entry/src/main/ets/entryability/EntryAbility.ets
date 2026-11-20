@@ -90,6 +90,7 @@ import {
   STORAGE_KEY_COMPACT_VIDEO_LAYOUT,
   STORAGE_KEY_VIDEO_FEED_TAP_PAUSE,
   STORAGE_KEY_VIDEO_HOLD_SPEED,
+  STORAGE_KEY_VIDEO_REMEMBER_SPEED,
   STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY,
   STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS,
   STORAGE_KEY_PAUSE_INLINE_VIDEO_ON_RETURN,
@@ -177,7 +178,10 @@ const SUPPORT_CONTINUE_PAGE_STACK_PARAMETER: string =
 
 export default class EntryAbility extends UIAbility {
   private windowStage: window.WindowStage | null = null;
-  private foldListener: (status: display.FoldStatus) => void = (_status: display.FoldStatus): void => this.updateCoverScreen();
+  private foldListener: (status: display.FoldStatus) => void =
+    (_status: display.FoldStatus): void => this.refreshResponsiveWindow();
+  private displayListener: (id: number) => void = (_id: number): void => this.refreshResponsiveWindow();
+  private observingDisplay: boolean = false;
   private observingFold: boolean = false;
   private updateCoverScreen(): void {
     let active: boolean = false;
@@ -311,6 +315,8 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_VIDEO_FEED_CONTROLS_ALWAYS_VISIBLE,
       videoFeedControlsAlwaysVisible);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_VIDEO_HDR_ENHANCEMENT, mediaSettingsStore.loadVideoHdrEnhancement(this.context));
+    AppStorage.setOrCreate<boolean>(STORAGE_KEY_VIDEO_REMEMBER_SPEED,
+      mediaSettingsStore.loadVideoRememberSpeed(this.context));
     const videoHoldSpeed: boolean = mediaSettingsStore.loadVideoHoldSpeed(this.context);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_VIDEO_DOUBLE_TAP_SEEK, mediaSettingsStore.loadVideoDoubleTapSeek(this.context));
     AppStorage.setOrCreate<number>(STORAGE_KEY_VIDEO_DOUBLE_TAP_SEEK_SECONDS, mediaSettingsStore.loadVideoDoubleTapSeekSeconds(this.context));
@@ -338,6 +344,8 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_SYSTEM_NOTIFICATIONS, systemNotifications);
     const dndSilent: boolean = notificationSettingsStore.loadDndSilentEnabled(this.context);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_NOTIFICATION_DND_SILENT, dndSilent);
+    postDisplaySettingsStore.loadLayoutSettings(this.context);
+    timelineSettingsStore.loadPostSwipeSettings(this.context);
     const defaultHomeFeed: number = timelineSettingsStore.loadDefaultHomeFeed(this.context);
     AppStorage.setOrCreate<number>(STORAGE_KEY_DEFAULT_HOME_FEED, defaultHomeFeed);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_COVER_SINGLE_COLUMN, timelineSettingsStore.loadCoverSingleColumn(this.context));
@@ -688,6 +696,23 @@ export default class EntryAbility extends UIAbility {
     pageBackgroundStore.refreshAppearance();
   }
 
+  private refreshResponsiveWindow(): void {
+    this.updateCoverScreen();
+    const mainWindow: window.Window | null = this.observedWindow;
+    if (mainWindow === null) { return; }
+    try {
+      const uiContext: UIContext = mainWindow.getUIContext();
+      const rect: window.Rect = mainWindow.getWindowProperties().windowRect;
+      this.updateResponsiveState(uiContext, rect.width, rect.height);
+      const top: number = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM).topRect.height;
+      const bottom: number = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR).bottomRect.height;
+      AppStorage.setOrCreate<number>(STATUS_BAR_HEIGHT_KEY, uiContext.px2vp(top));
+      AppStorage.setOrCreate<number>(NAVIGATION_INDICATOR_HEIGHT_KEY, uiContext.px2vp(bottom));
+    } catch (error) {
+      hilog.warn(DOMAIN, TAG, '%{public}s', 'Unable to refresh window geometry');
+    }
+  }
+
   private observeWindowAvoidAreas(windowStage: window.WindowStage): void {
     this.releaseWindowListeners();
     try {
@@ -719,6 +744,8 @@ export default class EntryAbility extends UIAbility {
       if (display.isFoldable()) {
         display.on('foldStatusChange', this.foldListener); this.observingFold = true;
       }
+      try { display.on('change', this.displayListener); this.observingDisplay = true; }
+      catch (error) { /* Window callbacks still report viewport changes. */ }
       this.updateCoverScreen();
       mainWindow.on('windowSizeChange', this.windowSizeListener);
       mainWindow.on('avoidAreaChange', this.avoidAreaListener);
@@ -751,6 +778,10 @@ export default class EntryAbility extends UIAbility {
   }
 
   private releaseWindowListeners(): void {
+    if (this.observingDisplay) {
+      try { display.off('change', this.displayListener); } catch (error) { /* Display service released. */ }
+      this.observingDisplay = false;
+    }
     if (this.observingFold) {
       try { display.off('foldStatusChange', this.foldListener); } catch (error) { /* Display service released. */ }
       this.observingFold = false;

@@ -110,6 +110,7 @@ function appearanceFixture(initial = {}) {
     putSync: (key, value) => values.set(key, value), flushSync() {} };
   const f = load('entry/src/main/ets/services/AppearanceStore.ets', {
     '@kit.AbilityKit': { ConfigurationConstant: {} },
+    '@kit.BasicServicesKit': { deviceInfo: { deviceType: 'phone' } },
     '@kit.ArkData': { preferences: { getPreferencesSync: () => pref } },
     '../utils/AccentPalette': load('entry/src/main/ets/utils/AccentPalette.ets')
   });

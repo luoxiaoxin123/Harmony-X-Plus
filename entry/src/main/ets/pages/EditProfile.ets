@@ -1,3 +1,4 @@
+import { EmojiSpans } from '../components/EmojiSpans';
 import { pageTextColor } from '../utils/ThemeColors';
 import { appPageBackground } from '../components/PageBackgroundLayer';
 import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
@@ -42,6 +43,7 @@ export struct EditProfile {
   @StorageProp('harmonyx.title_bar_style_mode') private titleBarStyleMode: number = 0;
   @StorageLink('harmonyx.accent_color') private accentColor: string = '#007DFF';
   @State private draft: ProfileEditDraft | null = null;
+  @State private previewOpen: boolean = false;
   @State private saving: boolean = false;
   @State private picking: boolean = false;
   @State private failure: string = '';
@@ -176,31 +178,35 @@ export struct EditProfile {
   }
 
   @Builder
-  private Photos(): void {
+  private Photos(readOnly: boolean = false): void {
     Column() {
       Stack() {
         Column().width('100%').height('100%').backgroundColor(this.accentColor)
         if ((this.draft?.bannerUri || this.draft?.profile.bannerUrl || '').length > 0) {
           ProxyMediaImage({ url: this.draft?.bannerUri || this.draft?.profile.bannerUrl || '', fillParent: true })
         }
-        Column().width('100%').height('100%').backgroundColor($r('app.color.profile_editor_image_shade'))
-        SymbolGlyph($r('sys.symbol.camera_badge_plus')).fontSize(34).fontColor([$r('app.color.text_on_brand')])
+        if (!readOnly) {
+          Column().width('100%').height('100%').backgroundColor($r('app.color.profile_editor_image_shade'))
+          SymbolGlyph($r('sys.symbol.camera_badge_plus')).fontSize(34).fontColor([$r('app.color.text_on_brand')])
+        }
       }.width('100%').aspectRatio(3).clip(true).enabled(!this.saving && !this.picking)
         .accessibilityText($r('app.string.profile_editor_choose_banner')).accessibilityLevel('yes')
-        .onClick((): void => { void this.selectPhoto(true); })
+        .onClick((): void => { if (!readOnly) { void this.selectPhoto(true); } })
       Row() {
         Stack() {
           ProxyAvatar({ url: this.draft?.avatarUri || this.draft?.profile.avatarUrl || '',
             avatarSize: this.avatarSize(), radius: this.avatarSize() / 2,
             verifiedType: this.draft?.profile.verifiedType ?? '', avatarShape: this.draft?.profile.avatarShape ?? '',
             fallbackText: (this.draft?.name ?? '').substring(0, 1), fallbackColor: this.accentColor })
-          Column().width('100%').height('100%').backgroundColor($r('app.color.profile_editor_image_shade'))
-          SymbolGlyph($r('sys.symbol.camera_badge_plus')).fontSize(30).fontColor([$r('app.color.text_on_brand')])
+          if (!readOnly) {
+            Column().width('100%').height('100%').backgroundColor($r('app.color.profile_editor_image_shade'))
+            SymbolGlyph($r('sys.symbol.camera_badge_plus')).fontSize(30).fontColor([$r('app.color.text_on_brand')])
+          }
         }.width(this.avatarSize()).height(this.avatarSize())
           .borderRadius(userAvatarRadius(this.avatarSize(), this.avatarSize() / 2,
             this.draft?.profile.verifiedType ?? '', this.draft?.profile.avatarShape ?? '')).clip(true)
           .enabled(!this.saving && !this.picking).accessibilityText($r('app.string.profile_editor_choose_avatar'))
-          .accessibilityLevel('yes').onClick((): void => { void this.selectPhoto(false); })
+          .accessibilityLevel('yes').onClick((): void => { if (!readOnly) { void this.selectPhoto(false); } })
         Blank()
       }.width('100%').padding({ left: 20, right: 20 }).margin({ top: -this.avatarSize() / 2, bottom: 18 })
     }.width('100%')
@@ -209,8 +215,24 @@ export struct EditProfile {
   @Builder
   private Form(): void {
     Column() {
+      if (this.previewOpen) {
+        this.Photos(true)
+        Column({ space: 8 }) {
+          Text() { EmojiSpans(this.getUIContext(), this.draft?.name ?? '', $r('sys.float.Title_S'), false) }
+            .fontFamily(this.appFontFamily).fontSize($r('sys.float.Title_S')).fontWeight(FontWeight.Bold)
+          Text('@' + (this.draft?.profile.username ?? '')).fontFamily(this.appFontFamily)
+            .fontColor($r('app.color.text_secondary'))
+          Text() { EmojiSpans(this.getUIContext(), this.draft?.bio ?? '', $r('sys.float.Body_L'), false) }
+            .fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_L')).width('100%')
+          Button($r('app.string.profile_editor_resume_editing')).onClick((): void => { this.previewOpen = false; })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 20, right: 20, bottom: 24 })
+      } else {
       this.Photos()
       Column() {
+        Button($r('app.string.profile_editor_preview')).onClick((): void => {
+          this.previewOpen = true;
+          this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
+        }).enabled(!this.saving && !this.picking).margin({ bottom: 12 })
         ProfileEditorField({ label: $r('app.string.profile_edit_name'), value: this.draft?.name ?? '', limit: 50,
           disabled: this.saving, onValue: (value: string): void => { if (this.draft !== null) { this.draft.name = value; } } })
         ProfileEditorField({ label: $r('app.string.profile_edit_bio'), value: this.draft?.bio ?? '', limit: 160, multiline: true,
@@ -239,6 +261,7 @@ export struct EditProfile {
             .width('100%').margin({ top: 18 }).accessibilityLevel('yes')
         }
       }.width('100%').padding({ left: 20, right: 20, bottom: this.bottomInset + 24 })
+      }
     }.width('100%').padding({ top: this.topInset + 74 })
   }
 

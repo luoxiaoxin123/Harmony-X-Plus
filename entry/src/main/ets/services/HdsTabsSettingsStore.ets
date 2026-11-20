@@ -54,8 +54,8 @@ export class HdsTabsSettingsStore {
     try {
       const store: preferences.Preferences = preferences.getPreferencesSync(context,
         { name: HdsTabsSettingsStore.STORE_NAME });
-      return store.getSync(HdsTabsSettingsStore.ROOT_LIQUID_TAB_INDICATOR_ENABLED_KEY, true) as boolean;
-    } catch (error) { return true; }
+      return store.getSync(HdsTabsSettingsStore.ROOT_LIQUID_TAB_INDICATOR_ENABLED_KEY, false) as boolean;
+    } catch (error) { return false; }
   }
 
   saveRootLiquidTabIndicatorEnabled(context: common.Context, enabled: boolean): boolean {

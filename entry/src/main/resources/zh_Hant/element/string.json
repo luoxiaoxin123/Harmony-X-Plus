@@ -666,7 +666,7 @@
     },
     {
       "name": "compose_media_limit",
-      "value": "最多選擇 4 張圖片"
+      "value": "每則貼文最多加入 20 個媒體附件，其中最多一個 GIF。"
     },
     {
       "name": "compose_character_count",
@@ -8766,7 +8766,7 @@
     },
     {
       "name": "share_post_media_limit",
-      "value": "發帖支援最多四張圖片（含一個 GIF），或一個影片。請減少附件或選擇私人訊息。"
+      "value": "每則貼文最多加入 20 個媒體附件，其中最多一個 GIF。"
     },
     {
       "name": "share_receive_failed",
@@ -12923,6 +12923,298 @@
     {
       "name": "grok_chat_hint",
       "value": "直接向 Grok 提問，開始新的對話。"
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "貼文超過字元上限，請編輯後再發佈。"
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "記住播放倍速"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "在本次應用程式執行期間切換影片時，沿用上次手動選擇的倍速。"
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "無法載入 X 登入頁面。"
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "貼文作者已封鎖你的帳號。"
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "貼文卡片版面"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "貼文詳情版面"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "經典"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "寬版"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "精簡"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "貼文媒體大小"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "貼文滑動手勢"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "向左滑動"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "向右滑動"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "關閉"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "每則貼文只能加入一個 GIF。"
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "圖片說明（ALT）"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "為使用螢幕閱讀器的人描述這張圖片。"
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "套用說明"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "圖片說明提交失敗，草稿已保留。"
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "移除附件"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "開啟色彩選擇器"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "個人主頁回覆按鈕"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "在使用者個人主頁顯示浮動回覆按鈕。"
+    },
+    {
+      "name": "external_article_read",
+      "value": "閱讀文章"
+    },
+    {
+      "name": "external_article_save",
+      "value": "儲存離線副本"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "已儲存離線副本"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "縮小字級"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "放大字級"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "無法擷取文章，可以繼續檢視原網頁。"
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "預覽個人資料"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "繼續編輯"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "圖片檔名"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "欄位依啟用順序組合。"
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "發文日期"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "作者使用者名稱"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "圖片序號"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "原始圖片代碼"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "貼文 ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "完整功能"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces 提示音"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "成功加入或主動離開直播時播放短提示音。"
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "亮度"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "對比度"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "飽和度"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "橡皮擦"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "馬賽克"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "自由裁切"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "套用裁切"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "切成直條"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "加入圖片貼圖"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "依序編輯圖片"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "拼接圖片"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "橫排"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "直排"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "格狀"
+    },
+    {
+      "name": "post_share_message",
+      "value": "附上留言"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "搜尋私訊收件人"
+    },
+    {
+      "name": "post_share_system",
+      "value": "系統分享"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "貼文長圖"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "複製截圖"
+    },
+    {
+      "name": "post_share_email",
+      "value": "電子郵件"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "複製內文"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "在 X 中開啟"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "剪輯影片"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "起點"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "長度"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "預覽起點"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "產生預覽"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "繼續發文"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "無法產生片段，請試試其他起點或長度。"
     }
   ]
 }

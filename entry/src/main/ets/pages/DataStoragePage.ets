@@ -1,3 +1,4 @@
+import { PHOTO_FILENAME_PARTS, photoFilenameStore, photoFilenameTitle } from '../services/PhotoFilenameStore';
 import { pageTextColor } from '../utils/ThemeColors';
 import { appPageBackground } from '../components/PageBackgroundLayer';
 import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
@@ -24,6 +25,8 @@ export function DataStorageBuilder(): void { DataStoragePage(); }
 @Component
 export struct DataStoragePage {
   @StorageProp('harmonyx.page_background') private pageBackgroundValue: string = '';
+  @State private photoFilenameParts: string[] = [];
+  @State private filenameExpanded: boolean = false;
   @State private pageMotion: PageTransitionMotion = new PageTransitionMotion();
   @StorageProp(STORAGE_KEY_PAGE_TRANSITION_MODE) private pageTransitionMode: string = DEFAULT_PAGE_TRANSITION_MODE;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
@@ -62,6 +65,7 @@ export struct DataStoragePage {
 
   private refreshLocation(): void {
     this.useFolder = downloadLocationStore.useDownloads(this.context());
+    this.photoFilenameParts = photoFilenameStore.load(this.context());
     this.directorySupported = downloadLocationStore.supportsDirectory();
     const method: MediaSaveMethod = downloadLocationStore.method(this.context());
     this.saveMethod = method === MediaSaveMethod.DIRECTORY && !this.directorySupported ? MediaSaveMethod.FILE_PICKER : method;
@@ -213,6 +217,7 @@ export struct DataStoragePage {
           .backgroundColor(secondaryButtonSurfaceColor(this.displayMode, this.darkSurface))
           .fontColor($r('app.color.text_primary')).onClick((): void => this.chooseDirectory())
       }
+      this.PhotoFilenameSettings()
       this.ValueRow($r('app.string.storage_download_files'), this.loaded ? storageBytes(this.usage.downloads.bytes) : '—')
       this.ValueRow($r('app.string.storage_other_cache'), this.loaded ? storageBytes(this.usage.otherCacheBytes()) : '—')
       Text($r('app.string.storage_protected_note')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Caption_M')).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue))).width('100%')
@@ -220,6 +225,55 @@ export struct DataStoragePage {
         .backgroundColor(secondaryButtonSurfaceColor(this.displayMode, this.darkSurface)).fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, secondaryButtonSurfaceColor(this.displayMode, this.darkSurface)))
         .onClick((): void => { this.pageStack.pushPath({ name: 'DownloadManager', param: '' }); })
     }.width('100%').padding(16).borderRadius(16).backgroundColor(pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue))
+  }
+
+  private filenamePartLabel(part: string): Resource {
+    switch (part) {
+      case 'date': return $r('app.string.storage_photo_filename_date');
+      case 'author': return $r('app.string.storage_photo_filename_author');
+      case 'index': return $r('app.string.storage_photo_filename_index');
+      case 'code': return $r('app.string.storage_photo_filename_code');
+      default: return $r('app.string.storage_photo_filename_post');
+    }
+  }
+
+  private filenameOrderLabel(part: string): string {
+    const index: number = this.photoFilenameParts.indexOf(part);
+    return index >= 0 ? (index + 1).toString() + '. ' : '';
+  }
+
+  private toggleFilenamePart(part: string, enabled: boolean): void {
+    const next: string[] = this.photoFilenameParts.filter((existing: string): boolean => existing !== part);
+    if (enabled) { next.push(part); }
+    if (photoFilenameStore.save(this.context(), next)) { this.photoFilenameParts = next; }
+    else { this.getUIContext().getPromptAction().showToast({ message: $r('app.string.settings_interaction_save_failed') }); }
+  }
+
+  @Builder
+  private PhotoFilenameSettings(): void {
+    Column({ space: 6 }) {
+      Button($r('app.string.storage_photo_filename')).width('100%').onClick((): void => {
+        this.filenameExpanded = !this.filenameExpanded;
+      })
+      if (this.filenameExpanded) {
+        Text($r('app.string.storage_photo_filename_order')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S'))
+          .width('100%')
+        ForEach(PHOTO_FILENAME_PARTS, (part: string): void => {
+          Row({ space: 8 }) {
+            Text(this.filenameOrderLabel(part) + this.context().resourceManager.getStringSync(this.filenamePartLabel(part)))
+              .fontFamily(this.appFontFamily).layoutWeight(1)
+            Toggle({ type: ToggleType.Switch, isOn: this.photoFilenameParts.includes(part) })
+              .accessibilityText(this.filenamePartLabel(part))
+              .onChange((enabled: boolean): void => this.toggleFilenamePart(part, enabled))
+          }.width('100%').constraintSize({ minHeight: 44 })
+        }, (part: string): string => part)
+        if (this.photoFilenameParts.length > 0) {
+          Text(photoFilenameTitle(this.photoFilenameParts, '2026-11-20', 'author', 1,
+            'https://pbs.twimg.com/media/Example.jpg', '123456789') + '.jpg')
+            .fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S')).width('100%')
+        }
+      }
+    }.width('100%')
   }
 
   @Builder

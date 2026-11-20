@@ -104,6 +104,8 @@ import {
   STORAGE_KEY_VIDEO_FEED_TAP_PAUSE,
   STORAGE_KEY_VIDEO_AUTO_BITRATE_CAP,
   STORAGE_KEY_VIDEO_HOLD_SPEED,
+  STORAGE_KEY_VIDEO_REMEMBER_SPEED,
+  STORAGE_KEY_VIDEO_SESSION_RATE_INDEX,
   STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY,
   STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS,
   STORAGE_KEY_VIDEO_DOUBLE_TAP_SEEK,
@@ -794,6 +796,16 @@ export struct SurfaceVideoPlayer {
   private initialPositionApplied: boolean = false;
   private sourceSwitchPositionSec: number = 0;
   private pendingSeekSeconds: number = -1;
+  private latestSeekTarget: number = -1;
+  private latestSeekUntil: number = 0;
+  @State private viewerZoom: number = 1;
+  @State private viewerPanX: number = 0;
+  @State private viewerPanY: number = 0;
+  private viewerZoomStart: number = 1;
+  private viewerPanStartX: number = 0;
+  private viewerPanStartY: number = 0;
+  private viewerPinching: boolean = false;
+  onViewerZoomChanged: (locked: boolean) => void = (_locked: boolean): void => {};
   private resumeAfterVideoFeed: boolean = false;
   private proxyPrepareEpoch: number = 0;
   private preparingSource: string = '';
@@ -838,6 +850,7 @@ export struct SurfaceVideoPlayer {
   aboutToAppear(): void {
     this.alive = true;
     this.positionSec = this.isAnimatedGif() ? 0 : this.initialPositionSeconds;
+    this.restoreViewerRate();
     this.keepAwakeVisible = true;
     this.initialPositionApplied = this.initialPositionSeconds <= 0;
     if (this.fullscreenInstanceKey.length === 0) {
@@ -1790,9 +1803,8 @@ export struct SurfaceVideoPlayer {
         this.clearLoadTimeout();
       }
       if (time > this.positionSec * 1000 + 1) { this.lastProgressAt = Date.now(); }
-      if (!this.scrubbing) {
-        this.positionSec = time / 1000;
-      }
+      if (this.scrubbing || !this.acceptPlaybackProgress(time / 1000)) { return; }
+      this.positionSec = time / 1000;
       if (this.playbackEnabled && !this.isAnimatedGif()) {
         videoMediaSession.updatePosition(this.media.id, time / 1000);
         videoPlaybackPositionStore.remember(this.media.id, time / 1000);
@@ -2671,11 +2683,23 @@ export struct SurfaceVideoPlayer {
     }
   }
 
+  private acceptPlaybackProgress(seconds: number): boolean {
+    if (this.latestSeekTarget < 0 || Date.now() > this.latestSeekUntil) {
+      this.latestSeekTarget = -1;
+      return true;
+    }
+    if (Math.abs(seconds - this.latestSeekTarget) > 0.35) { return false; }
+    this.latestSeekTarget = -1;
+    return true;
+  }
+
   private seekTo(seconds: number): void {
     const player: mediaKit.AVPlayer | null = this.player;
     const target: number = this.durationSec > 0 ?
       Math.max(0, Math.min(seconds, this.durationSec)) : Math.max(0, seconds);
     this.positionSec = target;
+    this.latestSeekTarget = target;
+    this.latestSeekUntil = Date.now() + 2000;
     if (this.casting) {
       videoMediaSession.sendCastCommand(this.media.id, { command: 'seek', parameter: Math.round(target * 1000) });
       return;
@@ -3184,6 +3208,32 @@ export struct SurfaceVideoPlayer {
     }
   }
 
+  private updateViewerPan(x: number, y: number): void {
+    const maxX: number = Math.max(0, this.windowWidth * (this.viewerZoom - 1) / 2);
+    const maxY: number = Math.max(0, this.videoFrameHeight() * (this.viewerZoom - 1) / 2);
+    this.viewerPanX = Math.max(-maxX, Math.min(maxX, x));
+    this.viewerPanY = Math.max(-maxY, Math.min(maxY, y));
+  }
+
+  private beginViewerPinch(): void {
+    this.finishHoldGesture();
+    this.viewerZoomStart = this.viewerZoom;
+    this.viewerPinching = true;
+    this.onViewerZoomChanged(true);
+  }
+
+  private finishViewerPinch(): void {
+    this.viewerPinching = false;
+    if (this.viewerZoom < 1.03) { this.resetViewerZoom(); }
+  }
+
+  private resetViewerZoom(): void {
+    this.viewerPinching = false;
+    this.viewerZoom = 1;
+    this.updateViewerPan(0, 0);
+    this.onViewerZoomChanged(false);
+  }
+
   private showFullscreenPinchHint(): void {
     this.fullscreenPinchHint = true;
     if (this.fullscreenPinchHintTimer >= 0) {
@@ -3383,6 +3433,7 @@ export struct SurfaceVideoPlayer {
     if (!this.playbackEnabled) {
       // A page that stops playing cannot keep a temporary boost on screen.
       this.finishHoldSpeed();
+      if (this.viewerPinching || this.viewerZoom > 1) { this.resetViewerZoom(); }
       this.pendingPip = false;
       this.pipResumeDesired = false;
       this.setMuted(true);
@@ -3405,6 +3456,7 @@ export struct SurfaceVideoPlayer {
       }
       return;
     }
+    this.restoreViewerRate();
     if (this.takeRequestedPlayer()) { return; }
     if (this.mediaViewerLayout) {
       // A cached preload hides its controls. Restore them on activation even
@@ -3871,7 +3923,8 @@ export struct SurfaceVideoPlayer {
     this.clearProgressWatchdog();
     this.holdControls();
     if (state === undefined) { return; }
-    if (state.position !== undefined && !this.scrubbing) {
+    if (state.position !== undefined && !this.scrubbing &&
+      this.acceptPlaybackProgress(state.position.elapsedTime / 1000)) {
       this.positionSec = state.position.elapsedTime / 1000;
       videoPlaybackPositionStore.remember(this.media.id, this.positionSec);
     }
@@ -4139,9 +4192,22 @@ export struct SurfaceVideoPlayer {
     }
   }
 
+  private restoreViewerRate(): void {
+    if (!this.mediaViewerLayout) { return; }
+    const index: number = (AppStorage.get<boolean>(STORAGE_KEY_VIDEO_REMEMBER_SPEED) ?? true) ?
+      AppStorage.get<number>(STORAGE_KEY_VIDEO_SESSION_RATE_INDEX) ?? 1 : 1;
+    this.playbackRateIndex = FULLSCREEN_PLAYBACK_RATES[index] === undefined ? 1 : index;
+    const player: mediaKit.AVPlayer | null = this.player;
+    if (player !== null && !this.holdSpeedActive) { this.applyPlaybackRate(player); }
+  }
+
   private cyclePlaybackRate(): void {
     const lastIndex: number = FULLSCREEN_PLAYBACK_RATES.length - 1;
     this.playbackRateIndex = this.playbackRateIndex >= lastIndex ? 0 : this.playbackRateIndex + 1;
+    if (this.holdSpeedActive) { this.holdSpeedRestoreIndex = this.playbackRateIndex; }
+    if (this.mediaViewerLayout && (AppStorage.get<boolean>(STORAGE_KEY_VIDEO_REMEMBER_SPEED) ?? true)) {
+      AppStorage.setOrCreate<number>(STORAGE_KEY_VIDEO_SESSION_RATE_INDEX, this.playbackRateIndex);
+    }
     if (this.casting) {
       videoMediaSession.sendCastCommand(this.media.id, { command: 'setSpeed', parameter: this.playbackRate() });
       this.holdControls();
@@ -5441,6 +5507,8 @@ export struct SurfaceVideoPlayer {
         }
         .width(this.videoFrameWidth())
         .height(this.videoFrameHeight())
+        .scale({ x: this.viewerZoom, y: this.viewerZoom })
+        .translate({ x: this.viewerPanX, y: this.viewerPanY })
         .id(this.mediaViewerLayout ? 'video-viewer-frame-' + this.media.id : this.transitionSourceId)
         .align(this.videoFrameAlignment())
         .borderRadius(this.videoRadius())
@@ -5513,8 +5581,32 @@ export struct SurfaceVideoPlayer {
       // The frame, loading cover and inline chrome share the same rounded
       // viewport. Clipping only XComponent leaves the gradient's corners square.
       .borderRadius(this.videoRadius())
-      .clip(!this.mediaViewerLayout && !this.fullscreen)
+      .clip((!this.mediaViewerLayout && !this.fullscreen) || this.viewerZoom > 1)
       .id(this.mediaViewerLayout ? 'video-viewer-layer' : '')
+      .onGestureJudgeBegin((info: GestureInfo): GestureJudgeResult => {
+        if (info.tag === 'viewer-zoom' || info.tag === 'viewer-pan') {
+          if (!this.mediaViewerLayout || !this.playbackEnabled || info.tag === 'viewer-pan' && this.viewerZoom <= 1) {
+            return GestureJudgeResult.REJECT;
+          }
+        }
+        return GestureJudgeResult.CONTINUE;
+      })
+      .parallelGesture(PinchGesture({ fingers: 2, distance: 5 }).tag('viewer-zoom')
+          .onActionStart((): void => this.beginViewerPinch())
+          .onActionUpdate((event: GestureEvent): void => {
+            this.viewerZoom = Math.max(1, Math.min(4, this.viewerZoomStart * event.scale));
+            this.updateViewerPan(this.viewerPanX, this.viewerPanY);
+          })
+          .onActionEnd((): void => this.finishViewerPinch())
+          .onActionCancel((): void => this.finishViewerPinch()))
+      .priorityGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 }).tag('viewer-pan')
+          .onActionStart((): void => {
+            this.viewerPanStartX = this.viewerPanX;
+            this.viewerPanStartY = this.viewerPanY;
+          })
+          .onActionUpdate((event: GestureEvent): void => {
+            this.updateViewerPan(this.viewerPanStartX + event.offsetX, this.viewerPanStartY + event.offsetY);
+          }))
       .gesture(GestureGroup(GestureMode.Exclusive,
         LongPressGesture({ fingers: 1, repeat: this.mediaViewerLayout || this.fullscreen || this.inlineVideoHoldPlay, duration: HOLD_SEEK_DURATION_MS })
           .onAction((event: GestureEvent): void => this.onVideoLongPress(event))
@@ -5650,6 +5742,7 @@ export struct PostMedia {
   onViewerDanmakuToggle: () => void = (): void => {};
   onViewerDanmakuSend: () => void = (): void => {};
   onViewerAdvance: () => void = (): void => {};
+  onViewerZoomChanged: (locked: boolean) => void = (_locked: boolean): void => {};
   // Reported by the player that is being held, so the short-video viewer can
   // draw the rate capsule directly under its back/more row.
   onHoldSpeedChanged: (active: boolean, rate: number) => void = (active: boolean, rate: number): void => {};
@@ -6801,6 +6894,7 @@ export struct PostMedia {
               onViewerCastPickerChanged: this.onViewerCastPickerChanged,
               onViewerCastingChanged: this.onViewerCastingChanged,
               mediaViewerLayout: this.mediaViewerLayout,
+              onViewerZoomChanged: this.onViewerZoomChanged,
               landscapePostContent: this.ForwardLandscapePost,
               onViewerBack: this.onViewerBack,
 
