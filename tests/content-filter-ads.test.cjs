@@ -44,24 +44,15 @@ function post(id, label = '') {
     presentation: label ? { labels: [{ kind: label }] } : undefined };
 }
 
-test('ads are hidden by default, while paid promotion disclosures remain', () => {
-  const { contentFilterStore, STORAGE_KEY_FILTER_HIDE_ADS, storage } = fixture();
+test('legacy installations cannot opt back into sponsored posts', () => {
+  const { ContentFilterStore, contentFilterStore, disk, storage } = fixture();
+  disk.set('hide_ads', false);
+  storage.set('harmonyx.filter_hide_ads', false);
   const settings = contentFilterStore.load({});
-  assert.equal(settings.hideAds, true);
-  assert.equal(storage.get(STORAGE_KEY_FILTER_HIDE_ADS), true);
-  assert.deepEqual(contentFilterStore.filter([post('ad', 'ad'), post('paid', 'paid'), post('normal')], settings)
-    .map(item => item.id), ['paid', 'normal']);
-});
-
-test('turning the switch off restores ads and survives reload', () => {
-  const { ContentFilterStore, contentFilterStore, disk } = fixture();
-  const settings = contentFilterStore.load({});
-  settings.hideAds = false;
   assert.equal(contentFilterStore.save({}, settings), true);
-  assert.equal(disk.get('hide_ads'), false);
   const restored = new ContentFilterStore().load({});
-  assert.equal(restored.hideAds, false);
-  assert.equal(contentFilterStore.shouldHide(post('ad', 'ad'), restored), false);
+  assert.deepEqual(contentFilterStore.filter([post('ad', 'ad'), post('paid', 'paid'), post('normal')], restored)
+    .map(item => item.id), ['paid', 'normal']);
 });
 
 test('multiple blocked languages survive restart and match regional tags without hiding unknown media', () => {

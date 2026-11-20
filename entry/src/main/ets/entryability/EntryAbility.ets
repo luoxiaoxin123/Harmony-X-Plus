@@ -1,3 +1,5 @@
+import { xxAuthPopupStore } from '../services/XXAuthPopupStore';
+import { removeLegacySupportData } from '../services/LegacySupportData';
 import { sidebarSettingsStore, SidebarSettings, STORAGE_KEY_SIDEBAR_ORDER, STORAGE_KEY_SIDEBAR_HIDDEN, STORAGE_KEY_SIDEBAR_SEARCH_CAPSULE } from '../services/SidebarSettingsStore';
 import { STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON } from '../services/MediaSettingsStore';
 import { tabOrderSettingsStore, STORAGE_KEY_BOTTOM_TAB_ORDER, STORAGE_KEY_HOME_TAB_ORDER } from '../services/TabOrderSettingsStore';
@@ -18,7 +20,6 @@ import { crashDiagnostics } from '../services/CrashDiagnostics';
 import display from '@ohos.display';
 import UIAbility from '@ohos.app.ability.UIAbility';
 import { startupSession } from '../utils/StartupSession';
-import { SPLASH_OPEN_REQUEST, xxAuthSplashStore } from '../services/XXAuthSplashStore';
 import { videoKeepAwake } from '../services/VideoKeepAwake';
 import { interactionSettingsStore } from '../services/InteractionSettingsStore';
 import { motionSettingsStore } from '../services/MotionSettingsStore';
@@ -203,7 +204,8 @@ export default class EntryAbility extends UIAbility {
     crashDiagnostics.initialize(this.context);
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
     startupSession.cancel();
-    xxAuthSplashStore.beginSession();
+    xxAuthPopupStore.removeLegacyInstallId(this.context);
+    removeLegacySupportData().catch((): void => {});
     this.startupIconReady = this.appIconScheduleStore.applyIfEnabled(this.context);
     try { huaweiCloudSyncService.initialize(this.context); }
     catch (error) { hilog.warn(DOMAIN, TAG, '%{public}s', 'Cloud preferences are temporarily unavailable'); }
@@ -777,9 +779,6 @@ export default class EntryAbility extends UIAbility {
     videoHdrCapability.refresh();
     downloadManager.onForeground(this.context);
     AppStorage.setOrCreate<boolean>('harmonyx.app_foreground', true);
-    if (xxAuthSplashStore.onForeground()) {
-      AppStorage.setOrCreate<number>(SPLASH_OPEN_REQUEST, Date.now());
-    }
     videoKeepAwake.setForeground(true, this.context);
     AppStorage.setOrCreate<number>('harmonyx.foreground_tick', Date.now());
     AppStorage.setOrCreate<number>(STORAGE_KEY_POST_TIME_NOW, Date.now());
@@ -810,7 +809,6 @@ export default class EntryAbility extends UIAbility {
     // window dismissed while the app stays behind stops playback, one that is
     // tapped to return to the app does not.
     AppStorage.setOrCreate<boolean>('harmonyx.app_foreground', false);
-    xxAuthSplashStore.onBackground();
     videoKeepAwake.setForeground(false, this.context);
     AppStorage.setOrCreate<number>('harmonyx.background_tick', Date.now());
     videoPipPlaybackKeeper.resumeAll();

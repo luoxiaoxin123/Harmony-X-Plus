@@ -84,7 +84,6 @@ import type { PostDetailRouteParam } from './PostDetail';
 import {
   ContentFilterSettings,
   contentFilterStore,
-  STORAGE_KEY_FILTER_HIDE_ADS,
   STORAGE_KEY_FILTER_HIDE_REPLIES,
   STORAGE_KEY_FILTER_HIDE_REPOSTS,
   STORAGE_KEY_FILTER_LANGUAGES,
@@ -139,7 +138,6 @@ export struct UserDetail {
   @StorageLink(STORAGE_KEY_FILTER_ONLY_MEDIA) filterOnlyMedia: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPOSTS) filterHideReposts: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPLIES) filterHideReplies: boolean = false;
-  @StorageLink(STORAGE_KEY_FILTER_HIDE_ADS) filterHideAds: boolean = true;
   @StorageProp(STORAGE_KEY_FILTER_LANGUAGES) private filterLanguages: string = '';
   @StorageLink(STORAGE_KEY_FILTER_KEYWORDS) filterKeywords: string = '';
   @StorageLink(STORAGE_KEY_FILTER_MUTED_USERS) filterMutedUsers: string = '';
@@ -339,7 +337,7 @@ export struct UserDetail {
       tab === 0 ? this.filterHideReplies : false,
       this.filterKeywords,
       this.filterMutedUsers,
-      this.filterHideAds, this.filterLanguages
+      this.filterLanguages
     );
   }
 

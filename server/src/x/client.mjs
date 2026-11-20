@@ -20,7 +20,7 @@ export const DEFAULT_FEATURES = {
   android_home_timeline_status_injections_facepile_enabled: true,
   grok_translations_post_auto_translation_is_enabled: true,
   reply_dislike_android_enabled: true,
-  x_lite_quick_promote_analytics_banner_enabled: true,
+  x_lite_quick_promote_analytics_banner_enabled: false,
   responsive_web_graphql_exclude_directive_enabled: true,
   responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
   responsive_web_graphql_timeline_navigation_enabled: true,

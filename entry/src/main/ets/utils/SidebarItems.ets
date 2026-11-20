@@ -4,16 +4,16 @@ export const DEFAULT_SIDEBAR_HIDDEN: string = 'home,explore,messages';
 
 export const SIDEBAR_ITEM_IDS: string[] = ['home', 'explore', 'messages', 'profile',
   'notifications', 'follow', 'premium', 'communities', 'bookmarks', 'history', 'lists', 'spaces',
-  'grok', 'groups', 'studio', 'support', 'help'];
+  'grok', 'groups', 'studio', 'help'];
 
 export function sidebarOrderedIds(order: string): string[] {
   const main: string[] = orderedTabIds(order, SIDEBAR_ITEM_IDS)
     .filter((id: string): boolean => !sidebarFooterItem(id));
-  return [...main, 'support', 'help'];
+  return [...main, 'help'];
 }
 
 export function sidebarFooterItem(id: string): boolean {
-  return id === 'support' || id === 'help';
+  return id === 'help';
 }
 
 export function sidebarMainIds(order: string, hidden: string): string[] {
@@ -41,7 +41,6 @@ export function sidebarItemLabel(id: string): Resource {
   if (id === 'grok') { return $r('app.string.grok_title'); }
   if (id === 'groups') { return $r('app.string.account_groups_title'); }
   if (id === 'studio') { return $r('app.string.side_creator_studio'); }
-  if (id === 'support') { return $r('app.string.side_support'); }
   return $r('app.string.side_help');
 }
 
@@ -61,6 +60,5 @@ export function sidebarItemIcon(id: string): Resource {
   if (id === 'grok') { return $r('sys.symbol.wand_and_stars'); }
   if (id === 'groups') { return $r('sys.symbol.person_2'); }
   if (id === 'studio') { return $r('sys.symbol.rectangle_3_group'); }
-  if (id === 'support') { return $r('sys.symbol.heart_fill'); }
   return $r('sys.symbol.questionmark_circle');
 }

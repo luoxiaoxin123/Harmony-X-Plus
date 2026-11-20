@@ -53,26 +53,6 @@
       "value": "随当前图标播放专属开场动画，结束后显示首页。"
     },
     {
-      "name": "splash_ad_label",
-      "value": "广告"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "跳过"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "与你喜欢的世界相遇"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "云端账号绑定配置异常，请联系作者核对。"
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "应用内切回原账号会恢复已保存的状态。换设备、重装或切换应用版本后，请登录同一 X 账号并输入原兑换码恢复。"
-    },
-    {
       "name": "eye_reading_title",
       "value": "眼动翻页"
     },
@@ -421,112 +401,8 @@
       "value": "最近阅读"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "7 天内不再显示"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "本次关闭"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "请先登录 X 账号，兑换码会绑定到当前账号。"
-    },
-    {
-      "name": "supporter_account",
-      "value": "兑换码将绑定到 @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "无法安全保存支持者凭证，请稍后重试。"
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "暂时无法验证，请稍后重试。已有且未到期的免推荐状态仍会保留。"
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "兑换码无效、已到期、已停用或已绑定其他 X 账号，请联系作者核对。"
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "刷新支持者状态"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "正在验证…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "激活免推荐"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "输入支持者兑换码"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "有效至 %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "感谢支持！免推荐已生效。"
-    },
-    {
-      "name": "supporter_description",
-      "value": "支持作者后，可凭作者核对收款后发放的兑换码激活免推荐。每个兑换码绑定一个 X 账号，激活后隐藏应用推荐和推广 Banner，公告与版本更新照常显示。"
-    },
-    {
-      "name": "supporter_title",
-      "value": "支持者 · 免推荐"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "支持 Harmony X 作者"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "发现更多好应用"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "查看应用推荐"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "不再提醒"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "跳转前往"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "暂未完成免提醒设置，请稍后重试。"
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "应用推荐"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "拾刻水印"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "发现更多好应用。拾刻水印专注于照片水印创作，提供明星、旅行、古城、山海与森林等原创水印样式。"
-    },
-    {
       "name": "xxauth_close",
       "value": "关闭"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "3 天内不提醒"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "立即体验"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "检查适用于 HarmonyOS 的更新"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "当前没有需要提示的更新"
-    },
-    {
       "name": "xxauth_empty",
       "value": "暂无内容"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "重试"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "此版本需要更新后才能继续使用，请打开下载链接完成更新。"
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "帮助中心"
     },
     {
-      "name": "side_support",
-      "value": "支持 Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "遇到问题、想提出建议，或愿意支持项目，都可以在这里找到入口。"
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "无法打开 Telegram 群邀请，请稍后重试"
-    },
-    {
-      "name": "help_support_title",
-      "value": "赞助作者"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "作者持续投入时间和精力进行功能开发与 API 测试。若这款应用对你有帮助，欢迎自愿支持；无论是否赞助，都感谢你的使用。"
-    },
-    {
-      "name": "help_support_scan",
-      "value": "使用微信或支付宝扫描下方二维码即可支持。"
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "微信支付"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "支付宝"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "这些规则只影响本机显示，不会取消关注、拉黑或修改 X 账号设置。"
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "关闭广告"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "隐藏 X 标记为广告的帖子。"
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "娱乐"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "推广"
     },
     {
       "name": "explore_section_unavailable",
@@ -9585,10 +9417,6 @@
       "value": "在首页标题栏显示空间状态；关闭后可在此重新开启。"
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "照片和视频纯黑背景"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "保存后，DoH 解析失败会停止相应请求，不会自动回退到系统 DNS。关闭 DoH 并保存可恢复系统解析。所有更改均在保存后生效。"
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "爱发电"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "扫码支持开发"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "永久免推荐 · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "在爱发电购买永久免推荐卡密，购买后返回应用兑换即可。"
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "前往爱发电购买"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "点击展开"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "点击收起"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "使用对应的支付应用扫描收款码。"
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "推荐"
     },
     {
       "name": "dns_x_test",

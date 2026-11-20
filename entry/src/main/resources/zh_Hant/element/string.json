@@ -53,26 +53,6 @@
       "value": "隨目前圖示播放專屬開場動畫，結束後顯示首頁。"
     },
     {
-      "name": "splash_ad_label",
-      "value": "廣告"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "略過"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "與你喜歡的世界相遇"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "雲端帳號綁定設定異常，請聯絡作者核對。"
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "在應用程式內切回原帳號會恢復已儲存的狀態。更換裝置、重新安裝或切換應用程式版本後，請登入同一 X 帳號並輸入原兌換碼恢復。"
-    },
-    {
       "name": "eye_reading_title",
       "value": "眼動翻頁"
     },
@@ -421,112 +401,8 @@
       "value": "最近閱讀"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "7 天內不再顯示"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "本次關閉"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "請先登入 X 帳號，兌換碼會綁定到目前帳號。"
-    },
-    {
-      "name": "supporter_account",
-      "value": "兌換碼將綁定到 @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "無法安全儲存支持者憑證，請稍後重試。"
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "暫時無法驗證，請稍後重試。已有且未到期的免推薦狀態仍會保留。"
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "兌換碼無效、已到期、已停用或已綁定其他 X 帳號，請聯絡作者核對。"
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "重新整理支持者狀態"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "正在驗證…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "啟用免推薦"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "輸入支持者兌換碼"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "有效至 %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "感謝支持！免推薦已生效。"
-    },
-    {
-      "name": "supporter_description",
-      "value": "支持作者後，可憑作者核對收款後發放的兌換碼啟用免推薦。每個兌換碼綁定一個 X 帳號，啟用後隱藏應用推薦和推廣 Banner，公告與版本更新照常顯示。"
-    },
-    {
-      "name": "supporter_title",
-      "value": "支持者 · 免推薦"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "支持 Harmony X 作者"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "发现更多好应用"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "查看应用推荐"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "不再提醒"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "跳转前往"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "暂未完成免提醒设置，请稍后重试。"
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "應用推薦"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "拾刻浮水印"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "發現更多好應用。拾刻浮水印專注於照片浮水印創作，提供明星、旅行、古城、山海與森林等原創樣式。"
-    },
-    {
       "name": "xxauth_close",
       "value": "關閉"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "3 天內不再提醒"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "立即體驗"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "檢查適用於 HarmonyOS 的更新"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "目前沒有需要提示的更新"
-    },
-    {
       "name": "xxauth_empty",
       "value": "暫無內容"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "重試"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "此版本需要更新後才能繼續使用，請開啟下載連結完成更新。"
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "幫助中心"
     },
     {
-      "name": "side_support",
-      "value": "支援 Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "遇到問題、想提出建議，或願意支援專案，都可以在這裡找到入口。"
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "無法開啟 Telegram 群邀請，請稍後重試"
-    },
-    {
-      "name": "help_support_title",
-      "value": "贊助作者"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "作者持續投入時間和精力進行功能開發與 API 測試。若這款應用程式對你有幫助，歡迎自願支援；無論是否贊助，都感謝你的使用。"
-    },
-    {
-      "name": "help_support_scan",
-      "value": "使用微信或支付寶掃描下方二維碼即可支援。"
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "微信支付"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "支付寶"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "這些規則只影響此裝置的顯示，不會取消追蹤、封鎖帳號或修改 X 帳號設定。"
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "關閉廣告"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "隱藏 X 標記為廣告的貼文。"
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "娛樂"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "推廣"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "在首頁標題列顯示音訊空間狀態；關閉後可在此重新開啟。"
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "照片和影片純黑背景"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "儲存後，DoH 解析失敗會停止相應請求，不會自動退回系統 DNS。關閉 DoH 並儲存可恢復系統解析。所有變更均在儲存後生效。"
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "愛發電"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "掃碼支持開發"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "永久免推薦 · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "在愛發電購買永久免推薦卡密，購買後返回應用兌換即可。"
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "前往愛發電購買"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "點擊展開"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "點擊收起"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "使用對應的支付應用掃描收款碼。"
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "推薦"
     },
     {
       "name": "dns_x_test",

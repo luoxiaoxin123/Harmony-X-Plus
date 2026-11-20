@@ -29,10 +29,10 @@ export struct StartupBrand {
         Image(this.foreground()).width(36).height(36).objectFit(ImageFit.Contain)
           .colorFilter(this.markColorFilter()).accessibilityLevel('no')
         Column({ space: 3 }) {
-          Text($r('app.string.EntryAbility_label')).fontSize($r('app.float.splash_ad_brand_size'))
+          Text($r('app.string.EntryAbility_label')).fontSize($r('app.float.startup_brand_size'))
             .fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary')).maxLines(1)
-          Text(this.subtitle).fontSize($r('app.float.splash_ad_caption_size'))
-            .fontColor($r('app.color.splash_ad_muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.subtitle).fontSize($r('app.float.startup_brand_caption_size'))
+            .fontColor($r('app.color.startup_brand_caption_color')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       }.width('100%').height('100%')
     } else {

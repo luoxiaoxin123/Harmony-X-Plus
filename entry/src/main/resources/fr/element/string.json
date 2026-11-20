@@ -53,26 +53,6 @@
       "value": "Lance une animation adaptée à l’icône actuelle, puis affiche l’accueil."
     },
     {
-      "name": "splash_ad_label",
-      "value": "Publicité"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "Passer"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "Rencontrez un monde à aimer"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "La liaison du compte dans le cloud n’a pas pu être confirmée. Contactez l’auteur."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "Revenir à un compte restaure son statut enregistré. Sur un nouvel appareil, après réinstallation ou dans une autre version, connectez-vous au même compte X et saisissez votre code d’origine pour rétablir l’accès."
-    },
-    {
       "name": "eye_reading_title",
       "value": "Lecture par le regard"
     },
@@ -421,112 +401,8 @@
       "value": "Recently read"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "Centre d'aide"
     },
     {
-      "name": "side_support",
-      "value": "Soutenir Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "Retrouvez ici où poser vos questions, proposer des idées et soutenir le projet."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "Impossible d'ouvrir l'invitation Telegram. Réessayez plus tard."
-    },
-    {
-      "name": "help_support_title",
-      "value": "Soutenir l'auteur"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "L'auteur consacre du temps et des frais de test API à ce projet. Si l'application vous est utile, vous pouvez le soutenir librement. Merci de l'utiliser, dans tous les cas."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "Scannez l'un des codes QR avec WeChat ou Alipay pour soutenir le projet."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "Ces filtres modifient uniquement l'affichage sur cet appareil. Ils ne désabonnent ni ne bloquent personne et ne changent pas votre compte X."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "Masquer les publicités"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "Masque les publications signalées comme publicités par X."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "Divertissement"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "Sponsorisé"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "Afficher les Spaces dans l’en-tête de l’accueil. Vous pouvez réactiver la capsule ici après l’avoir masquée."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "Fond noir pour les photos et vidéos"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "Scanner pour soutenir le développement"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "Sans recommandations à vie · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "Achetez un code permanent sans recommandations sur Afdian, puis revenez dans l’application pour l’activer."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "Acheter sur Afdian"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "Appuyer pour déplier"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "Appuyer pour replier"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "Scannez ce code avec l’application de paiement correspondante."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "Recommandé"
     },
     {
       "name": "dns_x_test",

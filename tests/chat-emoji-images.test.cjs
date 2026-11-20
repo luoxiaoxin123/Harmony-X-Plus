@@ -29,7 +29,9 @@ test('every Unicode 17 picker entry renders as one bundled unmodified graphic', 
   assert.equal(provenance.pickerEmojiCount, 3944);
   assert.equal(provenance.emojiCount, JSON.parse(fs.readFileSync(raw + 'chat-twemoji-17.json', 'utf8')).length);
   for (const asset of provenance.assets) {
-    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(raw + 'chat-twemoji/' + asset.file + '.svg')).digest('hex'), asset.sha256);
+    // Git's Windows checkout can convert the few SVGs with line breaks to CRLF.
+    const svg = fs.readFileSync(raw + 'chat-twemoji/' + asset.file + '.svg', 'utf8').replace(/\r\n/g, '\n');
+    assert.equal(crypto.createHash('sha256').update(svg).digest('hex'), asset.sha256, asset.file);
   }
   assert(fs.readFileSync(raw + 'chat-twemoji-LICENSE.txt', 'utf8').includes('Attribution 4.0 International'));
 });

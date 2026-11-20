@@ -360,10 +360,6 @@
     "value": "Help Center"
   },
   {
-    "name": "side_support",
-    "value": "Support Harmony X"
-  },
-  {
     "name": "help_intro",
     "value": "Find a place for questions, ideas, and ways to support this project."
   },
@@ -422,26 +418,6 @@
   {
     "name": "help_tg_group_failed",
     "value": "Unable to open the Telegram group invite. Please try again later."
-  },
-  {
-    "name": "help_support_title",
-    "value": "Support the author"
-  },
-  {
-    "name": "help_support_desc",
-    "value": "The author invests time and API testing costs in this project. If this app helps you, voluntary support is welcome. Thank you for using it either way."
-  },
-  {
-    "name": "help_support_scan",
-    "value": "Scan either QR code with WeChat or Alipay to support the project."
-  },
-  {
-    "name": "help_support_wechat",
-    "value": "WeChat Pay"
-  },
-  {
-    "name": "help_support_alipay",
-    "value": "Alipay"
   },
   {
     "name": "settings_account",
@@ -2018,10 +1994,6 @@
   {
     "name": "explore_category_entertainment",
     "value": "Entertainment"
-  },
-  {
-    "name": "explore_promoted",
-    "value": "Promoted"
   },
   {
     "name": "explore_section_unavailable",

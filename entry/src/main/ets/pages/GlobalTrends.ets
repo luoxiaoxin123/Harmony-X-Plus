@@ -117,7 +117,6 @@ export struct GlobalTrendsPageView {
       AppStorage.get<boolean>('harmonyx.filter_hide_replies') ?? false,
       AppStorage.get<string>('harmonyx.filter_keywords') ?? '',
       AppStorage.get<string>('harmonyx.filter_muted_users') ?? '',
-      AppStorage.get<boolean>('harmonyx.filter_hide_ads') ?? true,
       AppStorage.get<string>('harmonyx.filter_languages') ?? '');
     this.visiblePosts = contentFilterStore.filter(this.posts, settings);
   }

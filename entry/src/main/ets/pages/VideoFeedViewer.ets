@@ -15,7 +15,6 @@ import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '
 import { pageSystemTransition } from '../utils/PageTransition';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
-import { PostAdLabel } from '../components/PostAdLabel';
 import { verificationBadgeColor } from '../utils/UserIdentity';
 import { ProxyAvatar } from '../components/ProxyAvatar';
 import { DEFAULT_SHEET_MATERIAL_ENABLED, DEFAULT_SHEET_MATERIAL_LEVEL, STORAGE_KEY_SHEET_MATERIAL_ENABLED, STORAGE_KEY_SHEET_MATERIAL_LEVEL } from '../services/SheetMaterialSettingsStore';
@@ -86,7 +85,6 @@ import { STORAGE_KEY_DESKTOP_VIDEO_LAYOUT,
   DESKTOP_VIDEO_LAYOUT_SPLIT, DESKTOP_VIDEO_LAYOUT_FEED } from '../services/LayoutSettingsStore';
 import { VideoRecommendationStream, VideoRecommendationPage } from '../services/VideoRecommendationStream';
 import { postModerationStore } from '../services/PostModerationStore';
-import { STORAGE_KEY_FILTER_HIDE_ADS } from '../services/ContentFilterStore';
 import { isAdPost } from '../utils/PostDisclosure';
 import { VideoFeedDataSource, VideoFeedItem } from '../services/VideoFeedDataSource';
 import { postShareUrl, sharePost } from '../utils/SharePost';
@@ -193,7 +191,6 @@ export struct VideoFeedViewer {
   @StorageProp('harmonyx.display_mode') private themeDisplayMode: string = '';
   @StorageProp('harmonyx.dark_surface') private themeDarkSurface: string = '';
   @StorageLink(STORAGE_KEY_CONTENT_FONT_FAMILY) private contentFontFamily: string = DEFAULT_CONTENT_FONT_FAMILY;
-  @StorageLink(STORAGE_KEY_FILTER_HIDE_ADS) private filterHideAds: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_IMMERSIVE_FILL) videoImmersiveFill: boolean = false;
   @StorageProp(STORAGE_KEY_MEDIA_VIEWER_BLACK_BACKGROUND) mediaViewerBlackBackground: boolean = false;
   @StorageLink(STORAGE_KEY_VIDEO_FEED_CONTROLS_ALWAYS_VISIBLE)
@@ -363,7 +360,7 @@ export struct VideoFeedViewer {
     const requestedId: string = param.tweets[param.index]?.id ?? '';
     for (let i: number = 0; i < param.tweets.length; i++) {
       const tweet: Tweet = param.tweets[i];
-      if (this.filterHideAds && isAdPost(tweet.presentation)) { continue; }
+      if (isAdPost(tweet.presentation)) { continue; }
       const videos: MediaAttachment[] = this.videoAttachments(tweet, i === param.index && param.startPlaying === true);
       if (videos.length > 0) {
         next.push(new VideoFeedItem(tweet, this.focusedVideo(videos, i, param), next.length));
@@ -942,7 +939,7 @@ export struct VideoFeedViewer {
     const added: VideoFeedItem[] = [];
     const batchIds: Set<string> = new Set<string>();
     for (const tweet of tweets) {
-      if (postModerationStore.hidden(tweet) || this.filterHideAds && isAdPost(tweet.presentation)) { continue; }
+      if (postModerationStore.hidden(tweet) || isAdPost(tweet.presentation)) { continue; }
       for (const media of this.videoAttachments(tweet)) {
         if (this.items.some((item: VideoFeedItem): boolean =>
           item.attachments.some((existing: MediaAttachment): boolean => existing.id === media.id)) ||
@@ -1503,7 +1500,6 @@ export struct VideoFeedViewer {
         fallbackText: tweet.author.name.substring(0, 1).toUpperCase(),
         fallbackColor: tweet.author.avatarColor
       }).onClick((): void => this.openAuthorProfile(tweet))
-      PostAdLabel({ presentation: tweet.presentation })
       Column({ space: 1 }) {
         Row({ space: 4 }) {
           Text(tweet.author.name).fontFamily(this.appFontFamily)
@@ -2337,7 +2333,6 @@ export struct VideoFeedViewer {
         }.layoutWeight(1).height($r('app.float.compact_video_bottom_action_height'))
           .accessibilityText(tweet.author.name).monopolizeEvents(true)
           .onClick((): void => this.openAuthorProfile(tweet))
-        PostAdLabel({ presentation: tweet.presentation })
         if (!this.isOwnPost(tweet)) {
           MaterialButton({ nativeMaterialHost: true, buttonWidth: $r('app.float.compact_video_bottom_follow_width'),
             buttonHeight: $r('app.float.compact_video_bottom_action_height'),

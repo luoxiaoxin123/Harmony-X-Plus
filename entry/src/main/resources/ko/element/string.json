@@ -53,26 +53,6 @@
       "value": "현재 아이콘에 맞는 전용 애니메이션을 재생한 후 홈을 표시합니다."
     },
     {
-      "name": "splash_ad_label",
-      "value": "광고"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "건너뛰기"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "좋아하는 세상을 만나다"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "클라우드 계정 연결을 확인할 수 없습니다. 개발자에게 문의하세요."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "기존 계정으로 전환하면 저장된 상태가 복원됩니다. 새 기기, 재설치 또는 다른 앱 버전에서는 같은 X 계정으로 로그인하고 기존 코드를 입력해 복원하세요."
-    },
-    {
       "name": "eye_reading_title",
       "value": "시선으로 페이지 넘기기"
     },
@@ -421,112 +401,8 @@
       "value": "최근 읽은 글"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "고객센터"
     },
     {
-      "name": "side_support",
-      "value": "Harmony X 후원"
-    },
-    {
       "name": "help_intro",
       "value": "질문과 아이디어를 나누고 프로젝트를 후원할 수 있어요."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "Telegram 그룹 초대를 열 수 없어요. 나중에 다시 시도해 주세요."
-    },
-    {
-      "name": "help_support_title",
-      "value": "개발자 후원"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "이 프로젝트에는 개발 시간과 API 테스트 비용이 들어요. 앱이 도움이 되었다면 부담 없는 만큼 후원해 주세요. 후원 여부와 관계없이 이용해 주셔서 감사합니다."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "WeChat이나 Alipay로 QR 코드를 스캔해 프로젝트를 후원할 수 있어요."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "이 기기에 표시되는 내용만 바뀌어요. 언팔로우, 차단 또는 X 계정 설정 변경은 하지 않아요."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "광고 숨기기"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "X에서 광고로 표시한 게시물을 숨깁니다."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "엔터테인먼트"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "프로모션"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "홈 제목 표시줄에 스페이스 상태를 표시합니다. 숨긴 후에는 여기서 캡슐을 다시 켤 수 있습니다."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "사진 및 동영상 검은 배경"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "스캔하여 개발 후원"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "추천 영구 비활성화 · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "Afdian에서 추천을 영구 비활성화하는 코드를 구매한 후 앱으로 돌아와 등록하세요."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "Afdian에서 구매"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "눌러서 펼치기"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "눌러서 접기"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "해당 결제 앱으로 이 결제 코드를 스캔하세요."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "추천"
     },
     {
       "name": "dns_x_test",

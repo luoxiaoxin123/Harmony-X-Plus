@@ -54,9 +54,6 @@ export interface MediaAttachment {
   videoVariants?: VideoRendition[];
   // X supplies duration in its video metadata. Unknown duration is zero.
   durationMs?: number;
-  // Opt-in length chip on the tile; only promoted media turns it on, so the
-  // ordinary feed keeps its current look.
-  showDurationBadge?: boolean;
   previewUrl: string;
   width: number;
   height: number;

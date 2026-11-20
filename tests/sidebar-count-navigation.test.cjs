@@ -102,14 +102,15 @@ test('Home, Explore and Messages default off while explicit user visibility choi
   assert.equal(new mod.SidebarSettingsStore().load({}).hidden, '');
 });
 
-test('support and help remain in the footer partition even after an old saved order moves them first', () => {
+test('old sidebar orders drop the donation entry and keep help in the footer', () => {
   const mod = fixture().load('utils/SidebarItems');
   const order = mod.sidebarOrderedIds('help,support,messages,profile');
-  assert.deepEqual(order.slice(-2), ['support', 'help']);
+  assert.equal(order.at(-1), 'help');
+  assert.equal(order.includes('support'), false);
   assert.deepEqual(order.slice(0, 2), ['messages', 'profile']);
   assert.equal(mod.sidebarMainIds(order.join(','), '').includes('support'), false);
   assert.equal(mod.sidebarMainIds(order.join(','), '').includes('help'), false);
-  assert.equal(mod.sidebarVisibleIds(order.join(','), 'support').includes('support'), false);
+  assert.equal(mod.sidebarVisibleIds(order.join(','), 'support').includes('help'), true);
 });
 
 test('failed sidebar writes retain the prior saved and published configuration', () => {

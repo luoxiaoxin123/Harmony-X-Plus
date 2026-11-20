@@ -334,7 +334,7 @@ export class XPrivateClient {
       'android_home_timeline_status_injections_facepile_enabled': true,
       'grok_translations_post_auto_translation_is_enabled': true,
       'reply_dislike_android_enabled': true,
-      'x_lite_quick_promote_analytics_banner_enabled': true
+      'x_lite_quick_promote_analytics_banner_enabled': false
     };
     return flags;
   }
@@ -783,7 +783,7 @@ export class XPrivateClient {
     }
     const variables: Record<string, Object> = {};
     if (name === 'TweetResultByRestId') {
-      variables['tweetId'] = id; variables['includePromotedContent'] = true;
+      variables['tweetId'] = id; variables['includePromotedContent'] = false;
       variables['withBirdwatchNotes'] = true; variables['withVoice'] = true; variables['withCommunity'] = true;
     } else if (name === 'BroadcastQuery') { variables['id'] = id; }
     else if (name === 'ArticleEntityResultByRestId') { variables['articleEntityId'] = id; }
@@ -1252,7 +1252,7 @@ export class XPrivateClient {
   async immersiveMedia(seedTweetId: string, pageName: string = ''): Promise<XPrivateResult> {
     if (!/^\d+$/.test(seedTweetId)) { return new XPrivateResult(false, 0, '', 'invalid_seed', 'ImmersiveMedia'); }
     const variables: Record<string, Object> = { 'pinned_tweet_id': seedTweetId,
-      'includePromotedContent': true };
+      'includePromotedContent': false };
     if (pageName.length > 0) { variables['page_name'] = pageName; }
     return await this.immersiveWebGraphql('ImmersiveMedia', IMMERSIVE_MEDIA_QUERY_ID, variables);
   }
@@ -1262,7 +1262,7 @@ export class XPrivateClient {
       return new XPrivateResult(false, 0, '', 'missing_video_timeline', 'GenericTimelineById');
     }
     const variables: Record<string, Object> = { 'timelineId': timelineId, 'cursor': cursor,
-      'count': count, 'withQuickPromoteEligibilityTweetFields': true };
+      'count': count, 'withQuickPromoteEligibilityTweetFields': false };
     return await this.immersiveWebGraphql('GenericTimelineById', IMMERSIVE_TIMELINE_QUERY_ID, variables);
   }
 
@@ -1332,9 +1332,9 @@ export class XPrivateClient {
       'focalTweetId': tweetId,
       'with_rux_injections': false,
       'rankingMode': rankingMode === 'Recency' ? 'Recency' : 'Relevance',
-      'includePromotedContent': true,
+      'includePromotedContent': false,
       'withCommunity': true,
-      'withQuickPromoteEligibilityTweetFields': true,
+      'withQuickPromoteEligibilityTweetFields': false,
       'withBirdwatchNotes': true,
       'withVoice': true
     };

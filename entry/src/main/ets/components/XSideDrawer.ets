@@ -190,10 +190,6 @@ export struct XSideDrawer {
         }.width('100%').id('sidebar-item-' + id)
       }, (id: string): string => id)
       Divider().color($r('app.color.divider')).margin({ top: 8, bottom: 8 })
-      if (sidebarVisibleIds(this.itemOrder, this.hiddenItems).indexOf('support') >= 0) {
-        Column() { this.DrawerItem(sidebarItemIcon('support'), sidebarItemLabel('support'), (): void => this.onMenu('support')) }
-          .width('100%').id('sidebar-item-support')
-      }
       this.DrawerItem($r('sys.symbol.gearshape'), $r('app.string.settings_title'), (): void => this.onSettings())
       if (sidebarVisibleIds(this.itemOrder, this.hiddenItems).indexOf('help') >= 0) {
         Column() { this.DrawerItem(sidebarItemIcon('help'), sidebarItemLabel('help'), (): void => this.onMenu('help')) }

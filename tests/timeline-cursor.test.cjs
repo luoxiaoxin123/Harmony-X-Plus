@@ -27,7 +27,7 @@ new Function('require', 'module', 'exports', output)(
       return result.exports;
     }
     if (id === './XPostCardParser' || id === './XPollRequest') return require('./post-card-fixture.cjs');
-    if (id === './XArticleParser' || id === './XPostPresentationParser' || id === '../utils/UserIdentity') {
+    if (id === './XArticleParser' || id === './XPostPresentationParser' || id === '../utils/UserIdentity' || id === '../utils/PostDisclosure') {
       return require('./post-card-fixture.cjs').load(id.startsWith('../utils/') ? 'utils/' + id.slice(9) : 'services/' + id.slice(2));
     }
     throw new Error('Unexpected dependency: ' + id);

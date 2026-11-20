@@ -53,26 +53,6 @@
       "value": "Показать анимацию текущего значка, затем открыть главную страницу."
     },
     {
-      "name": "splash_ad_label",
-      "value": "Реклама"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "Пропустить"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "Откройте любимый мир"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "Не удалось подтвердить привязку аккаунта в облаке. Обратитесь к разработчику."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "При возврате к аккаунту восстанавливается его сохранённый статус. На новом устройстве, после переустановки или в другой версии войдите в тот же аккаунт X и введите исходный код для восстановления доступа."
-    },
-    {
       "name": "eye_reading_title",
       "value": "Чтение с управлением взглядом"
     },
@@ -421,112 +401,8 @@
       "value": "Recently read"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "Справочный центр"
     },
     {
-      "name": "side_support",
-      "value": "Поддержать Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "Здесь можно задать вопрос, поделиться идеей и поддержать проект."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "Не удалось открыть приглашение Telegram. Попробуйте позже."
-    },
-    {
-      "name": "help_support_title",
-      "value": "Поддержать автора"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "Автор тратит время и средства на проверку API. Если приложение полезно, вы можете поддержать его добровольно. Спасибо, что пользуетесь им."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "Отсканируйте любой QR-код в WeChat или Alipay, чтобы поддержать проект."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "Фильтры меняют только отображение на этом устройстве. Подписки, блокировки и настройки X не изменяются."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "Скрывать рекламу"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "Скрывать публикации, помеченные X как реклама."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "Развлечения"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "Реклама"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "Показывать Пространства в заголовке главной страницы. После скрытия капсулу можно включить здесь."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "Чёрный фон фото и видео"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "Сканируйте, чтобы поддержать разработку"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "Навсегда без рекомендаций · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "Купите постоянный код отключения рекомендаций на Afdian и вернитесь в приложение, чтобы активировать его."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "Купить на Afdian"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "Нажмите, чтобы развернуть"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "Нажмите, чтобы свернуть"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "Сканируйте код подходящим платёжным приложением."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "Рекомендуем"
     },
     {
       "name": "dns_x_test",

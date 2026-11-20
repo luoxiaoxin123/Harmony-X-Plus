@@ -1,13 +1,11 @@
 import { STORAGE_KEY_SIDEBAR_SEARCH_CAPSULE } from '../services/SidebarSettingsStore';
 import { CrashRecoveryNotice } from '../components/CrashRecoveryNotice';
 import { crashDiagnostics } from '../services/CrashDiagnostics';
-import { SupportBuilder, SupporterAccessBuilder } from './Support';
 import { mediaViewerNavigationTransition } from '../utils/MediaViewerNavigation';
 import { PostTranslationOptionsHost } from '../components/PostTranslationOptionsHost';
 import { SecureMediaSaveHost } from '../components/SecureMediaSaveHost';
 import { AboutAccountBuilder } from './AboutAccount';
-import { StartupLaunchCover } from '../components/StartupLaunchCover';
-import { SPLASH_OPEN_REQUEST } from '../services/XXAuthSplashStore';
+import { StartupCover } from '../components/StartupCover';
 import { startupSession } from '../utils/StartupSession';
 import { orderedTabIds } from '../utils/TabOrder';
 import { STORAGE_KEY_BOTTOM_TAB_ORDER, STORAGE_KEY_HOME_TAB_ORDER } from '../services/TabOrderSettingsStore';
@@ -89,10 +87,6 @@ import { OnboardingGuide } from '../components/OnboardingGuide';
 import { MaterialButton } from '../components/MaterialButton';
 import { NewPostsPill } from '../components/NewPostsPill';
 import { TimelinePageDataSource, TimelinePageItem } from '../utils/TimelinePageDataSource';
-import { PromotionPostCard } from '../components/PromotionPostCard';
-import { XXAuthPromotionPlan, XXAuthPromotionPost } from '../services/XXAuthPromotionPost';
-import { XXAuthPromotionInjector, XXAuthPromotionSlot } from '../utils/XXAuthPromotionInjector';
-import { XXAUTH_PROMOTION_POST, xxAuthPopupStore } from '../services/XXAuthPopupStore';
 import { HomeSpacePill } from '../components/HomeSpacePill';
 import { RootBottomTabItem } from '../components/RootBottomTabItem';
 import { RootSplitNavigation } from '../components/RootSplitNavigation';
@@ -382,7 +376,6 @@ import {
 import {
   ContentFilterSettings,
   contentFilterStore,
-  STORAGE_KEY_FILTER_HIDE_ADS,
   STORAGE_KEY_FILTER_HIDE_REPLIES,
   STORAGE_KEY_FILTER_HIDE_REPOSTS,
   STORAGE_KEY_FILTER_LANGUAGES,
@@ -400,15 +393,6 @@ import {
 import { midAutumnGreetingStore } from '../services/MidAutumnGreetingStore';
 import { materialModifier } from '../utils/SystemMaterial';
 
-// One row of a search-result timeline: either a real post or an injected
-// recommendation. Keeping both in one list is what lets a promotion sit at any
-// position without a second scroll container.
-class SearchTimelineRow {
-  key: string = '';
-  tweet: Tweet | null = null;
-  promotion: XXAuthPromotionPost | null = null;
-}
-
 // The WaterFlow key list and item builder may observe adjacent search-tab
 // states while a swipe is settling. Keep the row type with its payload so a
 // stale numeric index can never reinterpret a user row as a post or return an
@@ -416,7 +400,6 @@ class SearchTimelineRow {
 class SearchResultRow {
   key: string = '';
   tweet: Tweet | null = null;
-  promotion: XXAuthPromotionPost | null = null;
   user: UserRow | null = null;
 }
 
@@ -684,7 +667,7 @@ struct Index {
   @State private exploreTrendItems: XExploreTrend[] = [];
   @State private exploreHomeCards: XExploreTimelineCard[] = [];
   @State private exploreHero: XExploreHero | null = null;
-  // The promoted Explore hero always begins without sound. Its own glass
+  // The Explore hero always begins without sound. Its own glass
   // control owns this state rather than inheriting the timeline preference.
   @State private exploreHeroMuted: boolean = true;
   @State private exploreFrameCount: number = 0;
@@ -741,8 +724,6 @@ struct Index {
   messageLaunchRequest: number = 0;
   @State private showLinkPreview: boolean = false;
   @State private showStartupCover: boolean = startupSession.claimCover();
-  @State private startupFromForeground: boolean = false;
-  @StorageProp(SPLASH_OPEN_REQUEST) @Watch('onSplashOpenRequested') private splashOpenRequest: number = 0;
   @State private showOnboardingGuide: boolean = true;
   @State private onboardingLoginOnly: boolean = false;
   @State private onboardingAddAccount: boolean = false;
@@ -932,7 +913,6 @@ struct Index {
   @StorageLink(STORAGE_KEY_FILTER_ONLY_MEDIA) filterOnlyMedia: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPOSTS) filterHideReposts: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPLIES) filterHideReplies: boolean = false;
-  @StorageLink(STORAGE_KEY_FILTER_HIDE_ADS) filterHideAds: boolean = true;
   @StorageProp(STORAGE_KEY_FILTER_LANGUAGES) private filterLanguages: string = '';
   @StorageLink(STORAGE_KEY_FILTER_KEYWORDS) filterKeywords: string = '';
   @StorageLink(STORAGE_KEY_FILTER_MUTED_USERS) filterMutedUsers: string = '';
@@ -942,7 +922,6 @@ struct Index {
     AppStorage.get<number>('harmonyx.status_bar_height') ?? 0;
   @StorageProp('harmonyx.navigation_indicator_height') navigationIndicatorHeight: number =
     AppStorage.get<number>('harmonyx.navigation_indicator_height') ?? 0;
-  @StorageProp(XXAUTH_PROMOTION_POST) @Watch('onPromotionPostChanged') promotionPostJson: string = '';
   private api: XApiClient = new XApiClient();
   // Private-interface client (cookie session). Independent from `api`, which
   // speaks the official OAuth API; whichever one has credentials supplies the
@@ -1514,27 +1493,10 @@ struct Index {
     return ResponsiveLayout.isLarge(this.videoLayoutBreakpoint || this.breakpoint);
   }
 
-  private startupAdAllowed(): boolean {
-    if (crashDiagnostics.pendingReport()) { return false; }
-    return !this.showOnboardingGuide && !this.showLoginSheet && !this.showChatUnlock &&
-      !this.showMidAutumnGreeting && !this.photoOverlayOpen && !this.showLinkPreview &&
-      !this.showSpacePreview && !this.showPauseTopics && !this.showFollowingOrder && !this.showHomeSourceOptions &&
-      !(this.showSideDrawer && !this.isLargeScreen()) && this.externalShareRequest.length === 0 &&
-      (this.startupFromForeground || (this.currentTab === HOME_TAB_INDEX &&
-        !this.contentDestinationOpen && this.navPathStack.size() === 0));
-  }
-
-  private onSplashOpenRequested(): void {
-    if (!this.homePageAlive || this.splashOpenRequest <= 0 || this.showStartupCover) { return; }
-    this.startupFromForeground = true;
-    if (!this.startupAdAllowed()) { this.startupFromForeground = false; return; }
-    this.showStartupCover = true;
-  }
-
   private popupHostBlocked(): boolean {
     if (crashDiagnostics.pendingReport()) { return true; }
     // A large-screen rail is persistent navigation, not a modal surface. It
-    // must not suppress the recommendation sheet while the narrow overlay
+    // must not suppress the announcement sheet while the narrow overlay
     // drawer still needs to keep the sheet behind it.
     return this.showStartupCover || !this.homeFeedPresented || this.showOnboardingGuide || this.showLoginSheet || this.showMidAutumnGreeting ||
       this.showChatUnlock || this.showLinkPreview || (this.showSideDrawer && !this.isLargeScreen()) ||
@@ -1554,7 +1516,6 @@ struct Index {
     if (this.showStartupCover) {
       this.exitBackRequestedAt = 0;
       this.showStartupCover = false;
-      this.startupFromForeground = false;
       return true;
     }
     if (!this.isLargeScreen() && this.showSideDrawer) {
@@ -1768,7 +1729,6 @@ struct Index {
   private replaceHomePageData(index: number): void {
     const key: string = this.tabKey(index);
     this.homePageDataSource(index).replace(this.filteredTimeline(index),
-      this.promotionsForTab(index), key, this.promotionCountForTab(index),
       (count: number): void => { this.pageSections('home', key, count); });
   }
 
@@ -1783,10 +1743,7 @@ struct Index {
       this.homePresentationPending = false;
       if (!this.homePageAlive || index !== this.homeTabIndex() || key !== this.tabKey(index) ||
         this.homePageDataSource(index).postCount() === 0) { return; }
-      // First let the ordinary feed commit a visible frame. Only then may
-      // promotions change its rows or the startup sheet cover its content.
       this.homeFeedPresented = true;
-      this.onPromotionPostChanged();
     }));
   }
 
@@ -1992,7 +1949,7 @@ struct Index {
       this.filterHideReplies,
       this.filterKeywords,
       this.filterMutedUsers,
-      this.filterHideAds, this.filterLanguages, this.onlySensitiveForYou
+      this.filterLanguages, this.onlySensitiveForYou
     );
   }
 
@@ -2135,7 +2092,6 @@ struct Index {
 
   private visibleExploreCards(index: number): XExploreTimelineCard[] {
     return this.exploreCategoryPages[index].cards.filter((card: XExploreTimelineCard): boolean => {
-      if (this.filterHideAds && card.kind === 'hero' && card.hero?.promoted === true) { return false; }
       if (card.kind === 'tweets') {
         return contentFilterStore.filter(card.tweets, this.contentFilterSettings()).length > 0;
       }
@@ -2719,114 +2675,15 @@ struct Index {
     let source: TimelinePageDataSource | undefined = this.homePageSources.get(key);
     if (source === undefined) {
       source = new TimelinePageDataSource();
-      source.replace(this.filteredTimeline(index), this.promotionsForTab(index),
-        this.tabKey(index), this.promotionCountForTab(index));
+      source.replace(this.filteredTimeline(index));
       this.homePageSources.set(key, source);
     }
     return source;
   }
 
-  // A promotion joins a returned feed batch; an unrequested/empty page must
-  // never display a promotion as a placeholder while its real posts load.
-  private promotionsForTab(index: number): XXAuthPromotionPost[] {
-    if (!this.homeFeedPresented) { return []; }
-    const items: IconTabItem[] = this.homeTabItems();
-    if (index < 0 || index >= items.length) { return []; }
-    const key: string = items[index].key;
-    // Recommended and following timelines carry the promotions; a pinned topic
-    // stays exactly what the reader asked for.
-    if (key !== 'for-you' && key !== 'following') { return []; }
-    if (key === 'for-you' && this.onlySensitiveForYou) { return []; }
-    if (this.filteredTimeline(index).length === 0) { return []; }
-    const posts: XXAuthPromotionPost[] = this.promotionPlan().posts;
-    return posts;
-  }
-
-  private promotionPlan(): XXAuthPromotionPlan {
-    if (this.promotionPostJson.length === 0) { return new XXAuthPromotionPlan(); }
-    try {
-      const parsed: XXAuthPromotionPlan = JSON.parse(this.promotionPostJson) as XXAuthPromotionPlan;
-      if (parsed === null || !(parsed.posts instanceof Array)) { return new XXAuthPromotionPlan(); }
-      return parsed;
-    } catch (error) { return new XXAuthPromotionPlan(); }
-  }
-
-  // The search timeline is a plain ForEach, so the rows are planned per query:
-  // the same query keeps its positions, a new query draws new ones, and paging
-  // in more results never moves a row that is already on screen.
-  private searchTimelineRows(index: number): SearchTimelineRow[] {
-    const posts: Tweet[] = this.searchPagePosts(index);
-    const rows: SearchTimelineRow[] = [];
-    const plan: XXAuthPromotionPlan = this.promotionPlan();
-    const salt: string = SEARCH_PRODUCT_IDS[index] + ':' + this.activeExploreQuery;
-    const slots: XXAuthPromotionSlot[] = XXAuthPromotionInjector.slots(posts.length,
-      plan.posts, Math.min(plan.timelineCount, plan.posts.length), 'search:' + salt);
-    const placement: Map<number, XXAuthPromotionPost> = new Map();
-    for (let i: number = 0; i < slots.length; i++) {
-      placement.set(Math.min(slots[i].index + i, posts.length + i), slots[i].post);
-    }
-    for (let position: number = 0; position <= posts.length; position++) {
-      const injected: XXAuthPromotionPost | undefined = placement.get(position);
-      if (injected !== undefined) {
-        const row: SearchTimelineRow = new SearchTimelineRow();
-        row.key = 'promo:' + injected.fingerprint + ':' + position.toString();
-        row.promotion = injected;
-        rows.push(row);
-      }
-      if (position < posts.length) {
-        const row: SearchTimelineRow = new SearchTimelineRow();
-        row.key = 'surface-post-' + posts[position].id;
-        row.tweet = posts[position];
-        rows.push(row);
-      }
-    }
-    return rows;
-  }
-
   private tabKey(index: number): string {
     const items: IconTabItem[] = this.homeTabItems();
     return index >= 0 && index < items.length ? items[index].key : '';
-  }
-
-  // The remote budget decides how many rows a timeline carries; the injector
-  // picks which of the configured posts fills that row.
-  private promotionCountForTab(index: number): number {
-    const items: IconTabItem[] = this.homeTabItems();
-    if (index < 0 || index >= items.length) { return 0; }
-    const key: string = items[index].key;
-    if (key !== 'for-you' && key !== 'following') { return 0; }
-    if (key === 'for-you' && this.onlySensitiveForYou) { return 0; }
-    return this.promotionPlan().timelineCount;
-  }
-
-  private onPromotionPostChanged(): void {
-    if (!this.homeFeedPresented) { return; }
-    for (let index: number = 0; index < this.homeTabItems().length; index++) {
-      this.replaceHomePageData(index);
-    }
-    // The promotion is published after the WaterFlow is already mounted. Its
-    // section count must be refreshed with the injected row included.
-    this.syncHomeWaterFlowSections();
-  }
-
-  private hidePromotionPost(): void {
-    if (this.promotionPlan().dismissible === false) { return; }
-    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    xxAuthPopupStore.hidePromotion(context, Date.now(), this.promotionPostJson);
-    AppStorage.setOrCreate<string>(XXAUTH_PROMOTION_POST, '');
-  }
-
-  private hidePromotionForSession(): void {
-    if (this.promotionPlan().dismissible === false) { return; }
-    xxAuthPopupStore.hidePromotionForSession();
-    AppStorage.setOrCreate<string>(XXAUTH_PROMOTION_POST, '');
-  }
-
-  private openPromotionLink(url: string): void {
-    if (url.length === 0) { return; }
-    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    context.startAbility({ action: 'ohos.want.action.viewData',
-      entities: ['entity.system.browsable'], uri: url }).catch((): void => { });
   }
 
   private pageSections(group: string, key: string, count: number): WaterFlowSections {
@@ -6899,7 +6756,7 @@ struct Index {
     this.localGroupHomeVersions.clear();
     this.previewHomeTopic = null;
     this.homePageSources.forEach((source: TimelinePageDataSource, key: string): void => {
-      source.replace([], [], key, 0, (count: number): void => { this.pageSections('home', key, count); });
+      source.replace([], (count: number): void => { this.pageSections('home', key, count); });
     });
     this.homeTimelineRequestId += 1;
     this.recommendationSignalsLoaded = false;
@@ -7816,14 +7673,11 @@ struct Index {
         onOpenDiagnostics: (): void => { this.openRootContent({ name: 'Diagnostics' }); } })
 
       if (this.showStartupCover) {
-      ForEach([this.splashOpenRequest], (_opening: number): void => {
-        StartupLaunchCover({ allowAd: this.startupAdAllowed(), coldStart: !this.startupFromForeground,
-          contentReady: this.homeFeedPresented || !this.loading,
-          onFinished: (): void => { this.showStartupCover = false; this.startupFromForeground = false; } })
+        StartupCover({ contentReady: this.homeFeedPresented || !this.loading,
+          onFinished: (): void => { this.showStartupCover = false; } })
           .width('100%').height('100%')
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .zIndex(100)
-      }, (opening: number): string => opening.toString())
       }
     }
     .width('100%')
@@ -7908,11 +7762,6 @@ struct Index {
         onAccounts: (): void => this.openAccounts(),
         onMenu: (feature: string): void => {
           if (feature === 'help') { this.openHelpCenter(); return; }
-          if (feature === 'support') {
-            this.showSideDrawer = false;
-            this.openRootContent({ name: 'Support' });
-            return;
-          }
           this.showDrawerFeature(feature);
         }
       })
@@ -8114,10 +7963,6 @@ struct Index {
       LogoUniverseBuilder();
     } else if (name === 'About') {
       AboutBuilder();
-    } else if (name === 'Support') {
-      SupportBuilder();
-    } else if (name === 'SupporterAccess') {
-      SupporterAccessBuilder();
     } else if (name === 'HelpCenter') {
       HelpCenterBuilder();
     } else if (name === 'InputHelp') {
@@ -9059,21 +8904,9 @@ struct Index {
   private HomePageItem(item: TimelinePageItem, index: number): void {
     if (item.key === 'header') { this.HomeStatusLine(index) }
     else if (item.key === 'footer') { this.HomeTimelineFooter(index) }
-    else if (item.promotion !== null) { this.HomePromotion(item.promotion as XXAuthPromotionPost) }
     else if (item.tweet !== null) {
       this.HomePost(item.tweet as Tweet, index, item.postIndex, this.homePageDataSource(index).postCount())
     }
-  }
-
-  @Builder
-  private HomePromotion(post: XXAuthPromotionPost): void {
-    PromotionPostCard({
-      post: post,
-      narrowColumn: this.useNarrowTimelineCards(),
-      onOpen: (): void => { this.openPromotionLink(post.link); },
-      onHideSession: (): void => { this.hidePromotionForSession(); },
-      onHideWeek: (): void => { this.hidePromotionPost(); }
-    })
   }
 
   @Builder
@@ -9755,34 +9588,6 @@ struct Index {
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        if (hero.promoted || hero.authorName.length > 0) {
-          Row({ space: 6 }) {
-            if (hero.authorAvatarUrl.length > 0) {
-              Image(hero.authorAvatarUrl)
-                .width(18)
-                .height(18)
-                .borderRadius(userAvatarRadius(18, 9, hero.mediaTweet?.author?.verifiedType ?? '', hero.mediaTweet?.author?.avatarShape ?? ''))
-                .objectFit(ImageFit.Cover)
-            }
-            if (hero.promoted) {
-              Text($r('app.string.post_ad_label')).fontFamily(this.appFontFamily)
-                .fontSize($r('sys.float.Body_S'))
-                .fontColor('#CCFFFFFF')
-                .maxLines(1)
-            }
-            if (hero.promoted && hero.authorName.length > 0) {
-              Text('·').fontFamily(this.appFontFamily)
-                .fontSize($r('sys.float.Body_S'))
-                .fontColor('#CCFFFFFF')
-            }
-            if (hero.authorName.length > 0) {
-              Text(hero.authorName).fontFamily(this.appFontFamily)
-                .fontSize($r('sys.float.Body_S'))
-                .fontColor('#CCFFFFFF')
-                .maxLines(1)
-            }
-          }
-        }
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -10336,12 +10141,11 @@ struct Index {
 
   private searchResultRows(index: number): SearchResultRow[] {
     const rows: SearchResultRow[] = [];
-    const timeline: SearchTimelineRow[] = this.searchTimelineRows(index);
-    for (let i: number = 0; i < timeline.length; i++) {
+    const posts: Tweet[] = this.searchPagePosts(index);
+    for (let i: number = 0; i < posts.length; i++) {
       const row: SearchResultRow = new SearchResultRow();
-      row.key = timeline[i].key;
-      row.tweet = timeline[i].tweet;
-      row.promotion = timeline[i].promotion;
+      row.key = 'surface-post-' + posts[i].id;
+      row.tweet = posts[i];
       rows.push(row);
     }
     const users: UserRow[] = this.searchPageUsers(index);
@@ -10364,11 +10168,6 @@ struct Index {
     return row === null ? null : row.user;
   }
 
-  private searchResultPromotion(index: number, item: number): XXAuthPromotionPost | null {
-    const row: SearchResultRow | null = this.searchResultRow(index, item);
-    return row === null ? null : row.promotion;
-  }
-
   private searchResultTweet(index: number, item: number): Tweet | null {
     const row: SearchResultRow | null = this.searchResultRow(index, item);
     return row === null ? null : row.tweet;
@@ -10380,8 +10179,6 @@ struct Index {
       UserRowCard({ row: this.searchResultUser(page, item) as UserRow,
         onOpen: (row: UserRow): void => this.openSearchUser(row),
         onFollowChanged: (row: UserRow, next: boolean): Promise<boolean> => this.applyRowFollow(row, next) })
-    } else if (this.searchResultPromotion(page, item) !== null) {
-      this.HomePromotion(this.searchResultPromotion(page, item) as XXAuthPromotionPost);
     } else if (this.searchResultTweet(page, item) !== null) {
       this.ExploreTweetCard(this.searchResultTweet(page, item) as Tweet);
     }

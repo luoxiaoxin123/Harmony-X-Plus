@@ -53,26 +53,6 @@
       "value": "Putar animasi khusus ikon saat ini, lalu tampilkan Beranda."
     },
     {
-      "name": "splash_ad_label",
-      "value": "Iklan"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "Lewati"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "Temukan dunia yang kamu suka"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "Pengikatan akun di cloud tidak dapat dikonfirmasi. Hubungi pengembang."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "Beralih kembali ke akun memulihkan status tersimpannya. Di perangkat baru, setelah menginstal ulang, atau pada versi lain, masuk ke akun X yang sama dan masukkan kode asli untuk memulihkan akses."
-    },
-    {
       "name": "eye_reading_title",
       "value": "Membaca dengan tatapan"
     },
@@ -421,112 +401,8 @@
       "value": "Recently read"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "Pusat Bantuan"
     },
     {
-      "name": "side_support",
-      "value": "Dukung Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "Sampaikan pertanyaan dan ide, atau temukan cara mendukung proyek ini."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "Undangan grup Telegram tidak dapat dibuka. Coba lagi nanti."
-    },
-    {
-      "name": "help_support_title",
-      "value": "Dukung pengembang"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "Pengembang mencurahkan waktu dan biaya pengujian API untuk proyek ini. Jika aplikasi ini membantu, dukungan sukarela sangat dihargai. Terima kasih telah menggunakannya."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "Pindai salah satu kode QR dengan WeChat atau Alipay untuk mendukung proyek."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "Aturan ini hanya memengaruhi tampilan di perangkat ini. Akun X, hubungan mengikuti, dan pemblokiran tidak berubah."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "Sembunyikan iklan"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "Sembunyikan postingan yang ditandai sebagai iklan oleh X."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "Hiburan"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "Dipromosikan"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "Tampilkan Spaces di header Beranda. Aktifkan kembali di sini untuk menampilkan kapsul setelah disembunyikan."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "Latar hitam foto dan video"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "Pindai untuk mendukung pengembangan"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "Tanpa rekomendasi selamanya · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "Beli kode permanen tanpa rekomendasi di Afdian, lalu kembali ke aplikasi untuk menukarkannya."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "Beli di Afdian"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "Ketuk untuk membuka"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "Ketuk untuk menutup"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "Pindai kode ini dengan aplikasi pembayaran yang sesuai."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "Direkomendasikan"
     },
     {
       "name": "dns_x_test",

@@ -5,7 +5,6 @@ import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '
 import { pageSystemTransition, PageTransitionMotion } from '../utils/PageTransition';
 import { bundleManager, common } from '@kit.AbilityKit';
 import { requestXXAuthPopup } from '../services/XXAuthPopupStore';
-import { SUPPORTER_ACTIVE_KEY } from '../services/XXAuthSupporterService';
 import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { destinationTitleBarStyle } from '../utils/DestinationTitleBar';
@@ -42,7 +41,6 @@ struct About {
   @State private buildNumber: string = '';
   @State private developer: string = '';
   @State private linkFailed: boolean = false;
-  @StorageProp(SUPPORTER_ACTIVE_KEY) private supporterActive: boolean = false;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -281,20 +279,6 @@ struct About {
 
           this.AuthorAccounts()
           Column() {
-            this.ActionRow($r('sys.symbol.heart_fill'), $r('app.string.side_support'),
-              $r('app.string.help_support_scan'), (): void => { this.pageStack.pushPath({ name: 'Support' }); })
-            Divider().color($r('app.color.divider'))
-            this.ActionRow($r('sys.symbol.checkmark_shield'), $r('app.string.supporter_title'),
-              $r('app.string.supporter_redeem'), (): void => { this.pageStack.pushPath({ name: 'SupporterAccess' }); })
-          }.width('100%').backgroundColor(pageReadingSurfaceColor(cardSurfaceColor(this.displayMode, this.darkSurface), this.pageBackgroundValue))
-            .borderRadius($r('app.float.about_card_radius')).clip(true)
-
-          Column() {
-            if (!this.supporterActive) {
-              this.ActionRow($r('sys.symbol.info_circle'), $r('app.string.xxauth_view_recommendation'),
-                $r('app.string.xxauth_discover_apps'), (): void => { requestXXAuthPopup('recommendation'); })
-              Divider().color($r('app.color.divider'))
-            }
             this.ActionRow($r('sys.symbol.info_circle'), $r('app.string.xxauth_announcements'),
               $r('app.string.xxauth_announcements_desc'), (): void => { requestXXAuthPopup('announcements'); })
             Divider().color($r('app.color.divider'))

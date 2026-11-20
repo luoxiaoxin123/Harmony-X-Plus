@@ -273,7 +273,6 @@ import {
 import {
   ContentFilterSettings,
   contentFilterStore,
-  STORAGE_KEY_FILTER_HIDE_ADS,
   STORAGE_KEY_FILTER_HIDE_REPLIES,
   STORAGE_KEY_FILTER_HIDE_REPOSTS,
   STORAGE_KEY_FILTER_KEYWORDS,
@@ -709,7 +708,6 @@ export struct SettingsSection {
   @StorageLink(STORAGE_KEY_FILTER_ONLY_MEDIA) filterOnlyMedia: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPOSTS) filterHideReposts: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_HIDE_REPLIES) filterHideReplies: boolean = false;
-  @StorageLink(STORAGE_KEY_FILTER_HIDE_ADS) filterHideAds: boolean = true;
   @StorageLink(STORAGE_KEY_FILTER_KEYWORDS) filterKeywords: string = '';
   @StorageLink(STORAGE_KEY_FILTER_MUTED_USERS) filterMutedUsers: string = '';
   @State translationEnabled: boolean = false;
@@ -1219,7 +1217,7 @@ export struct SettingsSection {
     this.filterLanguages = (codes.indexOf(code) >= 0 ? codes.filter((item: string): boolean => item !== code) : [...codes, code]).join(',');
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     const settings: ContentFilterSettings = new ContentFilterSettings(this.filterOnlyMedia, this.filterHideReposts,
-      this.filterHideReplies, this.filterKeywords, this.filterMutedUsers, this.filterHideAds, this.filterLanguages, this.onlySensitiveForYou);
+      this.filterHideReplies, this.filterKeywords, this.filterMutedUsers, this.filterLanguages, this.onlySensitiveForYou);
     if (!contentFilterStore.save(context, settings)) {
       this.filterLanguages = previous;
       promptAction.showToast({ message: this.text($r('app.string.settings_filter_save_failed')) });
@@ -1262,7 +1260,6 @@ export struct SettingsSection {
     this.filterOnlyMedia = settings.onlyMedia;
     this.filterHideReposts = settings.hideReposts;
     this.filterHideReplies = settings.hideReplies;
-    this.filterHideAds = settings.hideAds;
     this.filterKeywords = settings.keywordsText;
     this.filterMutedUsers = settings.mutedUsersText;
     this.filterLanguages = settings.mutedLanguagesText;
@@ -1276,7 +1273,7 @@ export struct SettingsSection {
       this.filterHideReplies,
       this.filterKeywords,
       this.filterMutedUsers,
-      this.filterHideAds, this.filterLanguages, this.onlySensitiveForYou,
+      this.filterLanguages, this.onlySensitiveForYou,
       this.onlySensitiveAgeConfirmed
     );
     if (!contentFilterStore.save(context, settings)) {
@@ -1301,11 +1298,6 @@ export struct SettingsSection {
 
   private setFilterHideReplies(value: boolean): void {
     this.filterHideReplies = value;
-    this.saveContentFilters();
-  }
-
-  private setFilterHideAds(value: boolean): void {
-    this.filterHideAds = value;
     this.saveContentFilters();
   }
 
@@ -5021,9 +5013,6 @@ export struct SettingsSection {
         .width('100%')
         .padding({ left: 20, right: 20, bottom: 8 })
       Column({ space: 0 }) {
-        this.AutoHideSwitchRow($r('app.string.settings_filter_hide_ads'),
-          $r('app.string.settings_filter_hide_ads_desc'), this.filterHideAds,
-          (value: boolean): void => this.setFilterHideAds(value))
         Column() {
           this.AutoHideSwitchRow($r('app.string.settings_for_you_only_sensitive'),
             $r('app.string.settings_for_you_only_sensitive_desc'), this.onlySensitiveForYou,

@@ -110,8 +110,6 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
       $r('app.string.reply_quality_whitelist_desc'),
       $r('app.string.settings_filter_desc'),
       $r('app.string.xsettings_local_filter_note'),
-      $r('app.string.settings_filter_hide_ads'),
-      $r('app.string.settings_filter_hide_ads_desc'),
       $r('app.string.settings_for_you_only_sensitive'), $r('app.string.settings_for_you_only_sensitive_desc'),
       $r('app.string.settings_filter_only_media'),
       $r('app.string.settings_filter_only_media_desc'),
@@ -161,16 +159,10 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
       $r('app.string.settings_diagnostics'),
       $r('app.string.diagnostics_desc')
     ]),
-  new SettingsCategory('supportauthor', 'support', '', $r('app.string.side_support'),
-    $r('app.string.help_support_scan'), $r('sys.symbol.heart_fill'), 'Support', [
-      $r('app.string.help_support_wechat'), $r('app.string.help_support_alipay'),
-      $r('app.string.supporter_title'), $r('app.string.supporter_redeem')
-    ]),
   new SettingsCategory('about', 'support', '', $r('app.string.about_title'),
     $r('app.string.about_tagline'), $r('sys.symbol.info_circle'), 'About', [
       $r('app.string.about_version'), $r('app.string.xxauth_announcements'),
-      $r('app.string.xxauth_articles'), $r('app.string.xxauth_versions'), $r('app.string.settings_check_update'),
-      $r('app.string.supporter_title'), $r('app.string.supporter_redeem')
+      $r('app.string.xxauth_articles'), $r('app.string.xxauth_versions'), $r('app.string.settings_check_update')
     ]),
   new SettingsCategory('theme', 'experience', 'display', $r('app.string.settings_category_theme'),
     $r('app.string.settings_category_theme_desc'), $r('sys.symbol.sun_max'), '', [

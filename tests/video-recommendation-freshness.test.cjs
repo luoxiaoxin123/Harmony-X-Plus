@@ -190,9 +190,9 @@ test('web and APK requests use captured metadata with seed/generic pagination an
   await client.immersiveVideoTimeline('apk-bottom', 40, '101');
   const start = new URL(sends[0][1]), bottom = new URL(sends[1][1]);
   assert.equal(start.pathname, '/i/api/graphql/VylcAECK1LWwr_7O5Np4eg/ImmersiveMedia');
-  assert.deepEqual(JSON.parse(start.searchParams.get('variables')), { pinned_tweet_id: '101', includePromotedContent: true, page_name: 'seedAuthor' });
+  assert.deepEqual(JSON.parse(start.searchParams.get('variables')), { pinned_tweet_id: '101', includePromotedContent: false, page_name: 'seedAuthor' });
   assert.equal(bottom.pathname, '/i/api/graphql/cW93hZ3nlNYbYcUROF5r5A/GenericTimelineById');
-  assert.deepEqual(JSON.parse(bottom.searchParams.get('variables')), { timelineId: 'returned-server-id', cursor: 'web-bottom', count: 20, withQuickPromoteEligibilityTweetFields: true });
+  assert.deepEqual(JSON.parse(bottom.searchParams.get('variables')), { timelineId: 'returned-server-id', cursor: 'web-bottom', count: 20, withQuickPromoteEligibilityTweetFields: false });
   const captured = JSON.parse(fs.readFileSync('tests/fixtures/immersive-web-operation.json', 'utf8'));
   assert.deepEqual(Object.keys(JSON.parse(start.searchParams.get('features'))).sort(), captured.featureSwitches.sort());
   assert.deepEqual(Object.keys(JSON.parse(start.searchParams.get('fieldToggles'))).sort(), captured.fieldToggles.sort());

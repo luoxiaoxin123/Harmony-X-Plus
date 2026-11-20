@@ -17,8 +17,7 @@ const tokens = value => value.match(/%(?:\d+\$)?(?:\d+)?[sdif]/g) || [];
 const legacyFallbackLocales = new Set(['ru', 'uk', 'fa', 'ar', 'id', 'ms', 'tr', 'vi', 'th',
   'ja', 'ko', 'de', 'fr', 'es', 'pt', 'it', 'hi']);
 const legacyEnglishFallbacks = new Set([
-  'settings_component_hdr_enabled_desc', 'supporter_network_error', 'supporter_invalid',
-  'supporter_description', 'xxauth_recommend_description', 'xxauth_force_update',
+  'settings_component_hdr_enabled_desc', 'xxauth_load_failed', 'xxauth_retry',
   'settings_title_bar_logo_auto_contrast_desc', 'settings_desktop_rail_auto_hide_desc',
   'compose_schedule_invalid', 'compose_schedule_conflict', 'sidebar_swipe_desc',
   'sidebar_handle_style_desc', 'sidebar_handle_image_spec', 'chat_group_invite_hint',

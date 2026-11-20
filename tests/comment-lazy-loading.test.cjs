@@ -205,7 +205,7 @@ test('reply tree cache survives presentation updates and invalidates on data, ra
     orderedReplyCache: null, rebuildCommentRows() {} });
   const initial = detail.orderedReplies();
   assert.equal(detail.orderedReplies(), initial);
-  detail.filterHideAds = false; detail.replyQualityEnabled = true;
+  detail.replyQualityEnabled = true;
   assert.equal(detail.orderedReplies(), initial);
   assert.equal(computations, 1);
   detail.replies.push(post('c')); detail.onRepliesChanged();
@@ -270,6 +270,5 @@ test('all three comment layouts share native lazy rows, retained scroll controll
     assert.ok(source.includes(`stopScrollOnTouch(event, this.${controller})`));
   }
   assert.ok(source.includes("@Watch('onRepliesChanged') replies"));
-  assert.ok(source.includes("@Watch('rebuildCommentRows') private filterHideAds"));
   assert.ok(source.includes("@Watch('rebuildCommentRows') private replyQualityEnabled"));
 });

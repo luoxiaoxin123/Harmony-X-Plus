@@ -61,40 +61,12 @@
       "value": "16vp"
     },
     {
-      "name": "splash_ad_caption_size",
+      "name": "startup_brand_caption_size",
       "value": "12fp"
     },
     {
-      "name": "splash_ad_body_size",
-      "value": "14fp"
-    },
-    {
-      "name": "splash_ad_title_size",
-      "value": "38fp"
-    },
-    {
-      "name": "splash_ad_compact_title_size",
-      "value": "24fp"
-    },
-    {
-      "name": "splash_ad_brand_size",
+      "name": "startup_brand_size",
       "value": "16fp"
-    },
-    {
-      "name": "splash_ad_control_height",
-      "value": "44vp"
-    },
-    {
-      "name": "splash_ad_action_height",
-      "value": "52vp"
-    },
-    {
-      "name": "splash_ad_poster_radius",
-      "value": "28vp"
-    },
-    {
-      "name": "splash_ad_tile_radius",
-      "value": "14vp"
     },
     {
       "name": "startup_mark_size",

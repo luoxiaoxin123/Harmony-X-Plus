@@ -53,26 +53,6 @@
       "value": "پویانمایی ویژهٔ نماد فعلی را پخش کن و سپس صفحهٔ اصلی را نشان بده."
     },
     {
-      "name": "splash_ad_label",
-      "value": "آگهی"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "رد کردن"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "با دنیای دلخواهتان آشنا شوید"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "پیوند حساب در فضای ابری تأیید نشد. لطفاً با توسعه‌دهنده تماس بگیرید."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "با بازگشت به حساب، وضعیت ذخیره‌شده آن بازیابی می‌شود. در دستگاه جدید، پس از نصب مجدد یا در نسخه دیگر، وارد همان حساب X شوید و کد اصلی را برای بازیابی وارد کنید."
-    },
-    {
       "name": "eye_reading_title",
       "value": "مطالعه با نگاه"
     },
@@ -421,112 +401,8 @@
       "value": "Recently read"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "مرکز راهنما"
     },
     {
-      "name": "side_support",
-      "value": "حمایت از Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "پرسش یا پیشنهادی دارید؟ اینجا می‌توانید با ما در میان بگذارید و از پروژه حمایت کنید."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "دعوت گروه Telegram باز نشد. بعداً تلاش کنید."
-    },
-    {
-      "name": "help_support_title",
-      "value": "حمایت از سازنده"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "توسعه و آزمایش API هزینه و زمان می‌برد. اگر برنامه برایتان مفید است، از حمایت اختیاری شما خوشحال می‌شویم. در هر صورت از همراهی شما سپاسگزاریم."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "برای حمایت از پروژه، یکی از کدها را با WeChat یا Alipay اسکن کنید."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "این قوانین فقط نمایش محتوا روی همین دستگاه را تغییر می‌دهند؛ دنبال کردن، مسدودسازی و تنظیمات حساب X تغییری نمی‌کند."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "پنهان کردن تبلیغات"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "پست‌هایی را که X به‌عنوان تبلیغ علامت‌گذاری کرده است پنهان می‌کند."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "سرگرمی"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "تبلیغاتی"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "نمایش اسپیس‌ها در سربرگ خانه. پس از پنهان کردن کپسول، می‌توانید آن را از همین‌جا دوباره فعال کنید."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "پس‌زمینه سیاه عکس و ویدیو"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "برای حمایت از توسعه اسکن کنید"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "بدون پیشنهاد برای همیشه · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "کد دائمی حذف پیشنهادها را از Afdian بخرید و برای فعال‌سازی به برنامه برگردید."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "خرید در Afdian"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "برای باز کردن بزنید"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "برای بستن بزنید"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "این کد پرداخت را با برنامه پرداخت مربوطه اسکن کنید."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "پیشنهادی"
     },
     {
       "name": "dns_x_test",

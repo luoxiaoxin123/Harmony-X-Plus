@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
-const ts=require('D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
+const ts=require(process.env.HARMONYX_TYPESCRIPT || 'D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
 const groups=JSON.parse(fs.readFileSync('entry/src/main/resources/rawfile/chat-emoji-17.json','utf8'));
 const source=ts.transpileModule(fs.readFileSync('entry/src/main/ets/services/ChatEmojiStore.ets','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
 let account='a';const prefs=new Map();const deps={'@kit.AbilityKit':{},'@ohos.util':{default:{TextDecoder:{create:()=>({decodeToString:bytes=>Buffer.from(bytes).toString('utf8')})}}},'./XChatActions':{xChatActions:{localString:(_c,k,d)=>prefs.get(account+':'+k)||d,saveLocal:(_c,k,v)=>prefs.set(account+':'+k,v)}}};const m={exports:{}};new Function('require','module','exports',source)(id=>deps[id],m,m.exports);const {ChatEmojiStore}=m.exports;

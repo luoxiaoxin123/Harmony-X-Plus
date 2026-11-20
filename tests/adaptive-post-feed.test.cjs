@@ -134,17 +134,17 @@ test('search rows preserve payload type and ignore stale indexes during tab chan
   const root = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'Index');
   const methods = ['searchResultKeys', 'searchResultRows', 'searchResultRow'].map(name =>
     root.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(tree) === name).getText(tree));
-  const classes = ['SearchTimelineRow', 'SearchResultRow'].map(name =>
+  const classes = ['SearchResultRow'].map(name =>
     tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === name).getText(tree));
   const Search = evaluate(classes.join('\n') + '\nexport class Search {' + methods.join('\n') + '}').Search;
-  let timeline = [{ key: 'post:a', tweet: { id: 'a' }, promotion: null }];
+  let timeline = [{ id: 'a' }];
   let users = [{ id: 'u' }];
   const search = Object.assign(new Search(), {
-    searchTimelineRows: () => timeline,
+    searchPagePosts: () => timeline,
     searchPageUsers: () => users
   });
   const rows = search.searchResultRows(0);
-  assert.deepEqual(search.searchResultKeys(0), ['post:a', 'user-u']);
+  assert.deepEqual(search.searchResultKeys(0), ['surface-post-a', 'user-u']);
   assert.equal(rows[0].tweet.id, 'a');
   assert.equal(rows[0].user, null);
   assert.equal(rows[1].user.id, 'u');

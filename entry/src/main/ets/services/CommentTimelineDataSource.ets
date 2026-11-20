@@ -1,5 +1,4 @@
 import type { ThreadReplyRow } from './ThreadReplyOrder';
-import type { XXAuthPromotionPost } from './XXAuthPromotionPost';
 import type { ReplyQualityAssessment } from '../utils/ReplyQuality';
 import { PostCardReadingState } from './PostCardReadingState';
 
@@ -7,7 +6,6 @@ export class CommentTimelineRow {
   key: string = '';
   revision: number = 0;
   reply: ThreadReplyRow | null = null;
-  promotion: XXAuthPromotionPost | null = null;
   quality: ReplyQualityAssessment | null = null;
   readingState: PostCardReadingState = new PostCardReadingState();
 }
@@ -85,7 +83,6 @@ export class CommentTimelineDataSource implements IDataSource {
   }
 
   private sameContent(left: CommentTimelineRow, right: CommentTimelineRow): boolean {
-    if (left.promotion !== right.promotion) { return false; }
     if (left.quality?.reasons.join('|') !== right.quality?.reasons.join('|')) { return false; }
     if (left.reply === null || right.reply === null) { return left.reply === right.reply; }
     return left.reply.tweet === right.reply.tweet && left.reply.depth === right.reply.depth &&

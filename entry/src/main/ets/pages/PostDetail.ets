@@ -18,9 +18,7 @@ import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '
 import { pageSystemTransition, PageTransitionMotion } from '../utils/PageTransition';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
-import { PostAdLabel } from '../components/PostAdLabel';
 import { isAdPost, refreshedPostPresentation } from '../utils/PostDisclosure';
-import { STORAGE_KEY_FILTER_HIDE_ADS } from '../services/ContentFilterStore';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 import { DEFAULT_SHEET_MATERIAL_ENABLED, DEFAULT_SHEET_MATERIAL_LEVEL, STORAGE_KEY_SHEET_MATERIAL_ENABLED, STORAGE_KEY_SHEET_MATERIAL_LEVEL } from '../services/SheetMaterialSettingsStore';
 import { sheetContentBackground, sheetMaterialOptions } from '../utils/SheetMaterial';
@@ -44,10 +42,6 @@ import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
 import { harmonyShare, systemShare } from '@kit.ShareKit';
 import { TweetCard } from '../components/TweetCard';
-import { PromotionPostCard } from '../components/PromotionPostCard';
-import { XXAuthPromotionPlan, XXAuthPromotionPost } from '../services/XXAuthPromotionPost';
-import { XXAuthCommentPromotionSession } from '../utils/XXAuthCommentPromotionSession';
-import { XXAUTH_PROMOTION_POST, xxAuthPopupStore } from '../services/XXAuthPopupStore';
 import { AvatarTintPalette, avatarTintIsDark, avatarTintSurface } from '../utils/AvatarTintColors';
 import { SpaceAwareAvatar } from '../components/SpaceAwareAvatar';
 import { CommunitySource } from '../components/CommunitySource';
@@ -193,7 +187,6 @@ export struct PostDetail {
   @StorageProp(STORAGE_KEY_POST_ACTION_COUNTS) private actionCountsVisible: boolean = true;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
   @StorageProp(STORAGE_KEY_SYSTEM_EMOJI_ENABLED) private systemEmojiEnabled: boolean = false;
-  @StorageLink(STORAGE_KEY_FILTER_HIDE_ADS) @Watch('rebuildCommentRows') private filterHideAds: boolean = true;
   @StorageProp(STORAGE_KEY_REPLY_QUALITY_ENABLED) @Watch('rebuildCommentRows') private replyQualityEnabled: boolean = false;
   @StorageProp(STORAGE_KEY_REPLY_QUALITY_REVISION) @Watch('loadReplyQuality') private replyQualityRevision: number = 0;
   @StorageProp(STORAGE_KEY_ACCOUNTS_CHANGED) @Watch('loadReplyQuality') private qualityAccountRevision: number = 0;
@@ -266,8 +259,6 @@ export struct PostDetail {
   @StorageProp(STORAGE_KEY_AVATAR_TINT_ENABLED) private avatarTintEnabled: boolean = false;
   @State private avatarPalette: AvatarTintPalette | null = null;
   @State private avatarThemeDark: boolean = false;
-  @StorageProp(XXAUTH_PROMOTION_POST) @Watch('onPromotionChanged') private promotionPostJson: string = '';
-  private commentPromotions: XXAuthCommentPromotionSession = new XXAuthCommentPromotionSession();
   @State sharedElementId: string = '';
   @State private returnToMain: boolean = false;
   @State @Watch('onRepliesChanged') replies: Tweet[] = [];
@@ -417,7 +408,6 @@ export struct PostDetail {
 
   aboutToAppear(): void {
     this.alive = true;
-    this.commentPromotions = new XXAuthCommentPromotionSession();
     this.loadReplyQuality();
     this.detailVisible = true;
     // Bind the shared element before the destination's first layout. onReady
@@ -1190,74 +1180,14 @@ export struct PostDetail {
     this.commentDataSource.replace(this.commentRows());
   }
 
-  private onPromotionChanged(): void {
-    this.rebuildCommentRows();
-  }
-
-  private promotionPlan(): XXAuthPromotionPlan {
-    if (this.promotionPostJson.length === 0) { return new XXAuthPromotionPlan(); }
-    try {
-      const parsed: XXAuthPromotionPlan = JSON.parse(this.promotionPostJson) as XXAuthPromotionPlan;
-      if (parsed === null || !(parsed.posts instanceof Array)) { return new XXAuthPromotionPlan(); }
-      return parsed;
-    } catch (error) { return new XXAuthPromotionPlan(); }
-  }
-
-  private hidePromotionPost(): void {
-    if (this.promotionPlan().dismissible === false) { return; }
-    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    xxAuthPopupStore.hidePromotion(context, Date.now(), this.promotionPostJson);
-    AppStorage.setOrCreate<string>(XXAUTH_PROMOTION_POST, '');
-  }
-
-  private hidePromotionForSession(): void {
-    if (this.promotionPlan().dismissible === false) { return; }
-    xxAuthPopupStore.hidePromotionForSession();
-    AppStorage.setOrCreate<string>(XXAUTH_PROMOTION_POST, '');
-  }
-
-  private openPromotionLink(url: string): void {
-    if (url.length === 0) { return; }
-    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    context.startAbility({ action: 'ohos.want.action.viewData',
-      entities: ['entity.system.browsable'], uri: url }).catch((): void => { });
-  }
-
-  @Builder
-  private PromotionRow(post: XXAuthPromotionPost): void {
-    PromotionPostCard({
-      post: post,
-      onOpen: (): void => { this.openPromotionLink(post.link); },
-      onHideSession: (): void => { this.hidePromotionForSession(); },
-      onHideWeek: (): void => { this.hidePromotionPost(); }
-    })
-  }
-
-  // The promotion only ever lands before a top-level reply, so the thread
-  // connectors of a nested answer stay attached to their parent.
   private commentRows(): CommentTimelineRow[] {
     const rows: CommentTimelineRow[] = [];
     const replies: ThreadReplyRow[] = this.orderedReplies().filter((row: ThreadReplyRow): boolean =>
-      !this.filterHideAds || !isAdPost(row.tweet.presentation));
+      !isAdPost(row.tweet.presentation));
     const quality: Map<string, ReplyQualityAssessment> = this.replyQualityEnabled ?
       ReplyQuality.analyze(replies.map((row: ThreadReplyRow): Tweet => row.tweet),
         this.tweet?.author.id ?? '', this.qualityViewerId, this.qualityAllowedIds) : new Map<string, ReplyQualityAssessment>();
-    const anchors: string[] = [];
-    for (let i: number = 1; i < replies.length; i++) {
-      if (!replies[i].isNestedReply) { anchors.push(replies[i].tweet.id); }
-    }
-    // Embedded media viewers omit injected promotions, while the real reply
-    // rows below must still be rendered for both photo and video comments.
-    const placement: Map<string, XXAuthPromotionPost> = this.embedded ? new Map<string, XXAuthPromotionPost>() :
-      this.commentPromotions.placements(this.tweet?.id ?? '', anchors, this.promotionPlan());
     for (let i: number = 0; i < replies.length; i++) {
-      const injected: XXAuthPromotionPost | undefined = placement.get(replies[i].tweet.id);
-      if (injected !== undefined) {
-        const promotion: CommentTimelineRow = new CommentTimelineRow();
-        promotion.key = 'promo:' + injected.fingerprint + ':' + replies[i].tweet.id;
-        promotion.promotion = injected;
-        rows.push(promotion);
-      }
       const row: CommentTimelineRow = new CommentTimelineRow();
       row.key = replies[i].tweet.id;
       row.reply = replies[i];
@@ -2687,7 +2617,6 @@ export struct PostDetail {
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Start)
-          PostAdLabel({ foreground: this.postActionColor($r('app.color.text_secondary')), presentation: this.tweet.presentation })
           if (!this.isOwnPost()) {
             if (this.tweet !== null) { PostOverflowButton({ foreground: this.postActionColor($r('app.color.text_secondary')), tweet: this.tweet }) }
           } else if (this.hasPostMenu()) {
@@ -2909,11 +2838,7 @@ export struct PostDetail {
         LazyForEach(this.commentDataSource, (row: CommentTimelineRow | undefined) => {
           ListItem() {
             if (row !== undefined) {
-              if (row.promotion !== null) {
-                this.PromotionRow(row.promotion as XXAuthPromotionPost)
-              } else {
-                this.QualityReplyRow(row)
-              }
+              this.QualityReplyRow(row)
             }
           }.width('100%')
         }, (row: CommentTimelineRow | undefined, index: number): string =>
@@ -2926,7 +2851,7 @@ export struct PostDetail {
     .clip(this.embedded)
     if (!this.threadLoading && this.transitionSettled &&
       (this.threadLoadingMore || this.threadNextToken.length > 0 ||
-      this.discoverMore.some((post: Tweet): boolean => !this.filterHideAds || !isAdPost(post.presentation)))) {
+      this.discoverMore.some((post: Tweet): boolean => !isAdPost(post.presentation)))) {
       ListItem() {
         Column({ space: 16 }) {
           this.DiscoverMorePane()
@@ -2938,7 +2863,7 @@ export struct PostDetail {
 
   @Builder
   private DiscoverMorePane(): void {
-    if (this.discoverMore.some((post: Tweet): boolean => !this.filterHideAds || !isAdPost(post.presentation))) {
+    if (this.discoverMore.some((post: Tweet): boolean => !isAdPost(post.presentation))) {
       Column({ space: 0 }) {
         Column({ space: 6 }) {
           Text($r('app.string.post_detail_discover_more')).fontFamily(this.appFontFamily)
@@ -2953,8 +2878,8 @@ export struct PostDetail {
         }
         .width('100%')
         .padding({ left: 4, right: 4, top: 16, bottom: 12 })
-        AdaptivePostGrid({ itemKeys: this.discoverMore.filter((post: Tweet): boolean => !this.filterHideAds || !isAdPost(post.presentation)).map((post: Tweet): string => post.id),
-        item: (index: number): void => this.DiscoverMorePost(this.discoverMore.filter((post: Tweet): boolean => !this.filterHideAds || !isAdPost(post.presentation))[index]) })
+        AdaptivePostGrid({ itemKeys: this.discoverMore.filter((post: Tweet): boolean => !isAdPost(post.presentation)).map((post: Tweet): string => post.id),
+        item: (index: number): void => this.DiscoverMorePost(this.discoverMore.filter((post: Tweet): boolean => !isAdPost(post.presentation))[index]) })
       }
       .width('100%')
       .backgroundColor(this.embeddedSectionBackground())

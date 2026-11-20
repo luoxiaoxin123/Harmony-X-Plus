@@ -4,6 +4,7 @@ const { load } = require('./post-card-fixture.cjs');
 const { userIsVerified, userVerifiedType, userAvatarShape, userAvatarRadius, normalizedVerifiedType } = load('utils/UserIdentity');
 const { isAdPost, refreshedPostPresentation } = load('utils/PostDisclosure');
 const { XTimelineParser } = load('services/XTimelineParser');
+const { XExploreParser } = load('services/XExploreParser');
 const { XPostPresentationParser } = load('services/XPostPresentationParser');
 const { XUserParser } = load('services/XUserParser');
 const { XCommunityParser } = load('services/XCommunityParser');
@@ -45,13 +46,12 @@ test('gold avatars remain square at every size and the explicit shape does not c
   assert.equal(userAvatarRadius(44, 22, 'Government', 'Square'), 44 * 0.12);
 });
 
-test('HomeTimeline tweetPromotedMetadata marks only that timeline occurrence as AD', () => {
+test('HomeTimeline drops the ad occurrence and keeps the organic post', () => {
   // Android's observed wrapper; tracking/impression values are omitted.
   const metadata = { advertiserResult: { result: user }, adMetadataContainer: { renderLegacyWebsiteCard: true } };
   const data = XTimelineParser.parse(timeline([item(post(), { tweetPromotedMetadata: metadata }), item(post('456'))]), false);
-  assert.equal(isAdPost(data.tweets[0].presentation), true);
-  assert.equal(isAdPost(data.tweets[1].presentation), false);
-  assert.equal(isAdPost(JSON.parse(JSON.stringify(data.tweets[0])).presentation), true);
+  assert.deepEqual(data.tweets.map(tweet => tweet.id), ['456']);
+  assert.equal(isAdPost(data.tweets[0].presentation), false);
   for (const field of ['tweetPromotedMetadata', 'tweet_promoted_metadata', 'promotedMetadata', 'promoted_metadata']) {
     assert.equal(isAdPost(XPostPresentationParser.parse({ [field]: metadata })), true);
   }
@@ -63,6 +63,19 @@ test('cards, organization accounts, promotion eligibility and paid disclosures d
   assert.equal(isAdPost(XTimelineParser.parse(timeline([item(tweet)]), false).tweets[0].presentation), false);
   assert.equal(isAdPost(XPostPresentationParser.parse({ promotedMetadata: {} })), false);
   assert.equal(isAdPost(XPostPresentationParser.parse({ content_disclosure: { advertising_disclosure: { is_paid_promotion: true } } })), false);
+});
+
+test('Explore drops sponsored trends and hero cards while keeping organic entries', () => {
+  const metadata = { advertiser_results: { result: user } };
+  const payload = JSON.stringify([
+    { __typename: 'TimelineEventSummary', title: 'Sponsored event', promotedMetadata: metadata },
+    { __typename: 'TimelineTrend', name: 'Sponsored trend', promoted_metadata: metadata },
+    { __typename: 'TimelineTrend', name: 'Organic trend' },
+    { __typename: 'TimelineEventSummary', title: 'Organic event' }
+  ]);
+  assert.deepEqual(XExploreParser.parseTrends(payload), ['Organic trend']);
+  assert.deepEqual(XExploreParser.parseTrendItems(payload).map(entry => entry.name), ['Organic trend']);
+  assert.equal(XExploreParser.parseHero(payload).title, 'Organic event');
 });
 
 test('detail refresh retains feed AD while updating notes without mutating or duplicating disclosures', () => {

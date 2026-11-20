@@ -255,7 +255,7 @@ struct MediaCover {
   @Prop videoContain: boolean = false;
   @Prop photoContain: boolean = false;
   @Prop cornerRadius: number = 14;
-  // Explore's promoted hero begins as an ambient looping video, so its cover
+  // Explore's event hero begins as an ambient looping video, so its cover
   // deliberately omits the usual central play affordance.
   @Prop minimalVideoControls: boolean = false;
   @StorageProp('harmonyx.display_mode') private themeDisplayMode: string = '';
@@ -323,14 +323,6 @@ struct MediaCover {
       });
   }
 
-  // Clip length chip for promoted media; minutes:seconds as in the store page.
-  private durationBadgeLabel(): string {
-    const total: number = Math.max(0, Math.round((this.media.durationMs ?? 0) / 1000));
-    const minutes: number = Math.floor(total / 60);
-    const seconds: number = total % 60;
-    return minutes.toString() + ':' + (seconds < 10 ? '0' : '') + seconds.toString();
-  }
-
   @Builder
   private Still(): void {
     if (this.isLoop() && this.media.previewUrl.length > 0) {
@@ -385,27 +377,6 @@ struct MediaCover {
   build(): void {
     Stack({ alignContent: Alignment.Center }) {
       this.Still()
-      // Promoted media asks for its clip length on the tile; ordinary posts keep
-      // the current look because the flag stays off.
-      if (isVideoLike(this.media) && this.media.showDurationBadge === true && this.media.durationMs !== undefined &&
-        this.media.durationMs > 0) {
-        Column() {
-          Text(this.durationBadgeLabel())
-            .fontFamily(this.appFontFamily)
-            .fontSize($r('sys.float.Body_S'))
-            .fontColor(Color.White)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor('#99000000')
-            .borderRadius(6)
-        }
-        .width('100%')
-        .height('100%')
-        .padding(8)
-        .justifyContent(FlexAlign.End)
-        .alignItems(HorizontalAlign.End)
-        .hitTestBehavior(HitTestMode.Transparent)
-        .accessibilityLevel('no')
-      }
       Column({ space: 10 }) {
         if (isVideoLike(this.media) && !this.isLoop() && !this.minimalVideoControls) {
           Stack() {

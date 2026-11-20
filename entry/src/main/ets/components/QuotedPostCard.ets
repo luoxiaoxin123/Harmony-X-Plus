@@ -4,7 +4,6 @@ import { pageTextColor } from '../utils/ThemeColors';
 import { postCardSurfaceColor } from '../utils/ThemeColors';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
-import { PostAdLabel } from './PostAdLabel';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 // Compact, non-interactive-media preview for a post quoted by another post.
 import type { MediaAttachment, QuotedTweet, Tweet, TweetPoll } from '../models/Tweet';
@@ -137,7 +136,6 @@ export struct QuotedPostCard {
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
-        PostAdLabel({ foreground: this.readingText($r('app.color.text_secondary')), presentation: this.quoted.presentation })
       }
       .width('100%')
       if ((this.quoted.replyToUsername ?? '').length > 0) {

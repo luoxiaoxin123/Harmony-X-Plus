@@ -14,7 +14,6 @@ import { pageTextColor } from '../utils/ThemeColors';
 import { postCardSurfaceColor } from '../utils/ThemeColors';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
-import { PostAdLabel } from './PostAdLabel';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 // Reusable post card: X-style row (avatar, header, text, action bar)
 // with HarmonyOS SymbolGlyph icons and theme-resource colors.
@@ -156,12 +155,6 @@ export struct TweetCard {
   @Prop naturalVideoSize: boolean = true;
   @Prop connectAbove: boolean = false;
   @Prop connectBelow: boolean = false;
-  // A promotion row is a synthetic Tweet: the card keeps the ordinary post
-  // layout while the actions that would write to a real post are removed.
-  promotion: boolean = false;
-  @Prop promotionDismissible: boolean = true;
-  onPromotionHideSession: () => void = (): void => { };
-  onPromotionHideWeek: () => void = (): void => { };
   @State private cardHeight: number = 0;
   @State private inputMenuRequest: number = 0;
   @State private avatarTop: number = 12;
@@ -781,7 +774,7 @@ export struct TweetCard {
         }).width('100%')
       }
       Column({ space: 6 }) {
-          if (this.translatedText.length > 0 && !this.promotion && this.tweet.presentation?.visibility?.hidden !== true) {
+          if (this.translatedText.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
             PostTranslationInfo({ language: this.tweet.language ?? '', showingOriginal: this.showingOriginal,
               foreground: this.readingText($r('app.color.text_secondary')), accent: this.readingText(this.accentColor),
               onToggle: (): void => { this.showingOriginal = !this.showingOriginal; } })
@@ -851,8 +844,7 @@ export struct TweetCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
           }.layoutWeight(1).alignItems(VerticalAlign.Center)
             .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
-          PostAdLabel({ foreground: this.readingText($r('app.color.text_secondary')), presentation: this.tweet.presentation })
-          if (this.showActions && !this.promotion && (this.actionsMask & 4) !== 0) {
+          if (this.showActions && (this.actionsMask & 4) !== 0) {
             Row({ space: 3 }) {
               SymbolGlyph(this.liked ? $r('sys.symbol.heart_fill') : $r('sys.symbol.heart'))
                 .fontSize($r('app.float.timeline_column_action_icon'))
@@ -866,21 +858,9 @@ export struct TweetCard {
               .id('narrow-post-like-' + this.tweet.id).monopolizeEvents(true)
               .accessibilityText(this.metricLabel($r('app.string.action_like'), this.displayedLikeCount()))
               .onClick((): void => { void this.toggleLike(); })
-          } else if (this.promotion && this.promotionDismissible) {
-            Button({ type: ButtonType.Circle }) {
-              SymbolGlyph($r('sys.symbol.xmark')).fontSize($r('app.float.timeline_column_action_icon'))
-                .fontColor([this.readingText($r('app.color.text_secondary'))])
-            }.width($r('app.float.timeline_column_action_target')).height($r('app.float.timeline_column_action_target'))
-              .backgroundColor(Color.Transparent).accessibilityText($r('app.string.xxauth_close'))
-              .bindMenu([
-                { value: $r('app.string.promotion_hide_once'), action: (): void => this.onPromotionHideSession() },
-                { value: $r('app.string.promotion_hide_week'), action: (): void => this.onPromotionHideWeek() }
-              ])
           }
         }.width('100%').alignItems(VerticalAlign.Center).id('narrow-post-author-' + this.tweet.id)
-        if (!this.promotion) {
-          PostOverflowButton({ tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, hideTrigger: true })
-        }
+        PostOverflowButton({ tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, hideTrigger: true })
       }.width('100%').alignItems(HorizontalAlign.Start).padding($r('app.float.timeline_column_inset'))
     }.width('100%').id('narrow-post-card-' + this.tweet.id)
   }
@@ -965,31 +945,8 @@ export struct TweetCard {
               }
               .layoutWeight(1)
               .onClick((): void => this.onAuthorTapped(this.tweet))
-              PostAdLabel({ foreground: this.readingText($r('app.color.text_secondary')), presentation: this.tweet.presentation })
-              // A promotion row reuses this card for identical layout, so the
-              // affordances that need a real post are replaced by the dismissal
-              // choices the promotion supports.
-              if (this.promotion && this.promotionDismissible) {
-                Button({ type: ButtonType.Normal, stateEffect: true }) {
-                  SymbolGlyph($r('sys.symbol.xmark'))
-                    .fontSize(16)
-                    .fontColor([this.readingText($r('app.color.text_secondary'))])
-                    .accessibilityLevel('no')
-                }
-                .width(32)
-                .height(32)
-                .padding(0)
-                .backgroundColor(Color.Transparent)
-                .flexShrink(0)
-                .accessibilityText($r('app.string.xxauth_close'))
-                .bindMenu([
-                  { value: $r('app.string.promotion_hide_once'), action: (): void => this.onPromotionHideSession() },
-                  { value: $r('app.string.promotion_hide_week'), action: (): void => this.onPromotionHideWeek() }
-                ])
-              } else if (!this.promotion) {
-                PostOverflowButton({ compactHeader: true, foreground: this.readingText($r('app.color.text_secondary')), tweet: this.tweet, inputMenuRequest: this.inputMenuRequest })
-              }
-              if (this.translationEnabled && (this.actionsMask & 64) !== 0 && !this.showActions && !this.promotion) {
+              PostOverflowButton({ compactHeader: true, foreground: this.readingText($r('app.color.text_secondary')), tweet: this.tweet, inputMenuRequest: this.inputMenuRequest })
+              if (this.translationEnabled && (this.actionsMask & 64) !== 0 && !this.showActions) {
                 Stack() {
                   SymbolGlyph($r('sys.symbol.ellipsis_circle'))
                     .fontSize(20)
@@ -1018,7 +975,7 @@ export struct TweetCard {
           .width('100%')
           .alignItems(HorizontalAlign.Start)
 
-          if (this.translatedText.length > 0 && !this.promotion && this.tweet.presentation?.visibility?.hidden !== true) {
+          if (this.translatedText.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
             PostTranslationInfo({ language: this.tweet.language ?? '', showingOriginal: this.showingOriginal,
               foreground: this.readingText($r('app.color.text_secondary')), accent: this.readingText(this.accentColor),
               onToggle: (): void => { this.showingOriginal = !this.showingOriginal; } })
@@ -1199,7 +1156,7 @@ export struct TweetCard {
     .focusable(true).focusOnTouch(false).hoverEffect(HoverEffect.Highlight)
     .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.onOpen(this.tweet, this.sharedElementId)))
     .onMouse((event: MouseEvent): void => contextInputMouse(event, (): void => {
-      if (!this.promotion) { this.inputMenuRequest++; }
+      this.inputMenuRequest++;
     }))
     .onClick((): void => {
       this.onOpen(this.tweet, this.sharedElementId);

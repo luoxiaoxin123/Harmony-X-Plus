@@ -40,13 +40,8 @@ export class XExploreHero {
   context: string = '';
   time: string = '';
   imageUrl: string = '';
-  authorName: string = '';
-  authorAvatarUrl: string = '';
   url: string = '';
-  promoted: boolean = false;
-  // Event summaries can carry a complete Tweet media entity. Keep the parsed
-  // post instead of flattening it to its poster image, otherwise promoted
-  // videos become indistinguishable from a static hero image.
+  // Event summaries can carry a complete Tweet media entity, including video streams.
   mediaTweet: Tweet | null = null;
 }
 
@@ -219,6 +214,7 @@ export class XExploreParser {
     }
     const record: Record<string, Object> = node as Record<string, Object>;
     const typeName: string = String(record['__typename'] ?? '');
+    if (XExploreParser.isPromoted(record)) { return; }
     if (typeName.indexOf('Trend') >= 0) {
       const label: string = XExploreParser.labelOf(record);
       if (label.length > 0) {
@@ -523,6 +519,7 @@ export class XExploreParser {
   }
 
   private static trendFromRecord(record: Record<string, Object>): XExploreTrend | null {
+    if (XExploreParser.isPromoted(record)) { return null; }
     const item: XExploreTrend = new XExploreTrend();
     item.name = String(record['name'] ?? '').trim();
     const social: Record<string, Object> = XExploreParser.obj(record, 'social_context');
@@ -558,14 +555,12 @@ export class XExploreParser {
   }
 
   private static heroFromRecord(record: Record<string, Object>): XExploreHero | null {
+    if (XExploreParser.isPromoted(record)) { return null; }
     const hero: XExploreHero = new XExploreHero();
     const event: Record<string, Object> = XExploreParser.obj(record, 'event');
     hero.eventId = String(event['rest_id'] ?? '');
     hero.title = String(record['title'] ?? '');
-    const promoted: Record<string, Object> = XExploreParser.obj(record, 'promotedMetadata');
-    hero.promoted = Object.keys(promoted).length > 0;
-    hero.description = String(record['supportingText'] ?? record['supporting_text'] ??
-      promoted['promotedTrendDescription'] ?? '');
+    hero.description = String(record['supportingText'] ?? record['supporting_text'] ?? '');
     hero.time = String(record['timeString'] ?? record['time_string'] ?? '');
     const social: Record<string, Object> = XExploreParser.obj(record, 'socialContext');
     const legacySocial: Record<string, Object> = XExploreParser.obj(record, 'social_context');
@@ -573,12 +568,6 @@ export class XExploreParser {
     const eventUrl: Record<string, Object> = XExploreParser.obj(record, 'eventSummaryUrl');
     const currentEventUrl: Record<string, Object> = XExploreParser.obj(record, 'url');
     hero.url = String(eventUrl['url'] ?? currentEventUrl['url'] ?? '');
-    const advertiser: Record<string, Object> = XExploreParser.obj(
-      XExploreParser.obj(promoted, 'advertiser_results'), 'result');
-    const advertiserCore: Record<string, Object> = XExploreParser.obj(advertiser, 'core');
-    const advertiserAvatar: Record<string, Object> = XExploreParser.obj(advertiser, 'avatar');
-    hero.authorName = String(advertiserCore['name'] ?? '');
-    hero.authorAvatarUrl = String(advertiserAvatar['image_url'] ?? '');
     const directImage: Record<string, Object> = XExploreParser.obj(record, 'eventImage');
     const currentImage: Record<string, Object> = XExploreParser.obj(record, 'image');
     hero.imageUrl = String(directImage['url'] ?? currentImage['url'] ?? '');
@@ -593,6 +582,11 @@ export class XExploreParser {
       }
     }
     return hero.title.length > 0 || hero.description.length > 0 ? hero : null;
+  }
+
+  private static isPromoted(record: Record<string, Object>): boolean {
+    return Object.keys(XExploreParser.obj(record, 'promotedMetadata')).length > 0 ||
+      Object.keys(XExploreParser.obj(record, 'promoted_metadata')).length > 0;
   }
 
   private static frameFromItem(itemContent: Record<string, Object>,

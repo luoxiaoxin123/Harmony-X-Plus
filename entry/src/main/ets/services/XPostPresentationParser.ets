@@ -31,7 +31,7 @@ export class XPostPresentationParser {
       input['promotedMetadata'] ?? input['promoted_metadata'] ?? node['tweetPromotedMetadata'] ?? node['tweet_promoted_metadata'] ??
       node['promotedMetadata'] ?? node['promoted_metadata']);
     if (Object.keys(promoted).length > 0) {
-      XPostPresentationParser.label(out, 'ad', Card.text(promoted['disclaimerText']), Card.url(promoted['advertiser_url']));
+      XPostPresentationParser.label(out, 'ad', '', '');
     }
     const intervention: Record<string, Object> = Card.object(input['softIntervention'] ?? node['softIntervention']);
     if (Object.keys(intervention).length > 0) {

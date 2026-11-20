@@ -73,7 +73,7 @@ export struct SidebarSettings {
       }.width('100%').padding({ top: 12, bottom: 12 }).id('settings-sidebar-search-capsule')
       Divider().color($r('app.color.divider'))
       ForEach(this.ids(), (id: string) => {
-        if (id === 'support') { Divider().color($r('app.color.divider')).margin({ top: 8, bottom: 8 }) }
+        if (id === 'help') { Divider().color($r('app.color.divider')).margin({ top: 8, bottom: 8 }) }
         Row({ space: 4 }) {
           Text(sidebarItemLabel(id)).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_L')).layoutWeight(1)
             .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))

@@ -53,26 +53,6 @@
       "value": "Phát hoạt ảnh riêng của biểu tượng hiện tại, rồi hiển thị Trang chủ."
     },
     {
-      "name": "splash_ad_label",
-      "value": "Quảng cáo"
-    },
-    {
-      "name": "splash_ad_skip",
-      "value": "Bỏ qua"
-    },
-    {
-      "name": "splash_ad_signature",
-      "value": "Gặp thế giới bạn yêu thích"
-    },
-    {
-      "name": "supporter_config_error",
-      "value": "Không thể xác nhận liên kết tài khoản trên đám mây. Vui lòng liên hệ tác giả."
-    },
-    {
-      "name": "supporter_restore_hint",
-      "value": "Chuyển lại tài khoản sẽ khôi phục trạng thái đã lưu. Trên thiết bị mới, sau khi cài lại hoặc trong phiên bản khác, hãy đăng nhập cùng tài khoản X và nhập mã gốc để khôi phục quyền truy cập."
-    },
-    {
       "name": "eye_reading_title",
       "value": "Đọc bằng ánh mắt"
     },
@@ -421,112 +401,8 @@
       "value": "Recently read"
     },
     {
-      "name": "promotion_hide_week",
-      "value": "Hide for 7 days"
-    },
-    {
-      "name": "promotion_hide_once",
-      "value": "Hide this time"
-    },
-    {
-      "name": "supporter_account_hint",
-      "value": "Sign in to X first. The code is bound to the account that redeems it."
-    },
-    {
-      "name": "supporter_account",
-      "value": "This code will be bound to @%s"
-    },
-    {
-      "name": "supporter_storage_error",
-      "value": "Unable to securely save the supporter credential. Please try again later."
-    },
-    {
-      "name": "supporter_network_error",
-      "value": "Unable to verify right now. Please try again later. Existing unexpired supporter access is retained."
-    },
-    {
-      "name": "supporter_invalid",
-      "value": "This code is invalid, expired, disabled, or already bound to another X account. Please contact the author."
-    },
-    {
-      "name": "supporter_refresh",
-      "value": "Refresh supporter status"
-    },
-    {
-      "name": "supporter_verifying",
-      "value": "Verifying…"
-    },
-    {
-      "name": "supporter_redeem",
-      "value": "Activate supporter access"
-    },
-    {
-      "name": "supporter_code_placeholder",
-      "value": "Enter your supporter code"
-    },
-    {
-      "name": "supporter_expiry",
-      "value": "Valid until %s"
-    },
-    {
-      "name": "supporter_active",
-      "value": "Thank you! Promotions are disabled."
-    },
-    {
-      "name": "supporter_description",
-      "value": "After supporting the author, redeem the code issued once payment is verified. Each code is bound to one X account. App recommendations and promotional banners are hidden, while announcements and updates stay available."
-    },
-    {
-      "name": "supporter_title",
-      "value": "Supporter · No promotions"
-    },
-    {
-      "name": "xxauth_support_author",
-      "value": "Support the Harmony X developer"
-    },
-    {
-      "name": "xxauth_discover_apps",
-      "value": "Discover more apps"
-    },
-    {
-      "name": "xxauth_view_recommendation",
-      "value": "View recommended app"
-    },
-    {
-      "name": "xxauth_stop_secondary",
-      "value": "Do not ask again"
-    },
-    {
-      "name": "xxauth_go_store",
-      "value": "Open app store"
-    },
-    {
-      "name": "xxauth_snooze_failed",
-      "value": "Unable to save your reminder preference. Please try again."
-    },
-    {
-      "name": "xxauth_recommendation",
-      "value": "Recommended app"
-    },
-    {
-      "name": "xxauth_recommend_name",
-      "value": "Shike Watermark"
-    },
-    {
-      "name": "xxauth_recommend_description",
-      "value": "Discover more apps. Shike Watermark offers original photo watermark designs inspired by stars, travel, historic towns, mountains, seas and forests."
-    },
-    {
       "name": "xxauth_close",
       "value": "Close"
-    },
-    {
-      "name": "xxauth_snooze",
-      "value": "Remind me in 3 days"
-    },
-    {
-      "name": "xxauth_experience",
-      "value": "Explore app"
     },
     {
       "name": "xxauth_announcements",
@@ -557,10 +433,6 @@
       "value": "Check for HarmonyOS updates"
     },
     {
-      "name": "xxauth_update_none",
-      "value": "There are no updates to show"
-    },
-    {
       "name": "xxauth_empty",
       "value": "No content yet"
     },
@@ -571,10 +443,6 @@
     {
       "name": "xxauth_retry",
       "value": "Retry"
-    },
-    {
-      "name": "xxauth_force_update",
-      "value": "An update is required to continue using this version. Open the download link to update."
     },
     {
       "name": "settings_app_icon_milk_frog_white",
@@ -1513,10 +1381,6 @@
       "value": "Trung tâm trợ giúp"
     },
     {
-      "name": "side_support",
-      "value": "Ủng hộ Harmony X"
-    },
-    {
       "name": "help_intro",
       "value": "Gửi câu hỏi, chia sẻ ý tưởng và tìm cách ủng hộ dự án."
     },
@@ -1579,26 +1443,6 @@
     {
       "name": "help_tg_group_failed",
       "value": "Không mở được lời mời nhóm Telegram. Vui lòng thử lại sau."
-    },
-    {
-      "name": "help_support_title",
-      "value": "Ủng hộ tác giả"
-    },
-    {
-      "name": "help_support_desc",
-      "value": "Tác giả dành thời gian và chi phí thử nghiệm API cho dự án này. Nếu ứng dụng hữu ích, bạn có thể tự nguyện ủng hộ. Cảm ơn bạn đã sử dụng ứng dụng."
-    },
-    {
-      "name": "help_support_scan",
-      "value": "Quét một trong hai mã QR bằng WeChat hoặc Alipay để ủng hộ dự án."
-    },
-    {
-      "name": "help_support_wechat",
-      "value": "WeChat Pay"
-    },
-    {
-      "name": "help_support_alipay",
-      "value": "Alipay"
     },
     {
       "name": "settings_account",
@@ -2399,14 +2243,6 @@
     {
       "name": "settings_filter_desc",
       "value": "Quy tắc chỉ đổi nội dung hiển thị trên thiết bị này, không bỏ theo dõi, chặn hay đổi cài đặt tài khoản X."
-    },
-    {
-      "name": "settings_filter_hide_ads",
-      "value": "Ẩn quảng cáo"
-    },
-    {
-      "name": "settings_filter_hide_ads_desc",
-      "value": "Ẩn bài đăng được X đánh dấu là quảng cáo."
     },
     {
       "name": "settings_filter_only_media",
@@ -3479,10 +3315,6 @@
     {
       "name": "explore_category_entertainment",
       "value": "Giải trí"
-    },
-    {
-      "name": "explore_promoted",
-      "value": "Được quảng bá"
     },
     {
       "name": "explore_section_unavailable",
@@ -9581,10 +9413,6 @@
       "value": "Hiển thị Spaces trên thanh tiêu đề Trang chủ. Sau khi ẩn, bạn có thể bật lại viên nang tại đây."
     },
     {
-      "name": "post_ad_label",
-      "value": "AD"
-    },
-    {
       "name": "settings_media_black_background",
       "value": "Nền đen cho ảnh và video"
     },
@@ -12971,42 +12799,6 @@
     {
       "name": "dns_failure_note",
       "value": "After saving, DoH failures stop affected requests instead of falling back to system DNS. Turn DoH off and save to restore system DNS. Changes apply after saving."
-    },
-    {
-      "name": "help_support_afdian",
-      "value": "Afdian"
-    },
-    {
-      "name": "help_support_qr_summary",
-      "value": "Quét mã để hỗ trợ phát triển"
-    },
-    {
-      "name": "help_support_afdian_summary",
-      "value": "Tắt đề xuất vĩnh viễn · ¥16.6"
-    },
-    {
-      "name": "help_support_afdian_desc",
-      "value": "Mua mã tắt đề xuất vĩnh viễn trên Afdian, sau đó quay lại ứng dụng để đổi mã."
-    },
-    {
-      "name": "help_support_afdian_buy",
-      "value": "Mua trên Afdian"
-    },
-    {
-      "name": "help_support_expand",
-      "value": "Nhấn để mở rộng"
-    },
-    {
-      "name": "help_support_collapse",
-      "value": "Nhấn để thu gọn"
-    },
-    {
-      "name": "help_support_scan_code",
-      "value": "Quét mã này bằng ứng dụng thanh toán tương ứng."
-    },
-    {
-      "name": "help_support_recommended",
-      "value": "Đề xuất"
     },
     {
       "name": "dns_x_test",

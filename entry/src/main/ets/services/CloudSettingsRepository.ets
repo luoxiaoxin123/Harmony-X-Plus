@@ -91,7 +91,6 @@ export const CLOUD_SETTING_FIELDS: CloudSettingField[] = [
   new CloudSettingField('harmonyx_content_filter', 'only_media', 'harmonyx.filter_only_media', 4, false),
   new CloudSettingField('harmonyx_content_filter', 'hide_reposts', 'harmonyx.filter_hide_reposts', 4, false),
   new CloudSettingField('harmonyx_content_filter', 'hide_replies', 'harmonyx.filter_hide_replies', 4, false),
-  new CloudSettingField('harmonyx_content_filter', 'hide_ads', 'harmonyx.filter_hide_ads', 4, true),
   new CloudSettingField('harmonyx_content_filter', 'keywords', 'harmonyx.filter_keywords', 4, ''),
   new CloudSettingField('harmonyx_content_filter', 'muted_users', 'harmonyx.filter_muted_users', 4, ''),
   new CloudSettingField('harmonyx_content_filter', 'languages', 'harmonyx.filter_languages', 4, '')

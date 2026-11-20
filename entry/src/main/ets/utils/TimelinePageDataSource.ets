@@ -1,24 +1,14 @@
 import type { Tweet } from '../models/Tweet';
-import type { XXAuthPromotionPost } from '../services/XXAuthPromotionPost';
-import { XXAuthPromotionInjector, XXAuthPromotionSlot } from './XXAuthPromotionInjector';
-
-// Upper bound of promotions inside one timeline, whatever the remote asks for.
-const PROMOTION_LIMIT: number = 3;
 
 export class TimelinePageItem {
   key: string;
   tweet: Tweet | null;
   postIndex: number;
-  // Set only on an injected recommendation row; the feed renders it as a post
-  // while paging, numbering and cursors stay untouched.
-  promotion: XXAuthPromotionPost | null;
 
-  constructor(key: string, tweet: Tweet | null = null, postIndex: number = -1,
-    promotion: XXAuthPromotionPost | null = null) {
+  constructor(key: string, tweet: Tweet | null = null, postIndex: number = -1) {
     this.key = key;
     this.tweet = tweet;
     this.postIndex = postIndex;
-    this.promotion = promotion;
   }
 }
 
@@ -27,14 +17,11 @@ export class TimelinePageItem {
 export class TimelinePageDataSource implements IDataSource {
   private rows: TimelinePageItem[] = [new TimelinePageItem('header'), new TimelinePageItem('footer')];
   private listeners: DataChangeListener[] = [];
-  private posts: number = 0;
 
   totalCount(): number { return this.rows.length; }
   // WaterFlow sections contain a header and footer outside the content section.
-  // Keep this count in the data source so injected promotion rows are included
-  // in the same count as the LazyForEach rows.
   contentCount(): number { return Math.max(0, this.rows.length - 2); }
-  postCount(): number { return this.posts; }
+  postCount(): number { return this.contentCount(); }
   getData(index: number): TimelinePageItem { return this.rows[index]; }
 
   registerDataChangeListener(listener: DataChangeListener): void {
@@ -46,29 +33,11 @@ export class TimelinePageDataSource implements IDataSource {
     if (index >= 0) { this.listeners.splice(index, 1); }
   }
 
-  // Promotions are spread over the first page at launch-randomised positions,
-  // so the reader meets them while scrolling instead of at the very top.
-  // `count` is the remote budget for this surface; the posts list is the pool
-  // the injector cycles through, so one timeline only ever carries one row.
-  replace(posts: Tweet[], promotions: XXAuthPromotionPost[] = [], salt: string = '',
-    count: number = 0, onRowsReady: ((contentCount: number) => void) | null = null): void {
+  replace(posts: Tweet[], onRowsReady: ((contentCount: number) => void) | null = null): void {
     const desired: TimelinePageItem[] = [];
     for (let i: number = 0; i < posts.length; i++) {
       desired.push(new TimelinePageItem('post:' + posts[i].id, posts[i], i));
     }
-    if (promotions.length > 0 && count > 0) {
-      const slots: XXAuthPromotionSlot[] = XXAuthPromotionInjector.slots(posts.length,
-        promotions, Math.min(count, PROMOTION_LIMIT), 'home:' + salt);
-      for (let i: number = 0; i < slots.length; i++) {
-        const slot: XXAuthPromotionSlot = slots[i];
-        // Earlier insertions shift every later position by their own count.
-        const index: number = Math.min(slot.index + i, desired.length);
-        desired.splice(index, 0,
-          new TimelinePageItem('promo:' + slot.post.fingerprint + ':' + index.toString(),
-            null, -1, slot.post));
-      }
-    }
-    this.posts = posts.length;
 
     const previous: TimelinePageItem[] = this.rows;
     const oldIndices: Map<string, number> = new Map();

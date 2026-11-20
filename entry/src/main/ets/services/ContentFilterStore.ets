@@ -9,7 +9,6 @@ export const STORAGE_KEY_FOR_YOU_ONLY_SENSITIVE: string = 'harmonyx.for_you_only
 export const STORAGE_KEY_FILTER_ONLY_MEDIA: string = 'harmonyx.filter_only_media';
 export const STORAGE_KEY_FILTER_HIDE_REPOSTS: string = 'harmonyx.filter_hide_reposts';
 export const STORAGE_KEY_FILTER_HIDE_REPLIES: string = 'harmonyx.filter_hide_replies';
-export const STORAGE_KEY_FILTER_HIDE_ADS: string = 'harmonyx.filter_hide_ads';
 export const STORAGE_KEY_FILTER_KEYWORDS: string = 'harmonyx.filter_keywords';
 export const STORAGE_KEY_FILTER_MUTED_USERS: string = 'harmonyx.filter_muted_users';
 export const STORAGE_KEY_FILTER_REVISION: string = 'harmonyx.filter_revision';
@@ -37,13 +36,12 @@ export class ContentFilterSettings {
   onlyMedia: boolean = false;
   hideReposts: boolean = false;
   hideReplies: boolean = false;
-  hideAds: boolean = true;
   keywordsText: string = '';
   mutedUsersText: string = '';
   mutedLanguagesText: string = '';
 
   constructor(onlyMedia: boolean, hideReposts: boolean, hideReplies: boolean,
-    keywordsText: string, mutedUsersText: string, hideAds: boolean = true,
+    keywordsText: string, mutedUsersText: string,
     mutedLanguagesText: string = '', onlySensitiveForYou: boolean = false,
     onlySensitiveAgeConfirmed: boolean = false) {
     this.onlySensitiveForYou = onlySensitiveForYou;
@@ -51,7 +49,6 @@ export class ContentFilterSettings {
     this.onlyMedia = onlyMedia;
     this.hideReposts = hideReposts;
     this.hideReplies = hideReplies;
-    this.hideAds = hideAds;
     this.keywordsText = keywordsText;
     this.mutedUsersText = mutedUsersText;
     this.mutedLanguagesText = normalizedMutedLanguages(mutedLanguagesText);
@@ -63,7 +60,6 @@ export class ContentFilterStore {
   private static readonly ONLY_MEDIA_KEY: string = 'only_media';
   private static readonly HIDE_REPOSTS_KEY: string = 'hide_reposts';
   private static readonly HIDE_REPLIES_KEY: string = 'hide_replies';
-  private static readonly HIDE_ADS_KEY: string = 'hide_ads';
   private static readonly KEYWORDS_KEY: string = 'keywords';
   private static readonly MUTED_USERS_KEY: string = 'muted_users';
   private static readonly LANGUAGES_KEY: string = 'languages';
@@ -87,14 +83,13 @@ export class ContentFilterStore {
         store.getSync(ContentFilterStore.HIDE_REPLIES_KEY, false) as boolean,
         store.getSync(ContentFilterStore.KEYWORDS_KEY, '') as string,
         store.getSync(ContentFilterStore.MUTED_USERS_KEY, '') as string,
-        store.getSync(ContentFilterStore.HIDE_ADS_KEY, true) as boolean,
         store.getSync(ContentFilterStore.LANGUAGES_KEY, '') as string,
         onlySensitiveForYou, ageConfirmed
       );
       this.publish(settings);
       return settings;
     } catch (error) {
-      const settings: ContentFilterSettings = new ContentFilterSettings(false, false, false, '', '', true);
+      const settings: ContentFilterSettings = new ContentFilterSettings(false, false, false, '', '');
       this.publish(settings);
       return settings;
     }
@@ -107,7 +102,6 @@ export class ContentFilterStore {
       settings.hideReplies,
       this.normaliseText(settings.keywordsText),
       this.normaliseText(settings.mutedUsersText),
-      settings.hideAds,
       settings.mutedLanguagesText, settings.onlySensitiveForYou,
       settings.onlySensitiveForYou && settings.onlySensitiveAgeConfirmed
     );
@@ -120,7 +114,6 @@ export class ContentFilterStore {
       store.putSync(ContentFilterStore.ONLY_MEDIA_KEY, cleaned.onlyMedia);
       store.putSync(ContentFilterStore.HIDE_REPOSTS_KEY, cleaned.hideReposts);
       store.putSync(ContentFilterStore.HIDE_REPLIES_KEY, cleaned.hideReplies);
-      store.putSync(ContentFilterStore.HIDE_ADS_KEY, cleaned.hideAds);
       store.putSync(ContentFilterStore.KEYWORDS_KEY, cleaned.keywordsText);
       store.putSync(ContentFilterStore.MUTED_USERS_KEY, cleaned.mutedUsersText);
       store.putSync(ContentFilterStore.LANGUAGES_KEY, cleaned.mutedLanguagesText);
@@ -137,7 +130,6 @@ export class ContentFilterStore {
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_FILTER_ONLY_MEDIA, settings.onlyMedia);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_FILTER_HIDE_REPOSTS, settings.hideReposts);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_FILTER_HIDE_REPLIES, settings.hideReplies);
-    AppStorage.setOrCreate<boolean>(STORAGE_KEY_FILTER_HIDE_ADS, settings.hideAds);
     AppStorage.setOrCreate<string>(STORAGE_KEY_FILTER_KEYWORDS, this.normaliseText(settings.keywordsText));
     AppStorage.setOrCreate<string>(STORAGE_KEY_FILTER_MUTED_USERS, this.normaliseText(settings.mutedUsersText));
     AppStorage.setOrCreate<string>(STORAGE_KEY_FILTER_LANGUAGES, normalizedMutedLanguages(settings.mutedLanguagesText));
@@ -161,7 +153,7 @@ export class ContentFilterStore {
     const language: string = postLanguageCode(tweet.language ?? '');
     if (language.length > 0 && tweet.text.trim().length > 0 &&
       settings.mutedLanguagesText.split(',').indexOf(language) >= 0) { return true; }
-    if (settings.hideAds && isAdPost(tweet.presentation)) {
+    if (isAdPost(tweet.presentation)) {
       return true;
     }
     if (settings.onlyMedia && !this.hasMedia(tweet)) {

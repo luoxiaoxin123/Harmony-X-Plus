@@ -55,6 +55,7 @@ import type {
 } from '../models/Tweet';
 import type { TweetPage } from './XApiClient';
 import { normalizedPostMediaType } from '../utils/PostGif';
+import { isAdPost } from '../utils/PostDisclosure';
 import { optionalPostCount, postEditHistoryIds } from '../utils/PostMetadata';
 import { ReplyConversation } from './ReplyConversation';
 import { XPostCardParser } from './XPostCardParser';
@@ -2361,7 +2362,7 @@ export class XTimelineParser {
     const seen: Map<string, boolean> = new Map();
     const out: Tweet[] = [];
     for (let i: number = 0; i < tweets.length; i++) {
-      if (!seen.has(tweets[i].id)) {
+      if (!seen.has(tweets[i].id) && !isAdPost(tweets[i].presentation)) {
         seen.set(tweets[i].id, true);
         out.push(tweets[i]);
       }

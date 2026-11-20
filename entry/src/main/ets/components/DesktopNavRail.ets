@@ -118,9 +118,6 @@ export struct DesktopNavRail {
             this.Item(id, sidebarItemLabel(id), sidebarItemIcon(id))
           }, (id: string): string => id)
           Divider().color($r('app.color.divider')).margin({ top: 8, bottom: 8 })
-          if (sidebarVisibleIds(this.itemOrder, this.hiddenItems).indexOf('support') >= 0) {
-            this.Item('support', sidebarItemLabel('support'), sidebarItemIcon('support'))
-          }
           this.Item('settings', $r('app.string.settings_title'), $r('sys.symbol.gearshape'))
           if (sidebarVisibleIds(this.itemOrder, this.hiddenItems).indexOf('help') >= 0) {
             this.Item('help', sidebarItemLabel('help'), sidebarItemIcon('help'))
