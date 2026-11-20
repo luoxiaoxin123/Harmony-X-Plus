@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "لا تستخدم تسجيل الدخول عبر Google؛ أدخل بريدك الإلكتروني مباشرةً. إذا بقيت الصفحة بيضاء رغم عمل الشبكة، يُرجى الانتظار."
+      "value": "أدخل بريدك الإلكتروني بدلاً من تسجيل الدخول عبر Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "لم تظهر صفحة تسجيل الدخول إلى X. أعد المحاولة أو تحقّق من الاتصال في المتصفح."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "اختبار X في المتصفح"
     },
     {
       "name": "auth_web_load_failed",

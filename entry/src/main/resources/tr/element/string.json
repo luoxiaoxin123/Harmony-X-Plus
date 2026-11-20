@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Google ile giriş yapmayın; e-posta adresinizi doğrudan girin. Ağınız çalışırken sayfa boş kalırsa lütfen bekleyin."
+      "value": "Google ile giriş yapmak yerine e-posta adresinizi girin."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X giriş sayfası görüntülenmedi. Yeniden deneyin veya bağlantıyı tarayıcıda kontrol edin."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "X’i tarayıcıda dene"
     },
     {
       "name": "auth_web_load_failed",

@@ -12,10 +12,9 @@ import { OAuthConfigStore, XDeveloperConfig } from '../services/OAuthConfig';
 import { XPrivateStore, XSession, xPrivateStore } from '../services/XPrivateStore';
 import { XAccount, accountStore } from '../services/AccountStore';
 import { xWebCookieBridge } from '../services/XWebCookieBridge';
-import { xUserAgent } from '../services/XUserAgent';
-import { WebProxyCredential, proxyStore } from '../services/ProxyStore';
+import { X_LOGIN_URL, XLoginWebContent } from '../components/XLoginWebContent';
 import hilog from '@ohos.hilog';
-import { DISPLAY_MODE_DARK, DISPLAY_MODE_LIGHT, DISPLAY_MODE_SYSTEM } from '../services/AppearanceStore';
+import { DISPLAY_MODE_SYSTEM } from '../services/AppearanceStore';
 import { pageSurfaceColor, secondaryButtonSurfaceColor } from '../utils/ThemeColors';
 
 const DOMAIN = 0xFF00;
@@ -36,7 +35,6 @@ struct AuthWeb {
   private addAccount: boolean = false;
   @State busy: boolean = false;
   @State statusText: string = '';
-  @State private loadFailed: boolean = false;
   @StorageLink('harmonyx.accent_color') accentColor: string = '#007DFF';
   // The X sign-in page advertises prefers-color-scheme, so it follows the app's
   // light/dark setting rather than staying bright white at night.
@@ -47,32 +45,17 @@ struct AuthWeb {
     AppStorage.get<number>('harmonyx.status_bar_height') ?? 0;
   @StorageProp('harmonyx.navigation_indicator_height') navigationIndicatorHeight: number =
     AppStorage.get<number>('harmonyx.navigation_indicator_height') ?? 0;
-  private controller: webview.WebviewController = new webview.WebviewController();
   private api: XApiClient = new XApiClient();
   private configStore: OAuthConfigStore = new OAuthConfigStore();
   private handled: boolean = false;
+  private alive: boolean = false;
   // The "sign out of the account in use first" hint is shown once per attempt.
   private addHintShown: boolean = false;
   private pollTimer: number = -1;
-  // Standard mobile-browser UA: the default ArkWeb UA looks unfamiliar to
-  // X's login risk engine and can contribute to "temporarily limited"
-  // flags. This only identifies the renderer, nothing else is spoofed; the
-  // device token is the real productModel from deviceInfo.
-  private readonly ua: string = xUserAgent.value();
 
   private text(resource: Resource): string {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     return context.resourceManager.getStringSync(resource);
-  }
-
-  private webDarkMode(): WebDarkMode {
-    if (this.displayMode === DISPLAY_MODE_DARK) {
-      return WebDarkMode.On;
-    }
-    if (this.displayMode === DISPLAY_MODE_LIGHT) {
-      return WebDarkMode.Off;
-    }
-    return WebDarkMode.Auto;
   }
 
   // Until the avoid-area callback lands the stored height can be 0; the floor
@@ -82,13 +65,14 @@ struct AuthWeb {
   }
 
   aboutToAppear(): void {
+    this.alive = true;
     this.statusText = this.text($r('app.string.auth_loading'));
     const params = router.getParams() as Record<string, Object> | undefined;
     if (params !== undefined) {
       this.sessionMode = String(params['mode'] ?? '') === 'session';
       this.addAccount = String(params['addAccount'] ?? '') === '1';
       if (this.sessionMode) {
-        this.authUrl = 'https://x.com/i/flow/login';
+        this.authUrl = X_LOGIN_URL;
         this.statusText = this.text($r('app.string.auth_session_waiting'));
       } else {
         this.authUrl = String(params['authUrl'] ?? '');
@@ -105,6 +89,7 @@ struct AuthWeb {
   }
 
   aboutToDisappear(): void {
+    this.alive = false;
     this.stopSessionPolling();
     if (this.sessionMode && this.addAccount && !this.handled) {
       const ctx: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -130,7 +115,7 @@ struct AuthWeb {
   }
 
   private async checkSessionCookies(): Promise<void> {
-    if (this.handled) {
+    if (!this.alive || this.handled) {
       return;
     }
     let cookie: string = '';
@@ -139,6 +124,7 @@ struct AuthWeb {
     } catch (e) {
       return;
     }
+    if (!this.alive || this.handled) { return; }
     const session: XSession = XPrivateStore.parseCookieString(cookie);
     if (!session.isUsable()) {
       return;
@@ -325,66 +311,12 @@ struct AuthWeb {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .padding({ left: 16, right: 16, bottom: 6 })
         }
-        if (this.loadFailed) {
-          Column({ space: 12 }) {
-            Text($r('app.string.auth_web_load_failed')).fontFamily(this.appFontFamily)
-              .fontColor($r('app.color.text_primary'))
-            Button($r('app.string.card_retry'))
-              .id('auth-web-retry').focusable(true).defaultFocus(true)
-              .onClick((): void => {
-                this.statusText = this.text(this.sessionMode ? $r('app.string.auth_session_waiting') :
-                  $r('app.string.auth_loading'));
-                this.loadFailed = false;
-                if (this.sessionMode) { this.startSessionPolling(); }
-              })
-          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center)
-        } else if (this.authUrl.length > 0) {
-          Web({ src: this.authUrl, controller: this.controller })
-            .layoutWeight(1)
-            .width('100%')
-            .javaScriptAccess(true)
-            .domStorageAccess(true)
-            .userAgent(this.ua)
-            .darkMode(this.webDarkMode())
-            .forceDarkAccess(this.displayMode === DISPLAY_MODE_DARK)
-            .backgroundColor(pageSurfaceColor(this.displayMode, this.themeDarkSurface))
-            .onHttpAuthRequest((event): boolean => {
-              if (event === undefined || event === null) {
-                return false;
-              }
-              const credential: WebProxyCredential = proxyStore.webCredential();
-              if (!credential.usable) {
-                event.handler.cancel();
-                return false;
-              }
-              return event.handler.confirm(credential.username, credential.password);
-            })
-            .onErrorReceive((event): void => {
-              if (event.request.isMainFrame() && !this.handled) {
-                this.loadFailed = true;
-                this.stopSessionPolling();
-              }
-            })
-            .onHttpErrorReceive((event): void => {
-              if (event.request.isMainFrame() && event.response.getResponseCode() >= 400 && !this.handled) {
-                this.loadFailed = true;
-                this.stopSessionPolling();
-              }
-            })
-            .onPageEnd(() => {
-              // Login can complete without navigation firing the intercept
-              // path, so re-check whenever a page finishes loading.
-              if (this.sessionMode) {
-                this.checkSessionCookies();
-              }
-            })
-            .onLoadIntercept((event) => {
-              if (event === undefined) {
-                return false;
-              }
-              const url: string = event.data.getRequestUrl();
-              return this.onIntercept(url);
-            })
+        if (this.authUrl.length > 0) {
+          XLoginWebContent({
+            url: this.authUrl,
+            onPageLoaded: (): void => { if (this.sessionMode) { void this.checkSessionCookies(); } },
+            onIntercept: (url: string): boolean => this.onIntercept(url)
+          })
         } else {
           Blank().layoutWeight(1)
         }

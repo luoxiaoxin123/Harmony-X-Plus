@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "อย่าเข้าสู่ระบบด้วย Google ให้กรอกอีเมลโดยตรง หากเครือข่ายทำงานปกติแต่หน้ายังว่างอยู่ โปรดรอสักครู่"
+      "value": "โปรดป้อนอีเมลแทนการเข้าสู่ระบบด้วย Google"
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "หน้าเข้าสู่ระบบ X ยังไม่แสดง ลองใหม่หรือตรวจสอบการเชื่อมต่อในเบราว์เซอร์"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "ทดสอบ X ในเบราว์เซอร์"
     },
     {
       "name": "auth_web_load_failed",

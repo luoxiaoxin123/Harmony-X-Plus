@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Bitte nicht mit Google anmelden, sondern die E-Mail-Adresse direkt eingeben. Bleibt die Seite bei funktionierender Verbindung weiß, bitte warten."
+      "value": "Gib deine E-Mail-Adresse ein, anstatt dich über Google anzumelden."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Die X-Anmeldeseite wurde nicht angezeigt. Versuche es erneut oder prüfe die Verbindung im Browser."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "X im Browser testen"
     },
     {
       "name": "auth_web_load_failed",

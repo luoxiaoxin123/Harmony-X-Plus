@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Google ログインは使わず、メールアドレスを直接入力してください。通信に問題がなくても画面が真っ白な場合は、しばらくお待ちください。"
+      "value": "Googleログインの代わりにメールアドレスを入力してください。"
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Xのログイン画面が表示されませんでした。再試行するか、ブラウザで接続を確認してください。"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "ブラウザでXを開いて確認"
     },
     {
       "name": "auth_web_load_failed",

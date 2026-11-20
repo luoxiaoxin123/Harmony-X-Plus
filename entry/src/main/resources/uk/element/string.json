@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Не входьте через Google — введіть адресу електронної пошти безпосередньо. Якщо мережа працює, а сторінка залишається білою, зачекайте."
+      "value": "Введіть адресу електронної пошти замість входу через Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Сторінка входу в X так і не з’явилася. Спробуйте ще раз або перевірте з’єднання в браузері."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Перевірити X у браузері"
     },
     {
       "name": "auth_web_load_failed",

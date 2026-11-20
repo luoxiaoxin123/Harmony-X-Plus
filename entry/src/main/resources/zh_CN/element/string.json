@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "请勿使用 Google 登录，请直接输入邮箱；网络正常时若出现白屏，请耐心等待。"
+      "value": "请勿使用 Google 登录，请直接输入邮箱。"
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "在本次应用运行期间切换视频时，沿用上次手动选择的倍速。"
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X 登录页长时间没有显示。请重试，或用浏览器测试 X 是否能打开。"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "用浏览器测试 X"
     },
     {
       "name": "auth_web_load_failed",

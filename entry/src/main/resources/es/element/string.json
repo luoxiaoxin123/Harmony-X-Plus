@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "No inicies sesión con Google; introduce directamente tu correo electrónico. Si la página queda en blanco y la conexión funciona, espera."
+      "value": "Introduce tu correo electrónico en lugar de iniciar sesión con Google."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "La página de inicio de sesión de X no se ha mostrado. Inténtalo de nuevo o comprueba la conexión en tu navegador."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Probar X en el navegador"
     },
     {
       "name": "auth_web_load_failed",

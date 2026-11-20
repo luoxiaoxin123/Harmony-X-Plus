@@ -4494,7 +4494,7 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "از ورود با Google استفاده نکنید؛ ایمیل خود را مستقیماً وارد کنید. اگر شبکه درست کار می‌کند اما صفحه سفید است، لطفاً منتظر بمانید."
+      "value": "به‌جای ورود با گوگل، نشانی ایمیل خود را وارد کنید."
     },
     {
       "name": "onboarding_login_hint",
@@ -12935,6 +12935,14 @@
     {
       "name": "settings_video_remember_speed_desc",
       "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "صفحه ورود X نمایش داده نشد. دوباره تلاش کنید یا اتصال را در مرورگر بررسی کنید."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "آزمایش X در مرورگر"
     },
     {
       "name": "auth_web_load_failed",
