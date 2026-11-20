@@ -9,6 +9,7 @@ import { crashDiagnostics } from '../services/CrashDiagnostics';
 import { mediaViewerNavigationTransition } from '../utils/MediaViewerNavigation';
 import { PostTranslationOptionsHost } from '../components/PostTranslationOptionsHost';
 import { SecureMediaSaveHost } from '../components/SecureMediaSaveHost';
+import { PostShareSheetHost } from '../components/PostShareSheetHost';
 import { AboutAccountBuilder } from './AboutAccount';
 import { StartupCover } from '../components/StartupCover';
 import { startupSession } from '../utils/StartupSession';
@@ -7604,6 +7605,7 @@ struct Index {
       // 所以登录、引导与中秋弹窗各挂一个零尺寸宿主节点，根节点只保留链接预览。
       PostTranslationOptionsHost()
       SecureMediaSaveHost()
+      PostShareSheetHost({ inbox: this.messages })
       Column().width(0).height(0)
         .bindSheet($$this.showSpacePreview, this.SpacePreviewContent(), sheetMaterialOptions({
           width: 560,
@@ -9116,8 +9118,8 @@ struct Index {
           Text(this.exploreCategoryPages[index].status).fontFamily(this.appFontFamily)
             .fontSize($r('sys.float.Body_S'))
             .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-            .width('92%')
-            .padding({ top: 4, bottom: 8 })
+            .width('100%')
+            .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset'), top: 4, bottom: 8 })
         }
       }
 
@@ -9227,8 +9229,8 @@ struct Index {
         .fontSize($r('sys.float.Title_M'))
         .fontWeight(FontWeight.Bold)
         .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
-        .width('92%')
-        .padding({ top: 14, bottom: 6 })
+        .width('100%')
+        .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset'), top: 14, bottom: 6 })
     }
   }
 
@@ -9243,8 +9245,8 @@ struct Index {
         Text(card.footerText).fontFamily(this.appFontFamily)
           .fontSize($r('sys.float.Body_M'))
           .fontColor(this.accentColor)
-          .width('92%')
-          .padding({ top: 12, bottom: 14 })
+          .width('100%')
+          .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset'), top: 12, bottom: 14 })
           .onClick((): void => {
             this.openExploreDestination(card.footerUrl);
           })
@@ -9273,8 +9275,8 @@ struct Index {
         Text(card.footerText).fontFamily(this.appFontFamily)
           .fontSize($r('sys.float.Body_M'))
           .fontColor(this.accentColor)
-          .width('92%')
-          .padding({ top: 12, bottom: 14 })
+          .width('100%')
+          .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset'), top: 12, bottom: 14 })
           .onClick((): void => {
             this.openExploreDestination(card.footerUrl);
           })
@@ -9471,100 +9473,108 @@ struct Index {
 
   @Builder
   private ExploreTrendRow(trend: string): void {
-    Row({ space: 10 }) {
-      Column({ space: 3 }) {
-        Text($r('app.string.explore_category_trending')).fontFamily(this.appFontFamily)
-          .fontSize($r('sys.float.Body_S'))
-          .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-        Text(trend).fontFamily(this.appFontFamily)
-          .fontSize($r('sys.float.Title_S'))
-          .fontWeight(FontWeight.Bold)
-          .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-      SymbolGlyph($r('sys.symbol.ellipsis_circle'))
-        .fontSize(20)
-        .fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
-    }
-    .width('92%')
-    .padding({ top: 14, bottom: 14 })
-    .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
-    .visualEffect(new hdsEffect.HdsEffectBuilder()
-      .pointLight({
-        illuminatedType: hdsEffect.PointLightIlluminatedType.BORDER_CONTENT
-      })
-      .buildEffect())
-    .onClick((): void => {
-      this.submitSearchFromTrend(trend);
-    })
-  }
-
-  @Builder
-  private ExploreRichTrendRow(item: XExploreTrend): void {
-    Row({ space: 12 }) {
-      Column({ space: 6 }) {
-        if (item.context.length > 0) {
-          Text(item.context).fontFamily(this.appFontFamily)
+    Column() {
+      Row({ space: 10 }) {
+        Column({ space: 3 }) {
+          Text($r('app.string.explore_category_trending')).fontFamily(this.appFontFamily)
             .fontSize($r('sys.float.Body_S'))
             .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-
-        Row({ space: 6 }) {
-          Text(item.name).fontFamily(this.appFontFamily)
+          Text(trend).fontFamily(this.appFontFamily)
             .fontSize($r('sys.float.Title_S'))
             .fontWeight(FontWeight.Bold)
             .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-          if (item.isAiTrend) {
-            Text('AI').fontFamily(this.appFontFamily)
-              .fontSize(10)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_on_accent'))
-              .backgroundColor(this.accentColor)
-              .borderRadius(8)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          }
         }
-        .width('100%')
-
-        if (item.avatarUrls.length > 0) {
-          Row({ space: 2 }) {
-            ForEach(item.avatarUrls.slice(0, 3), (url: string) => {
-              Image(url)
-                .width(18)
-                .height(18)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(9)
-                .border({ width: 1, color: this.themedPageSurface() })
-            }, (url: string) => 'explore-face-' + url)
-          }
-        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        SymbolGlyph($r('sys.symbol.ellipsis_circle'))
+          .fontSize(20)
+          .fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      SymbolGlyph($r('sys.symbol.ellipsis_circle'))
-        .fontSize(20)
-        .fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
-    }
-    .width('92%')
-    .padding({ top: 14, bottom: 14 })
-    .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
-    .visualEffect(new hdsEffect.HdsEffectBuilder()
-      .pointLight({
-        illuminatedType: hdsEffect.PointLightIlluminatedType.BORDER_CONTENT
+      .width('100%')
+      .padding({ top: 14, bottom: 14 })
+      .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
+      .visualEffect(new hdsEffect.HdsEffectBuilder()
+        .pointLight({
+          illuminatedType: hdsEffect.PointLightIlluminatedType.BORDER_CONTENT
+        })
+        .buildEffect())
+      .onClick((): void => {
+        this.submitSearchFromTrend(trend);
       })
-      .buildEffect())
-    .onClick((): void => {
-      this.submitSearchFromTrendItem(item);
-    })
+    }
+    .width('100%')
+    .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset') })
+  }
+
+  @Builder
+  private ExploreRichTrendRow(item: XExploreTrend): void {
+    Column() {
+      Row({ space: 12 }) {
+        Column({ space: 6 }) {
+          if (item.context.length > 0) {
+            Text(item.context).fontFamily(this.appFontFamily)
+              .fontSize($r('sys.float.Body_S'))
+              .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+
+          Row({ space: 6 }) {
+            Text(item.name).fontFamily(this.appFontFamily)
+              .fontSize($r('sys.float.Title_S'))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+            if (item.isAiTrend) {
+              Text('AI').fontFamily(this.appFontFamily)
+                .fontSize(10)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.text_on_accent'))
+                .backgroundColor(this.accentColor)
+                .borderRadius(8)
+                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            }
+          }
+          .width('100%')
+
+          if (item.avatarUrls.length > 0) {
+            Row({ space: 2 }) {
+              ForEach(item.avatarUrls.slice(0, 3), (url: string) => {
+                Image(url)
+                  .width(18)
+                  .height(18)
+                  .objectFit(ImageFit.Cover)
+                  .borderRadius(9)
+                  .border({ width: 1, color: this.themedPageSurface() })
+              }, (url: string) => 'explore-face-' + url)
+            }
+          }
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        SymbolGlyph($r('sys.symbol.ellipsis_circle'))
+          .fontSize(20)
+          .fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
+      }
+      .width('100%')
+      .padding({ top: 14, bottom: 14 })
+      .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
+      .visualEffect(new hdsEffect.HdsEffectBuilder()
+        .pointLight({
+          illuminatedType: hdsEffect.PointLightIlluminatedType.BORDER_CONTENT
+        })
+        .buildEffect())
+      .onClick((): void => {
+        this.submitSearchFromTrendItem(item);
+      })
+    }
+    .width('100%')
+    .padding({ left: $r('app.float.page_search_inset'), right: $r('app.float.page_search_inset') })
   }
 
   @Builder

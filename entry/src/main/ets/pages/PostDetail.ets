@@ -1,4 +1,4 @@
-import type { PostShareRoute } from './PostShare';
+import { openPostShare } from '../services/PostShareRequest';
 import { ColorMetrics } from '@kit.ArkUI';
 import { STORAGE_KEY_POST_DETAIL_COMPACT } from '../services/PostDisplaySettingsStore';
 import { STANDARD_POST_CHARACTERS, weightedPostLength } from '../utils/PostCharacterCount';
@@ -1966,12 +1966,12 @@ export struct PostDetail {
     this.gestureSharing = false;
   }
 
-  private async shareCurrentPost(): Promise<void> {
+  private shareCurrentPost(): void {
     const post: Tweet | null = this.tweet;
     if (post === null) { return; }
-    const params: PostShareRoute = { post: post };
-    if (this.embedded) { this.onEmbeddedNavigate(); }
-    this.pageStack.pushPath({ name: 'PostShare', param: params });
+    openPostShare(post, this.pageStack, (): void => {
+      if (this.embedded) { this.onEmbeddedNavigate(); }
+    });
   }
 
   private useSplitReplyCapsule(): boolean {
@@ -2402,7 +2402,7 @@ export struct PostDetail {
         accentColor: this.accentColor,
         onReply: (): void => this.openReplyComposer('', '', ''),
         onRepost: (): void => { this.toggleRepost(); }, onLike: (): void => { this.toggleLike(); },
-        onBookmark: (): void => { this.toggleBookmark(); }, onShare: (): void => { void this.shareCurrentPost(); }
+        onBookmark: (): void => { this.toggleBookmark(); }, onShare: (): void => { this.shareCurrentPost(); }
       }).width('100%')
         .padding({ top: 4, bottom: 8 })
         .border({ width: { bottom: 0.5 }, color: $r('app.color.divider') })
