@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "تُحفظ الملفات الجديدة في مجلد com.haohaoai0.harmonx الفرعي. تغيير المكان لا ينقل الملفات السابقة."
+      "value": "تُحفظ الملفات الجديدة في مجلد com.harmony.x الفرعي. تغيير المكان لا ينقل الملفات السابقة."
     },
     {
       "name": "storage_path_authorize",

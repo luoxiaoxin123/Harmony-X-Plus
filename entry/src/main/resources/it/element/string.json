@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "I nuovi file vengono salvati nella sottocartella com.haohaoai0.harmonx. I file già salvati non vengono spostati."
+      "value": "I nuovi file vengono salvati nella sottocartella com.harmony.x. I file già salvati non vengono spostati."
     },
     {
       "name": "storage_path_authorize",

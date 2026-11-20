@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "Neue Dateien werden im Unterordner com.haohaoai0.harmonx gespeichert. Ein Ortswechsel verschiebt keine vorhandenen Dateien."
+      "value": "Neue Dateien werden im Unterordner com.harmony.x gespeichert. Ein Ortswechsel verschiebt keine vorhandenen Dateien."
     },
     {
       "name": "storage_path_authorize",

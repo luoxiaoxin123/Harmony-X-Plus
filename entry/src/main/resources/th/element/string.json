@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "ไฟล์ใหม่จะเก็บในโฟลเดอร์ย่อย com.haohaoai0.harmonx การเปลี่ยนตำแหน่งไม่ย้ายไฟล์เดิม"
+      "value": "ไฟล์ใหม่จะเก็บในโฟลเดอร์ย่อย com.harmony.x การเปลี่ยนตำแหน่งไม่ย้ายไฟล์เดิม"
     },
     {
       "name": "storage_path_authorize",

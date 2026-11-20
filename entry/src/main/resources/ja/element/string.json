@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "新しいファイルはcom.haohaoai0.harmonxサブフォルダーに保存します。保存先を変更しても既存のファイルは移動しません。"
+      "value": "新しいファイルはcom.harmony.xサブフォルダーに保存します。保存先を変更しても既存のファイルは移動しません。"
     },
     {
       "name": "storage_path_authorize",

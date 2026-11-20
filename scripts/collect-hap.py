@@ -11,13 +11,19 @@ def main():
     if not source.is_file():
         raise SystemExit("Expected unsigned HAP was not produced")
     manifest = Path("AppScope/app.json5").read_text(encoding="utf-8")
-    expected = re.search(r'"versionName"\s*:\s*"([^"]+)"', manifest)
+    expected_version = re.search(r'"versionName"\s*:\s*"([^"]+)"', manifest)
+    expected_bundle = re.search(r'"bundleName"\s*:\s*"([^"]+)"', manifest)
     with ZipFile(source) as archive:
         corrupt = archive.testzip()
         if corrupt:
             raise SystemExit(f"Corrupt HAP member {corrupt}")
-        version = json.loads(archive.read("module.json"))["app"]["versionName"]
-        if not expected or version != expected[1] or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]*", version):
+        app = json.loads(archive.read("module.json"))["app"]
+        bundle = app["bundleName"]
+        if not expected_bundle or bundle != expected_bundle[1]:
+            raise SystemExit(f"Unexpected HAP bundle name {bundle!r}")
+        version = app["versionName"]
+        if (not expected_version or version != expected_version[1]
+                or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]*", version)):
             raise SystemExit(f"Unexpected HAP version {version!r}")
         if "ets/modules.abc" not in archive.namelist():
             raise SystemExit("HAP is missing compiled ArkTS")
@@ -30,6 +36,7 @@ def main():
     with target.open("rb") as content:
         digest = hashlib.file_digest(content, "sha256").hexdigest()
     (output / "SHA256SUMS").write_text(f"{digest}  {name}\n", encoding="ascii")
+    print(f"Validated {bundle} {version}")
     print(f"{digest}  {target}")
 
 

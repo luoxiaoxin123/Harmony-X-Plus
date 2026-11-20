@@ -11,7 +11,7 @@ const SAVE_TO_FOLDER_KEY: string = 'save_to_folder';
 const SAVE_METHOD_KEY: string = 'save_method';
 const DOWNLOAD_ROOT: string = 'file://docs/storage/Users/currentUser/Download';
 // 下载目录使用应用包名，文件管理器的“来源”按包名文件夹识别并显示入口。
-const APP_FOLDER: string = 'com.haohaoai0.harmonx';
+const APP_FOLDER: string = 'com.harmony.x';
 
 export enum LocalFileSaveResult { SAVED = 0, CANCELLED = 2 }
 export enum MediaSaveMethod { GALLERY = 0, SECURE_BUTTON = 1, DIRECTORY = 2, FILE_PICKER = 3 }

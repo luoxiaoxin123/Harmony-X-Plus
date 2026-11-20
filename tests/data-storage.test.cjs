@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const ts = require(process.env.HARMONYX_TYPESCRIPT || 'D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
 const bundleName = fs.readFileSync('AppScope/app.json5', 'utf8').match(/"bundleName"\s*:\s*"([^"]+)"/)[1];
-const mediaFilePrefix = bundleName === 'com.haohaoai0.harmonx' ? 'HarmonyX' : 'CroakX';
+const mediaFilePrefix = bundleName === 'com.harmony.x' ? 'HarmonyX' : 'CroakX';
 function load(file, deps, globals = {}) {
   const mod = {exports:{}};
   const code = ts.transpileModule(fs.readFileSync(file,'utf8'), {
@@ -101,13 +101,13 @@ test('system-picker fallback preserves preferences without reusing unsupported d
     assert.equal(h.location.downloadLocationStore.useDownloads(h.context),true);
     const moduleConfig=ts.parseConfigFileTextToJson('module.json5',fs.readFileSync('entry/src/main/module.json5','utf8')).config;
     assert.equal(moduleConfig.module.requestPermissions.some(permission=>permission.name==='ohos.permission.FILE_ACCESS_PERSIST'),
-      bundleName === 'com.haohaoai0.harmonx');
+      bundleName === 'com.harmony.x');
   }finally{h.close();}
 });
 
 test('HarmonyX remembers one directory across restarts and serializes duplicate filenames; Croak always uses Save As',async()=>{
   const h=harness(true);try{
-    if(bundleName !== 'com.haohaoai0.harmonx'){
+    if(bundleName !== 'com.harmony.x'){
       assert.equal(h.location.downloadLocationStore.supportsDirectory(),false);
       const source=h.put('files/source','original'),destination=path.join(h.root,'export.jpg');h.save(destination);
       assert.equal(await h.location.downloadLocationStore.save(h.context,source,'export.jpg'),0);
@@ -118,10 +118,10 @@ test('HarmonyX remembers one directory across restarts and serializes duplicate 
     assert.equal(await h.location.downloadLocationStore.prepare(h.context),true);
     await h.location.downloadLocationStore.setUseDownloads(h.context,true);
     const store=new h.location.DownloadLocationStore();
-    assert.equal(store.hasDirectory(h.context),true);assert.ok(store.path(h.context).endsWith('/com.haohaoai0.harmonx'));
+    assert.equal(store.hasDirectory(h.context),true);assert.ok(store.path(h.context).endsWith('/com.harmony.x'));
     const source=h.put('files/source','original');
     assert.deepEqual(await Promise.all([store.save(h.context,source,'photo.jpg'),store.save(h.context,source,'photo.jpg')]),[0,0]);
-    const appFolder=path.join(folder,'com.haohaoai0.harmonx');
+    const appFolder=path.join(folder,'com.harmony.x');
     assert.equal(fs.readFileSync(path.join(appFolder,'photo.jpg'),'utf8'),'original');
     assert.equal(fs.readFileSync(path.join(appFolder,'photo (1).jpg'),'utf8'),'original');
     assert.equal(h.trace.filter(row=>row[0]==='directory').length,1);
@@ -132,7 +132,7 @@ test('HarmonyX remembers one directory across restarts and serializes duplicate 
 });
 
 test('directory cancellation stops transfers and a failed preference write keeps the previous authorization',async()=>{
-  if(bundleName !== 'com.haohaoai0.harmonx')return;
+  if(bundleName !== 'com.harmony.x')return;
   const h=harness(true);try{
     h.directory('');h.values.set('save_to_folder',true);
     const service=mediaService(h,{enqueue(){throw Error('canceled directory must not start transfer');}});
@@ -251,7 +251,7 @@ test('Gallery is restored for fresh and upgraded installs and saves single image
 });
 
 test('explicit X-new folder saves retain one grant across images, videos, batches and restarts',async()=>{
-  if(bundleName !== 'com.haohaoai0.harmonx')return;
+  if(bundleName !== 'com.harmony.x')return;
   const h=harness(true);try{
     const folder=path.join(h.root,'downloads');fs.mkdirSync(folder);h.directory(folder);
     h.values.set('save_to_folder_v2',true);
@@ -266,7 +266,7 @@ test('explicit X-new folder saves retain one grant across images, videos, batche
     assert.equal(await new Promise(resolve=>service.downloadImages(h.context,['file://'+photo,'file://'+photo],'batch',resolve)),0);
     assert.equal(h.trace.filter(row=>row[0]==='directory').length,1);
     assert.equal(h.trace.filter(row=>row[0]==='picker').length,0);
-    const saved=path.join(folder,'com.haohaoai0.harmonx');
+    const saved=path.join(folder,'com.harmony.x');
     assert.deepEqual(fs.readdirSync(saved).sort(),['HarmonyX-batch-0.jpg','HarmonyX-batch-1.jpg','HarmonyX-photo.jpg','HarmonyX-video.mp4']);
     await h.location.downloadLocationStore.setUseDownloads(h.context,false);
     assert.equal(new h.location.DownloadLocationStore().useDownloads(h.context),false);

@@ -4,7 +4,7 @@
 
 ## 应用配置
 
-Harmony X：`com.haohaoai0.harmonx`，用户确认的应用 Client ID 为 `6917619309138960961`，配置在 entry 模块的 `metadata.client_id`。`AppScope/app.json5` 开启 `cloudFileSyncEnabled`。
+原版包名 `com.haohaoai0.harmonx` 对应的 Client ID 为 `6917619309138960961`，目前仍记录在 entry 模块的 `metadata.client_id`。当前分支包名为 `com.harmony.x`，华为账号登录与云同步需要为该包名配置 Client ID 和匹配的签名后验证。`AppScope/app.json5` 开启 `cloudFileSyncEnabled`。
 
 HarmonyX 的功能代码相同，Client ID 必须按其自身应用身份配置；不得套用 Harmony X 或 PaperTalk 的应用配置。客户端不需要也不能写入 Client Secret。AGC 中还需确认当前安装包的签名证书 SHA-256 指纹、账号服务与昵称头像权限。
 

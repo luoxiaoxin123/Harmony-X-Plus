@@ -8,7 +8,7 @@ import { accountStore } from './AccountStore';
 
 const DOMAIN = 0xFF00;
 const TAG = 'HarmonyX-Notify';
-const BUNDLE_NAME: string = 'com.haohaoai0.harmonx';
+const BUNDLE_NAME: string = 'com.harmony.x';
 const ABILITY_NAME: string = 'EntryAbility';
 const NOTIFICATION_GROUP: string = 'harmonyx-x-notifications';
 const MESSAGE_GROUP: string = 'harmonyx-x-messages';

@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "Los archivos nuevos se guardan en la subcarpeta com.haohaoai0.harmonx. Cambiar la ubicación no mueve archivos anteriores."
+      "value": "Los archivos nuevos se guardan en la subcarpeta com.harmony.x. Cambiar la ubicación no mueve archivos anteriores."
     },
     {
       "name": "storage_path_authorize",

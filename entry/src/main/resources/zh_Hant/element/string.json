@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "新檔案儲存到此目錄下的 com.haohaoai0.harmonx 檔案夾。更改位置不會搬移已儲存的檔案。"
+      "value": "新檔案儲存到此目錄下的 com.harmony.x 檔案夾。更改位置不會搬移已儲存的檔案。"
     },
     {
       "name": "storage_path_authorize",

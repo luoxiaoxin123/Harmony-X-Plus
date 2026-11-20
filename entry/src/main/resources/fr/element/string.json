@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "Les nouveaux fichiers vont dans le sous-dossier com.haohaoai0.harmonx. Changer de dossier ne déplace pas les fichiers existants."
+      "value": "Les nouveaux fichiers vont dans le sous-dossier com.harmony.x. Changer de dossier ne déplace pas les fichiers existants."
     },
     {
       "name": "storage_path_authorize",

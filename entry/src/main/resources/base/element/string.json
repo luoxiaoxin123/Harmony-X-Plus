@@ -6622,7 +6622,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "新文件保存到此目录下的 com.haohaoai0.harmonx 文件夹。更改位置不会搬移已保存的文件。"
+      "value": "新文件保存到此目录下的 com.harmony.x 文件夹。更改位置不会搬移已保存的文件。"
     },
     {
       "name": "storage_path_authorize",

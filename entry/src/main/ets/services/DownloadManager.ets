@@ -15,7 +15,7 @@ import {
 
 const DOMAIN: number = 0xFF00;
 const TAG: string = 'HarmonyX-DownloadManager';
-const BUNDLE_NAME: string = 'com.haohaoai0.harmonx';
+const BUNDLE_NAME: string = 'com.harmony.x';
 const ABILITY_NAME: string = 'EntryAbility';
 const DIRECTORY_NAME: string = 'harmonyx-downloads';
 const MANIFEST_NAME: string = 'tasks.txt';

@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "새 파일은 com.haohaoai0.harmonx 하위 폴더에 저장해요. 위치를 바꿔도 이전 파일은 옮기지 않아요."
+      "value": "새 파일은 com.harmony.x 하위 폴더에 저장해요. 위치를 바꿔도 이전 파일은 옮기지 않아요."
     },
     {
       "name": "storage_path_authorize",

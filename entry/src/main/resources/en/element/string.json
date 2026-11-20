@@ -6578,7 +6578,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "New files go into the com.haohaoai0.harmonx subfolder. Changing location does not move previously saved files."
+      "value": "New files go into the com.harmony.x subfolder. Changing location does not move previously saved files."
     },
     {
       "name": "storage_path_authorize",

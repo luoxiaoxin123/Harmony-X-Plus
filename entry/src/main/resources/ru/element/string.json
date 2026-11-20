@@ -6574,7 +6574,7 @@
     },
     {
       "name": "storage_path_note",
-      "value": "Новые файлы сохраняются в подпапку com.haohaoai0.harmonx. Смена папки не перемещает старые файлы."
+      "value": "Новые файлы сохраняются в подпапку com.harmony.x. Смена папки не перемещает старые файлы."
     },
     {
       "name": "storage_path_authorize",

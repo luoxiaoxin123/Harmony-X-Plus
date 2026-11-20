@@ -262,13 +262,13 @@ test('all supplied launch clips map by icon and resolved light/dark theme', () =
     milk_frog_black: 'launch_milk_frog', zombie_x: 'launch_zombie_x', mid_autumn: 'launch_mid_autumn'
   };
   for (const name of Object.keys(expected)) {
-    assert.equal(animationSource.startupAnimationName(name, false, 'com.haohaoai0.harmonx'), expected[name] + '_light');
-    assert.equal(animationSource.startupAnimationName(name, true, 'com.haohaoai0.harmonx'), expected[name] + '_dark');
+    assert.equal(animationSource.startupAnimationName(name, false, 'com.harmony.x'), expected[name] + '_light');
+    assert.equal(animationSource.startupAnimationName(name, true, 'com.harmony.x'), expected[name] + '_dark');
   }
-  assert.equal(animationSource.startupAnimationName('twitter_white', false, 'com.haohaoai0.harmonx'), 'launch_twitter_white');
-  assert.equal(animationSource.startupAnimationName('twitter_white', true, 'com.haohaoai0.harmonx'), 'launch_twitter_dark');
-  assert.equal(animationSource.startupAnimationName('twitter_blue', false, 'com.haohaoai0.harmonx'), 'launch_twitter_blue');
-  assert.equal(animationSource.startupAnimationName('', false, 'com.haohaoai0.harmonx'), 'launch_classic_light');
+  assert.equal(animationSource.startupAnimationName('twitter_white', false, 'com.harmony.x'), 'launch_twitter_white');
+  assert.equal(animationSource.startupAnimationName('twitter_white', true, 'com.harmony.x'), 'launch_twitter_dark');
+  assert.equal(animationSource.startupAnimationName('twitter_blue', false, 'com.harmony.x'), 'launch_twitter_blue');
+  assert.equal(animationSource.startupAnimationName('', false, 'com.harmony.x'), 'launch_classic_light');
   assert.equal(animationSource.startupAnimationName('', true, 'com.haohaoai0.CroakX'), 'launch_blue_frog_dark');
 });
 
