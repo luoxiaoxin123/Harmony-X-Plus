@@ -267,6 +267,7 @@ export interface DmPage {
 }
 
 export interface UserProfile {
+  supportsLongPosts?: boolean;
   id: string;
   name: string;
   username: string;

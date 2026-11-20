@@ -148,6 +148,26 @@ export class PageBackgroundStore {
     return preferences.getPreferencesSync(context, { name: 'harmonyx_page_background' });
   }
 
+  loadFavoriteColors(context: common.Context): string[] {
+    try {
+      const stored: string[] = JSON.parse(this.preferences(context).getSync('favorite_colors', '[]') as string) as string[];
+      return Array.isArray(stored) ? this.validFavoriteColors(stored) : [];
+    } catch (error) { return []; }
+  }
+
+  saveFavoriteColors(context: common.Context, colors: string[]): boolean {
+    try {
+      const store: preferences.Preferences = this.preferences(context);
+      store.putSync('favorite_colors', JSON.stringify(this.validFavoriteColors(colors)));
+      store.flushSync();
+      return true;
+    } catch (error) { return false; }
+  }
+
+  private validFavoriteColors(colors: string[]): string[] {
+    return colors.filter((color: string): boolean => /^#[0-9A-Fa-f]{8}$/.test(color)).slice(0, 72);
+  }
+
   load(context: common.Context): PageBackgroundState {
     try {
       const raw: string = this.preferences(context).getSync('state', '') as string;

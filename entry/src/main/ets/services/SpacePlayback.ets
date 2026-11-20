@@ -1,3 +1,4 @@
+import { STORAGE_KEY_SPACE_TONES } from './SpacePreferencesStore';
 import { common } from '@kit.AbilityKit';
 import { media } from '@kit.MediaKit';
 import { audio } from '@kit.AudioKit';
@@ -23,8 +24,9 @@ class SpacePlayback implements VideoPlaybackHandle {
   private revision: number = 0;
   private timeoutId: number = -1;
   private wantsPlay: boolean = false;
+  private joinedLive: boolean = false;
 
-  constructor() { xPrivateClient.onSessionChange((): void => { this.stop(); }); }
+  constructor() { xPrivateClient.onSessionChange((): void => { this.stop(false); }); }
 
   async listen(context: common.UIAbilityContext, candidate: SpaceRoom): Promise<void> {
     if (this.room?.id === candidate.id && this.player !== null && this.state !== 'error' && this.state !== 'ended' &&
@@ -35,6 +37,7 @@ class SpacePlayback implements VideoPlaybackHandle {
     await this.releasePlayer();
     if (generation !== this.generation) { return; }
     this.context = context;
+    this.joinedLive = this.room?.id === candidate.id && this.joinedLive;
     this.room = candidate;
     this.wantsPlay = true;
     this.setState('loading');
@@ -66,6 +69,10 @@ class SpacePlayback implements VideoPlaybackHandle {
           if (this.wantsPlay) { this.startPlayback(); } else { this.clearTimeout(); this.setState('paused'); }
         } else if (state === 'playing') {
           this.clearTimeout(); this.setState('playing'); this.claimSession(generation);
+          if (room.isLive() && !this.joinedLive) {
+            this.joinedLive = true;
+            void this.playCue(true);
+          }
         } else if (state === 'paused') {
           this.clearTimeout(); this.setState('paused'); this.updateSession(false);
         } else if (state === 'completed') {
@@ -127,12 +134,44 @@ class SpacePlayback implements VideoPlaybackHandle {
     }
   }
   stopPlayback(): void { this.stop(); }
-  async stop(): Promise<void> {
+  async stop(userInitiated: boolean = true): Promise<void> {
+    const leaveCue: boolean = userInitiated && this.joinedLive;
+    this.joinedLive = false;
     const generation: number = ++this.generation;
     await this.releasePlayer();
     if (generation !== this.generation) { return; }
     this.room = null;
     this.setState('idle');
+    if (leaveCue) { void this.playCue(false); }
+  }
+
+  private async playCue(joining: boolean): Promise<void> {
+    if (AppStorage.get<boolean>(STORAGE_KEY_SPACE_TONES) !== true) { return; }
+    let renderer: audio.AudioRenderer | undefined;
+    try {
+      const sampleRate: number = 48000;
+      const segment: number = Math.round(sampleRate * 0.075);
+      const samples: Int16Array = new Int16Array(segment * 2);
+      for (let index: number = 0; index < samples.length; index++) {
+        const position: number = index % segment;
+        const first: boolean = index < segment;
+        const hz: number = first === joining ? 540 : 720;
+        const envelope: number = Math.min(1, position / 240, (segment - position) / 540);
+        samples[index] = Math.round(Math.sin(2 * Math.PI * hz * position / sampleRate) * envelope * 2600);
+      }
+      const options: audio.AudioRendererOptions = {
+        streamInfo: { samplingRate: audio.AudioSamplingRate.SAMPLE_RATE_48000,
+          channels: audio.AudioChannel.CHANNEL_1, sampleFormat: audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
+          encodingType: audio.AudioEncodingType.ENCODING_TYPE_RAW },
+        rendererInfo: { content: audio.ContentType.CONTENT_TYPE_MUSIC,
+          usage: audio.StreamUsage.STREAM_USAGE_NOTIFICATION, rendererFlags: 0 }
+      };
+      renderer = await audio.createAudioRenderer(options);
+      await renderer.start();
+      await renderer.write(samples.buffer as ArrayBuffer);
+      await renderer.drain();
+    } catch (error) { /* Spaces playback is independent of the optional cue. */ }
+    finally { if (renderer !== undefined) { try { await renderer.release(); } catch (error) {} } }
   }
   private ownerId(): string { return 'space:' + (this.room?.id ?? ''); }
   private setState(state: string): void {

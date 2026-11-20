@@ -375,8 +375,9 @@ function playbackFixture(detail) {
       session.owner = id; sessionCallbacks.push({ id, handle, title, type }); return true;
     }, updatePlayback() {}, release: async id => { if (session.owner === id) session.owner = ''; }
   };
-  const oldAppStorage = global.AppStorage; global.AppStorage = { setOrCreate() {} };
+  const oldAppStorage = global.AppStorage; global.AppStorage = { get: () => false, setOrCreate() {} };
   const { spacePlayback } = load('services/SpacePlayback', {
+    './SpacePreferencesStore': { STORAGE_KEY_SPACE_TONES: 'harmonyx.space_tones' },
     '@kit.AbilityKit': {}, '@kit.BasicServicesKit': {}, '@kit.AudioKit': { audio: { ContentType: { CONTENT_TYPE_SPEECH: 1 }, StreamUsage: { STREAM_USAGE_MEDIA: 1 } } },
     '@kit.MediaKit': { media: { BufferingInfoType: { BUFFERING_START: 1, BUFFERING_END: 2 },
       createMediaSourceWithUrl: () => ({ setMediaResourceLoaderDelegate() {} }), createAVPlayer: async () => {

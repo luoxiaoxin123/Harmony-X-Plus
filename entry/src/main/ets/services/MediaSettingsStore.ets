@@ -31,6 +31,9 @@ export const STORAGE_KEY_VIDEO_FEED_TAP_PAUSE: string = 'harmonyx.video_feed_tap
 // shows a glass capsule, in the style of the short-video feeds. Turning this off
 // keeps the original hold-to-seek gesture (left half rewinds, right half
 // forwards).
+export const STORAGE_KEY_VIDEO_REMEMBER_SPEED: string = 'harmonyx.video_remember_speed';
+// AppStorage only. Manual rates are remembered until the process exits.
+export const STORAGE_KEY_VIDEO_SESSION_RATE_INDEX: string = 'harmonyx.video_session_rate_index';
 export const STORAGE_KEY_VIDEO_HOLD_SPEED: string = 'harmonyx.video_hold_speed';
 export const STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY: string = 'harmonyx.inline_video_hold_play';
 export const STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS: string = 'harmonyx.inline_video_overlay_controls';
@@ -539,6 +542,21 @@ export class MediaSettingsStore {
       AppStorage.setOrCreate<number>(STORAGE_KEY_VIDEO_DOUBLE_TAP_SEEK_SECONDS, value);
       return true;
     } catch (error) { return false; }
+  }
+
+  loadVideoRememberSpeed(context: common.Context): boolean {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context,
+        { name: MediaSettingsStore.STORE_NAME });
+      return store.getSync('video_remember_speed', true) === true;
+    } catch (error) { return true; }
+  }
+
+  saveVideoRememberSpeed(context: common.Context, enabled: boolean): boolean {
+    const saved: boolean = this.saveInlineOption(context, 'video_remember_speed',
+      STORAGE_KEY_VIDEO_REMEMBER_SPEED, enabled);
+    if (saved && !enabled) { AppStorage.delete(STORAGE_KEY_VIDEO_SESSION_RATE_INDEX); }
+    return saved;
   }
 
   loadVideoHoldSpeed(context: common.Context): boolean {

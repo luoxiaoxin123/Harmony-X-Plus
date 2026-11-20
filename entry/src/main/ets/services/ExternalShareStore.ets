@@ -1,3 +1,4 @@
+import { COMPOSER_MAX_MEDIA_ITEMS, COMPOSER_MEDIA_GIF } from '../models/ComposerMedia';
 import { common } from '@kit.AbilityKit';
 import { systemShare } from '@kit.ShareKit';
 import fs from '@ohos.file.fs';
@@ -38,9 +39,8 @@ export class ExternalShareStore {
   }
 
   canPost(payload: ExternalSharePayload): boolean {
-    const videos: number = payload.files.filter((file: ExternalShareFile): boolean => file.type === 3).length;
-    const gifs: number = payload.files.filter((file: ExternalShareFile): boolean => file.type === 2).length;
-    return videos > 0 ? videos === 1 && payload.files.length === 1 : payload.files.length <= 4 && gifs <= 1;
+    const gifs: number = payload.files.filter((file: ExternalShareFile): boolean => file.type === COMPOSER_MEDIA_GIF).length;
+    return payload.files.length <= COMPOSER_MAX_MEDIA_ITEMS && gifs <= 1;
   }
 
   async stage(context: common.Context, records: systemShare.SharedRecord[]): Promise<ExternalSharePayload> {
@@ -56,7 +56,7 @@ export class ExternalShareStore {
         }
         if ((record.uri ?? '').length === 0) { continue; }
         const type: number = this.mediaType(record.utd);
-        if (type === 0 || payload.files.length >= 10) { throw new Error('Unsupported shared media'); }
+        if (type === 0 || payload.files.length >= COMPOSER_MAX_MEDIA_ITEMS) { throw new Error('Unsupported shared media'); }
         const file: ExternalShareFile = new ExternalShareFile();
         file.type = type;
         const sourceUri: string = record.uri ?? '';
@@ -88,7 +88,7 @@ export class ExternalShareStore {
     try {
       const directory: string = this.directory(context, id);
       const payload: ExternalSharePayload = JSON.parse(fs.readTextSync(directory + '/payload.json')) as ExternalSharePayload;
-      if (payload.id !== id || payload.files.length > 10) { return null; }
+      if (payload.id !== id || payload.files.length > COMPOSER_MAX_MEDIA_ITEMS) { return null; }
       for (let i: number = 0; i < payload.files.length; i++) {
         const file: ExternalShareFile = payload.files[i];
         if (!file.uri.startsWith(directory + '/') || file.uri.indexOf('/../') >= 0 ||

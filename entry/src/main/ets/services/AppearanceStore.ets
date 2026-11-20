@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit';
 // Persistent, application-wide display preferences.  Color mode is applied
 // through ApplicationContext so resource-qualified dark colors update too.
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
@@ -171,7 +172,9 @@ export class AppearanceStore {
     try {
       const options: preferences.Options = { name: AppearanceStore.STORE_NAME };
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
-      const savedMode: string = store.getSync(AppearanceStore.MODE_KEY, DISPLAY_MODE_SYSTEM) as string;
+      let defaultMode: string = DISPLAY_MODE_SYSTEM;
+      try { if (deviceInfo.deviceType === 'wearable') { defaultMode = DISPLAY_MODE_DARK; } } catch (error) {}
+      const savedMode: string = store.getSync(AppearanceStore.MODE_KEY, defaultMode) as string;
       const savedAccent: string = store.getSync(AppearanceStore.ACCENT_KEY, DEFAULT_ACCENT_COLOR) as string;
       const savedFontMode: string = store.getSync(AppearanceStore.FONT_MODE_KEY, FONT_MODE_SYSTEM) as string;
       const savedFontScale: number = store.getSync(AppearanceStore.FONT_KEY, DEFAULT_FONT_SCALE) as number;

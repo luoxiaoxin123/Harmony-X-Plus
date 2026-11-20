@@ -11,6 +11,7 @@ import { MaterialSurfaceHost } from './MaterialSurfaceHost';
 interface EmojiRow { id: string; group: string; entries: ChatEmoji[]; }
 class EmojiRows implements IDataSource {
   private rows: EmojiRow[];
+  indexOfGroup(id: string): number { return this.rows.findIndex((row: EmojiRow): boolean => row.group === id); }
   constructor(groups: ChatEmojiGroup[]) {
     this.rows = [];
     groups.forEach((group: ChatEmojiGroup): void => {
@@ -32,13 +33,35 @@ export struct ChatEmojiPanel {
   onSelect: (emoji: string) => void = (): void => {};
   @StorageProp(STORAGE_KEY_REPLY_CAPSULE_MATERIAL_LEVEL) materialLevel: number = DEFAULT_REPLY_CAPSULE_MATERIAL_LEVEL;
   @State private query: string = '';
+  @State private categoryIds: string[] = [];
+  @State private variantBase: string = '';
+  @State private variantItems: ChatEmoji[] = [];
+  private ignoreTapUntil: number = 0;
   @State private rows: EmojiRows = new EmojiRows([]);
   private scroller: Scroller = new Scroller();
   aboutToAppear(): void { this.search(); }
+  private context(): common.UIAbilityContext { return getContext(this) as common.UIAbilityContext; }
+
   private search(): void {
-    this.rows = new EmojiRows(chatEmojiStore.search(getContext(this) as common.UIAbilityContext, this.query));
+    const groups: ChatEmojiGroup[] = chatEmojiStore.search(this.context(), this.query);
+    this.rows = new EmojiRows(groups);
+    this.categoryIds = groups.map((group: ChatEmojiGroup): string => group.id);
+    this.variantBase = '';
     this.scroller.scrollEdge(Edge.Top);
   }
+  private openVariants(entry: ChatEmoji): void {
+    const variants: ChatEmoji[] = chatEmojiStore.variants(this.context(), entry.emoji);
+    if (variants.length <= 1) { return; }
+    this.ignoreTapUntil = Date.now() + 350;
+    this.variantBase = entry.emoji;
+    this.variantItems = variants;
+  }
+
+  private choose(entry: ChatEmoji): void {
+    if (Date.now() < this.ignoreTapUntil) { return; }
+    this.onSelect(this.query.trim().length > 0 ? entry.emoji : chatEmojiStore.preferred(this.context(), entry.emoji));
+  }
+
   private groupLabel(group: string): Resource {
     if (group === 'recent') { return $r('app.string.chat_emoji_recent'); }
     if (group === 'smileys') { return $r('app.string.chat_emoji_smileys'); }
@@ -64,6 +87,37 @@ export struct ChatEmojiPanel {
       MaterialSurfaceHost({ surfaceHeight: 52, surfaceContent: (): void => { this.SearchBar(); } })
         .height(52).width('100%').backgroundColor(Color.Transparent)
         .clip(false)
+      if (this.categoryIds.length > 0) {
+        Scroll() {
+          Row({ space: 6 }) {
+            ForEach(this.categoryIds, (id: string): void => {
+              Button(this.groupLabel(id)).fontFamily(this.appFontFamily).fontSize($r('sys.float.Caption_M'))
+                .constraintSize({ minHeight: 40 })
+                .onClick((): void => {
+                  const index: number = this.rows.indexOfGroup(id);
+                  if (index >= 0) { this.scroller.scrollToIndex(index, false, ScrollAlign.START); }
+                })
+            }, (id: string): string => id)
+          }.padding({ left: 8, right: 8 })
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).width('100%')
+      }
+      if (this.variantBase.length > 0) {
+        Scroll() {
+          Row({ space: 5 }) {
+            ForEach(this.variantItems, (variant: ChatEmoji): void => {
+              Button({ type: ButtonType.Normal }) {
+                ChatEmojiText({ text: variant.emoji, fontSize: $r('app.float.chat_emoji_picker_size') })
+              }.width(44).height(44).padding(0).accessibilityText(variant.name)
+                .onClick((): void => {
+                  chatEmojiStore.rememberVariant(this.context(), this.variantBase, variant.emoji);
+                  this.variantBase = '';
+                  this.onSelect(variant.emoji);
+                })
+            }, (variant: ChatEmoji): string => variant.emoji)
+            Button($r('app.string.compose_cancel')).onClick((): void => { this.variantBase = ''; })
+          }.padding({ left: 8, right: 8 })
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).width('100%')
+      }
       List({ scroller: this.scroller }) {
         LazyForEach(this.rows, (row: EmojiRow) => {
           ListItem() {
@@ -78,7 +132,9 @@ export struct ChatEmojiPanel {
                   }
                     .width('14.2857%').height(52).padding(0).borderRadius(16).backgroundColor(Color.Transparent)
                     .accessibilityText(entry.keywords.length > 0 ? entry.keywords : entry.name)
-                    .onClick((): void => { this.onSelect(entry.emoji); })
+                    .onClick((): void => this.choose(entry))
+                    .gesture(LongPressGesture({ repeat: false, duration: 450 })
+                      .onAction((): void => this.openVariants(entry)))
                 }, (entry: ChatEmoji): string => entry.emoji)
               }.width('100%')
             }

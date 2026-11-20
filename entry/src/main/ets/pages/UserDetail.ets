@@ -117,6 +117,7 @@ export struct UserDetail {
   @StorageProp(STORAGE_KEY_PAGE_TRANSITION_MODE) private pageTransitionMode: string = DEFAULT_PAGE_TRANSITION_MODE;
   @StorageProp('harmonyx.compact_window') private sheetCompactWindow: boolean = false;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
+  @StorageProp('harmonyx.profile_reply_button') private profileReplyButton: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_FLOATING_ACTION) private homeFloatingAction: string = HOME_FLOATING_COMPOSE;
   @StorageProp(STORAGE_KEY_SYSTEM_EMOJI_ENABLED) private systemEmojiEnabled: boolean = false;
   @StorageProp('harmonyx.breakpoint') private sheetWindowBreakpoint: string = 'sm';
@@ -1865,7 +1866,7 @@ export struct UserDetail {
         }
         FloatingComposeButton({ bottomInset: this.navigationIndicatorHeight,
           mode: this.homeFloatingAction === HOME_FLOATING_TOP ? 'top' : 'reply',
-          hidden: this.homeFloatingAction === HOME_FLOATING_HIDDEN,
+          hidden: !this.profileReplyButton || this.homeFloatingAction === HOME_FLOATING_HIDDEN,
           accessibilityLabel: this.text(this.homeFloatingAction === HOME_FLOATING_TOP ?
             $r('app.string.action_scroll_top') : $r('app.string.action_reply')),
           onTop: (): void => { this.scroller.scrollEdge(Edge.Top); this.headerScrollOffset = 0; },

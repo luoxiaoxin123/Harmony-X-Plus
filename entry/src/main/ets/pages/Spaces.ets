@@ -303,7 +303,7 @@ struct SpaceRoomPage {
       this.failed = room === null;
       if (room !== null) {
         this.room = room;
-        if (!room.canListen() && spacePlayback.room?.id === room.id) { spacePlayback.stop(); }
+        if (!room.canListen() && spacePlayback.room?.id === room.id) { spacePlayback.stop(false); }
       }
     } catch (error) { if (this.alive && generation === this.generation) { this.failed = true; } }
     finally {

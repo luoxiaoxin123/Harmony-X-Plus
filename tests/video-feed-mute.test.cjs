@@ -14,7 +14,7 @@ const names = ['shouldStartMuted', 'startMuted', 'hideVideoChrome', 'usesFeedMut
   'onHomeVideoMutedChanged', 'onViewerVideoMutedChanged', 'onFeedMutePreferenceChanged',
   'toggleMutedFromUser', 'onInlineAudioTap', 'saveFeedMuteChoice', 'setMuted',
   'claimExclusivePlayback', 'canControlPlayer', 'applyPlayerVolume', 'isCoveredByVideoFeed',
-  'onPlaybackEnabledChanged', 'onControlsVisibilityChanged', 'holdControls',
+  'onPlaybackEnabledChanged', 'onControlsVisibilityChanged', 'holdControls', 'restoreViewerRate', 'cyclePlaybackRate', 'applyPlaybackRate', 'playbackRate',
   'play', 'setGestureVolume', 'clampGestureValue', 'enterFullscreen', 'exitFullscreen', 'adoptPlayerHandoff'];
 const methods = names.map(name => component.members.find(member =>
   ts.isMethodDeclaration(member) && member.name.getText(tree) === name).getText(tree)).join('\n');
@@ -29,8 +29,12 @@ function fixture(initialMuted = true, storageFails = false, initialViewerMuted =
   const coordinatorExports = {}, settingsExports = {};
   new Function('exports', coordinatorCode)(coordinatorExports);
   const coordinator = coordinatorExports.videoPlaybackCoordinator;
+  const transient = new Map();
   const AppStorage = {
+    get: key => transient.get(key),
+    delete: key => transient.delete(key),
     setOrCreate(key, value) {
+      transient.set(key, value);
       if (key === 'harmonyx.home_video_muted') {
         for (const view of views) view.homeVideoMuted = value;
         for (const view of views) view.onHomeVideoMutedChanged();
@@ -54,19 +58,22 @@ function fixture(initialMuted = true, storageFails = false, initialViewerMuted =
   const body = compile(`class MuteHarness { syncKeepAwake() {} ${methods} }`);
   const Harness = new Function('mediaSettingsStore', 'videoPlaybackCoordinator',
     'videoPlayerHandoff', 'hilog', 'DOMAIN', 'TAG', 'FIRST_FRAME_TIMEOUT_MS', 'videoMediaSession',
-    'videoPlaybackPositionStore',
+    'videoPlaybackPositionStore', 'AppStorage', 'STORAGE_KEY_VIDEO_REMEMBER_SPEED',
+    'STORAGE_KEY_VIDEO_SESSION_RATE_INDEX', 'FULLSCREEN_PLAYBACK_RATES',
     `${body}; return MuteHarness;`)
     (settings, coordinator, { isRequested: () => false, isReturning: () => false,
       isInlinePaused: () => false, setInlinePaused() {} }, { warn() {}, info() {} },
-      0, '', 12000, { release() {}, sendCastCommand() {} }, { remember() {} });
+      0, '', 12000, { release() {}, sendCastCommand() {}, updatePlayback() {} }, { remember() {} },
+      AppStorage, settingsExports.STORAGE_KEY_VIDEO_REMEMBER_SPEED,
+      settingsExports.STORAGE_KEY_VIDEO_SESSION_RATE_INDEX, [0.75, 1, 1.25, 1.5, 2]);
 
   function view(id, options = {}) {
-    const volumes = [], nativePlayer = { state: 'playing', setVolume: value => volumes.push(value),
+    const volumes = [], nativePlayer = { state: 'playing', setVolume: value => volumes.push(value), setPlaybackRate() {},
       play: () => Promise.resolve() };
     const result = Object.assign(new Harness(), {
       media: { id }, homeTimelineVideo: true, mediaViewerLayout: false, forceUnmuted: false,
       exploreHeroVideo: false, exploreHeroMuted: true, casting: false, alive: true,
-      playbackEnabled: true, homeVideoMuted: initialMuted, muted: initialMuted,
+      playbackEnabled: true, playbackRateIndex: 1, holdSpeedActive: false, homeVideoMuted: initialMuted, muted: initialMuted,
       viewerVideoMuted: initialViewerMuted,
       playbackVolume: initialMuted ? 0 : 1, playing: true, wantsPlay: true,
       player: nativePlayer, playerState: 'playing', videoFeedActive: false, fullscreen: false,
@@ -418,4 +425,17 @@ test('opened-video volume gestures never change the home preference', () => {
   assert.equal(item.viewerVideoMuted, true);
   assert.equal(item.homeVideoMuted, true);
   assert.deepEqual(f.writes, [false, true]);
+});
+
+test('manual viewer speed carries to a preloaded viewer and resets when the preference is off', () => {
+  const f = fixture();
+  const first = f.view('first-rate', { mediaViewerLayout: true }).component;
+  const next = f.view('next-rate', { mediaViewerLayout: true, preloaded: true }).component;
+  first.cyclePlaybackRate();
+  next.onPlaybackEnabledChanged();
+  assert.equal(next.playbackRateIndex, 2);
+  assert.equal(f.settings.saveVideoRememberSpeed({}, false), true);
+  f.view('default-rate', { mediaViewerLayout: true, playbackRateIndex: 4 }).component.restoreViewerRate();
+  next.onPlaybackEnabledChanged();
+  assert.equal(next.playbackRateIndex, 1);
 });

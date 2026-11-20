@@ -1,3 +1,5 @@
+import { STORAGE_KEY_SPACE_TONES } from '../services/SpacePreferencesStore';
+import { STORAGE_KEY_POST_SWIPE_LEFT, STORAGE_KEY_POST_SWIPE_RIGHT } from '../services/TimelineSettingsStore';
 import { SidebarSettings } from '../components/SidebarSettings';
 import { STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON } from '../services/MediaSettingsStore';
 import { TabOrderSettings } from '../components/TabOrderSettings';
@@ -211,6 +213,7 @@ import {
   STORAGE_KEY_VIDEO_AUTO_PIP,
   STORAGE_KEY_VIDEO_BACKGROUND_MODE,
   STORAGE_KEY_VIDEO_HOLD_SPEED,
+  STORAGE_KEY_VIDEO_REMEMBER_SPEED,
   STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY,
   STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS,
   STORAGE_KEY_PAUSE_INLINE_VIDEO_ON_RETURN,
@@ -620,7 +623,7 @@ export struct SettingsSection {
   @StorageLink(STORAGE_KEY_NATIVE_BOTTOM_BAR) nativeBottomBar: boolean = false;
   @StorageLink(STORAGE_KEY_NATIVE_TAB_MATERIAL_LEVEL) nativeTabMaterialLevel: number = DEFAULT_NATIVE_TAB_MATERIAL_LEVEL;
   @StorageLink(STORAGE_KEY_ROOT_TAB_LABELS_VISIBLE) rootTabLabelsVisible: boolean = true;
-  @StorageLink(STORAGE_KEY_ROOT_LIQUID_TAB_INDICATOR_ENABLED) rootLiquidTabIndicatorEnabled: boolean = true;
+  @StorageLink(STORAGE_KEY_ROOT_LIQUID_TAB_INDICATOR_ENABLED) rootLiquidTabIndicatorEnabled: boolean = false;
   @StorageLink(STORAGE_KEY_ROOT_TAB_GRADIENT_MASK_ENABLED) rootTabGradientMaskEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_AUTO_HIDE_FAB) autoHideFab: boolean = true;
   @StorageLink(STORAGE_KEY_HOME_HEADER_COLLAPSE) homeHeaderCollapseEnabled: boolean = false;
@@ -637,6 +640,7 @@ export struct SettingsSection {
   @StorageLink(STORAGE_KEY_REPLY_CAPSULE_SPLIT_ENABLED)
   replyCapsuleSplitEnabled: boolean = DEFAULT_REPLY_CAPSULE_SPLIT_ENABLED;
   @StorageLink(STORAGE_KEY_COMPOSE_BUTTON_ENABLED) composeButtonEnabled: boolean = true;
+  @StorageProp('harmonyx.profile_reply_button') private profileReplyButton: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_FLOATING_ACTION) homeFloatingAction: string = HOME_FLOATING_COMPOSE;
   @StorageProp(STORAGE_KEY_HOME_HEADER_ACTION) homeHeaderAction: string = HOME_HEADER_SEARCH;
   @StorageProp(STORAGE_KEY_HOME_FOLLOW_SUGGESTIONS) homeFollowSuggestions: boolean = true;
@@ -678,6 +682,7 @@ export struct SettingsSection {
   @StorageProp(STORAGE_KEY_VIDEO_COMMENT_PROGRESS_RING) videoCommentProgressRing: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) videoAutoPip: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_IMMERSIVE_FILL) videoImmersiveFill: boolean = false;
+  @StorageLink(STORAGE_KEY_VIDEO_REMEMBER_SPEED) videoRememberSpeed: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_HOLD_SPEED) videoHoldSpeed: boolean = true;
   @StorageLink(STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY) inlineVideoHoldPlay: boolean = false;
   @StorageLink(STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS) inlineVideoOverlayControls: boolean = false;
@@ -695,6 +700,9 @@ export struct SettingsSection {
   @State private onlyChatPush: boolean = false;
   @StorageLink(STORAGE_KEY_SYSTEM_NOTIFICATIONS) systemNotificationsEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_NOTIFICATION_DND_SILENT) notificationDndSilent: boolean = true;
+  @StorageProp(STORAGE_KEY_SPACE_TONES) private spaceTones: boolean = false;
+  @StorageProp(STORAGE_KEY_POST_SWIPE_LEFT) private postSwipeLeft: number = 0;
+  @StorageProp(STORAGE_KEY_POST_SWIPE_RIGHT) private postSwipeRight: number = 0;
   @StorageLink('harmonyx.default_home_feed') defaultHomeFeedMode: number = HOME_FEED_FOR_YOU;
   @StorageProp(STORAGE_KEY_COVER_SINGLE_COLUMN) private coverSingleColumn: boolean = true;
   @StorageLink(STORAGE_KEY_TIMELINE_COLUMNS) timelineColumnsMode: number = TIMELINE_COLUMNS_AUTO;
@@ -2755,6 +2763,9 @@ export struct SettingsSection {
       this.AutoHideSwitchRow($r('app.string.settings_auto_hide_fab'),
         $r('app.string.settings_auto_hide_fab_desc'), this.autoHideFab,
         (value: boolean): void => this.setAutoHideFab(value))
+      this.AutoHideSwitchRow($r('app.string.settings_profile_reply_button'),
+        $r('app.string.settings_profile_reply_button_desc'), this.profileReplyButton,
+        (value: boolean): void => this.interactionSaved(interactionSettingsStore.saveProfileReplyButton(getContext(this), value)))
     }
     .width('100%')
   }
@@ -2930,6 +2941,9 @@ export struct SettingsSection {
             promptAction.showToast({ message: this.text($r('app.string.spaces_save_failed')) });
           }
         })
+      this.AutoHideSwitchRow($r('app.string.settings_space_cues'),
+        $r('app.string.settings_space_cues_desc'), this.spaceTones,
+        (enabled: boolean): void => this.interactionSaved(spacePreferencesStore.saveTones(getContext(this), enabled)))
       TabOrderSettings({ home: true })
       this.MenuActionsContent('post_menu', $r('app.string.settings_menu_post'))
     }.width('100%').alignItems(HorizontalAlign.Start)
@@ -3908,6 +3922,12 @@ export struct SettingsSection {
         $r('app.string.settings_default_feed_for_you_desc'))
       this.HomeFeedOption(HOME_FEED_FOLLOWING, $r('app.string.home_following'),
         $r('app.string.settings_default_feed_following_desc'))
+      Column({ space: 8 }) {
+        Text($r('app.string.settings_post_swipe_title')).fontFamily(this.appFontFamily)
+          .fontSize($r('sys.float.Title_S')).fontWeight(FontWeight.Bold).width('100%')
+        this.PostSwipeOption($r('app.string.settings_post_swipe_left'), STORAGE_KEY_POST_SWIPE_LEFT, this.postSwipeLeft)
+        this.PostSwipeOption($r('app.string.settings_post_swipe_right'), STORAGE_KEY_POST_SWIPE_RIGHT, this.postSwipeRight)
+      }.width('100%').padding({ left: 20, right: 20, top: 16, bottom: 20 })
 
     }.width('100%')
   }
@@ -4069,6 +4089,23 @@ export struct SettingsSection {
       }
       .width('100%')
       .padding({ top: 16, bottom: 16, left: 20, right: 20 })
+      Row({ space: 14 }) {
+        Column({ space: 4 }) {
+          Text($r('app.string.settings_video_remember_speed')).fontFamily(this.appFontFamily)
+            .fontSize($r('sys.float.Subtitle_L'))
+            .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
+          Text($r('app.string.settings_video_remember_speed_desc')).fontFamily(this.appFontFamily)
+            .fontSize($r('sys.float.Body_M'))
+            .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
+            .width('100%')
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+        Toggle({ type: ToggleType.Switch, isOn: this.videoRememberSpeed })
+          .selectedColor(mixedAccentRoleColor(this.accentTheme, 'control', this.accentColor))
+          .onChange((value: boolean): void => {
+            const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+            if (!mediaSettingsStore.saveVideoRememberSpeed(context, value)) { this.videoRememberSpeed = !value; }
+          })
+      }.width('100%').padding({ bottom: 16, left: 20, right: 20 })
       Row({ space: 14 }) {
         Column({ space: 4 }) {
           Text($r('app.string.settings_video_hold_speed')).fontFamily(this.appFontFamily)
@@ -4906,6 +4943,22 @@ export struct SettingsSection {
     }
     .width('100%')
     .padding({ top: 16, bottom: 16, left: 20, right: 20 })
+  }
+
+  @Builder
+  private PostSwipeOption(label: Resource, key: string, selected: number): void {
+    Row({ space: 12 }) {
+      Text(label).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_L')).layoutWeight(1)
+        .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
+      Select([{ value: $r('app.string.settings_post_swipe_off') }, { value: $r('app.string.action_reply') },
+        { value: $r('app.string.action_like') }, { value: $r('app.string.action_repost') },
+        { value: $r('app.string.action_bookmark') }, { value: $r('app.string.action_share') },
+        { value: $r('app.string.video_feed_not_interested') }])
+        .selected(selected).accessibilityDescription(this.text(label))
+        .onSelect((value: number): void => {
+          this.interactionSaved(timelineSettingsStore.savePostSwipe(getContext(this), key, value));
+        })
+    }.width('100%').constraintSize({ minHeight: 48 })
   }
 
   @Builder

@@ -14,6 +14,8 @@ function load(source, modules = {}, globals = {}) {
   return module.exports;
 }
 
+const composerMedia = load(fs.readFileSync('entry/src/main/ets/models/ComposerMedia.ets', 'utf8'));
+
 function methods(file, name, names) {
   const source = fs.readFileSync(file, 'utf8').replace('struct ' + name, 'class ' + name);
   const parsed = ts.createSourceFile(file + '.ts', source, ts.ScriptTarget.Latest, true);
@@ -103,6 +105,7 @@ function share(t) {
     rmdirSync: target => { assert.ok(target.startsWith(root + '/share-inbox/')); fs.rmSync(target, { recursive: true }); } };
   const parents = { jpg: ['image'], gif: ['gif', 'image'], mp4: ['video'], heic: ['image'] };
   const { ExternalShareStore } = load(fs.readFileSync('entry/src/main/ets/services/ExternalShareStore.ets', 'utf8'), {
+    '../models/ComposerMedia': composerMedia,
     '@ohos.file.fs': { default: api }, '@ohos.util': { default: { generateRandomUUID: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' } },
     '@ohos.data.uniformTypeDescriptor': { default: { UniformDataType: { IMAGE: 'image', VIDEO: 'video', GIF: 'gif' },
       getTypeDescriptor: type => ({ belongsTo: parent => parents[type]?.includes(parent) ?? false }) } }
@@ -140,13 +143,14 @@ test('incoming IDs cannot escape the share sandbox', t => {
   assert.equal(fs.existsSync(f.root), true);
 });
 
-test('post limits leave larger and mixed albums intact for the DM path', t => {
+test('post imports allow mixed media in order with a 20-item limit and one GIF', t => {
   const f = share(t);
   const payload = types => ({ files: types.map(type => ({ type })) });
   assert.equal(f.store.canPost(payload([1, 1, 1, 2])), true);
-  assert.equal(f.store.canPost(payload([1, 1, 1, 1, 1])), false);
+  assert.equal(f.store.canPost(payload(Array.from({ length: 20 }, () => 1))), true);
+  assert.equal(f.store.canPost(payload(Array.from({ length: 21 }, () => 1))), false);
   assert.equal(f.store.canPost(payload([3])), true);
-  assert.equal(f.store.canPost(payload([1, 3])), false);
+  assert.equal(f.store.canPost(payload([1, 3])), true);
   assert.equal(f.store.canPost(payload([2, 2])), false);
 });
 
@@ -206,14 +210,16 @@ test('shared content does not overwrite an existing composer draft without the e
   const { Subject } = load(methods('entry/src/main/ets/components/ReplyComposer.ets', 'ReplyComposerPage', ['importSharedPayload']), {}, {
     getContext: () => ({}), accountStore: { activeId: () => 'account' }, $r: value => value,
     promptAction: { showDialog: async () => ({ index: choice }) },
+    ComposerMedia: composerMedia.ComposerMedia,
     ComposerOptions: class { hasSettings() { return false; } }
   });
   const page = new Subject();
-  Object.assign(page, { sharedImportId: '', composerPageActive: true, draft: 'existing', imageUris: ['/old.jpg'], gifUri: '', videoUri: '',
+  Object.assign(page, { sharedImportId: '', composerPageActive: true, draft: 'existing', attachments: [new composerMedia.ComposerMedia('/old.jpg', 1)],
     composeOptions: { hasSettings: () => false }, text: value => value, scheduleDraftSave: () => saves++ });
-  const payload = { id: 'share-1', text: 'caption', files: [{ uri: '/new.jpg', type: 1 }] };
+  const payload = { id: 'share-1', text: 'caption',
+    files: [{ uri: '/video.mp4', type: 3 }, { uri: '/new.jpg', type: 1 }, { uri: '/gif.gif', type: 2 }] };
   await page.importSharedPayload(payload);
-  assert.equal(page.draft, 'existing'); assert.deepEqual(page.imageUris, ['/old.jpg']); assert.equal(saves, 0);
+  assert.equal(page.draft, 'existing'); assert.deepEqual(page.attachments.map(item => item.uri), ['/old.jpg']); assert.equal(saves, 0);
   choice = 1; await page.importSharedPayload({ ...payload, id: 'share-2' });
-  assert.equal(page.draft, 'caption'); assert.deepEqual(page.imageUris, ['/new.jpg']); assert.equal(saves, 1);
+  assert.equal(page.draft, 'caption'); assert.deepEqual(page.attachments.map(item => item.uri), ['/video.mp4', '/new.jpg', '/gif.gif']); assert.equal(saves, 1);
 });

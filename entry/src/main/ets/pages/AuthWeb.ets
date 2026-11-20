@@ -36,6 +36,7 @@ struct AuthWeb {
   private addAccount: boolean = false;
   @State busy: boolean = false;
   @State statusText: string = '';
+  @State private loadFailed: boolean = false;
   @StorageLink('harmonyx.accent_color') accentColor: string = '#007DFF';
   // The X sign-in page advertises prefers-color-scheme, so it follows the app's
   // light/dark setting rather than staying bright white at night.
@@ -324,7 +325,20 @@ struct AuthWeb {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .padding({ left: 16, right: 16, bottom: 6 })
         }
-        if (this.authUrl.length > 0) {
+        if (this.loadFailed) {
+          Column({ space: 12 }) {
+            Text($r('app.string.auth_web_load_failed')).fontFamily(this.appFontFamily)
+              .fontColor($r('app.color.text_primary'))
+            Button($r('app.string.card_retry'))
+              .id('auth-web-retry').focusable(true).defaultFocus(true)
+              .onClick((): void => {
+                this.statusText = this.text(this.sessionMode ? $r('app.string.auth_session_waiting') :
+                  $r('app.string.auth_loading'));
+                this.loadFailed = false;
+                if (this.sessionMode) { this.startSessionPolling(); }
+              })
+          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center)
+        } else if (this.authUrl.length > 0) {
           Web({ src: this.authUrl, controller: this.controller })
             .layoutWeight(1)
             .width('100%')
@@ -344,6 +358,18 @@ struct AuthWeb {
                 return false;
               }
               return event.handler.confirm(credential.username, credential.password);
+            })
+            .onErrorReceive((event): void => {
+              if (event.request.isMainFrame() && !this.handled) {
+                this.loadFailed = true;
+                this.stopSessionPolling();
+              }
+            })
+            .onHttpErrorReceive((event): void => {
+              if (event.request.isMainFrame() && event.response.getResponseCode() >= 400 && !this.handled) {
+                this.loadFailed = true;
+                this.stopSessionPolling();
+              }
             })
             .onPageEnd(() => {
               // Login can complete without navigation firing the intercept

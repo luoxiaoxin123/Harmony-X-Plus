@@ -1,3 +1,7 @@
+import type { PostShareRoute } from './PostShare';
+import { ColorMetrics } from '@kit.ArkUI';
+import { STORAGE_KEY_POST_DETAIL_COMPACT } from '../services/PostDisplaySettingsStore';
+import { STANDARD_POST_CHARACTERS, weightedPostLength } from '../utils/PostCharacterCount';
 import { formatPostCount } from '../utils/PostCountFormat';
 import { STORAGE_KEY_POST_COUNT_FORMAT } from '../services/PostDisplaySettingsStore';
 import { PostLinkMenu } from '../components/PostLinkMenu';
@@ -165,7 +169,7 @@ export struct PostDetail {
   }
 
   @Builder
-  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl) }
+  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl, this.pageStack) }
 
   private bodyTextController: TextController = new TextController();
   private translatedTextController: TextController = new TextController();
@@ -228,6 +232,7 @@ export struct PostDetail {
   @StorageProp(STORAGE_KEY_POST_TIME_NOW) private postTimeNow: number = Date.now();
   @StorageProp(STORAGE_KEY_POST_VIEWS_REVISION) private viewCountRevision: number = 0;
   @Consume('pageStack') pageStack: NavPathStack;
+  @StorageProp(STORAGE_KEY_POST_DETAIL_COMPACT) private detailLayout: number = 0;
   @StorageProp('harmonyx.status_bar_height') statusBarHeight: number =
     AppStorage.get<number>('harmonyx.status_bar_height') ?? 0;
   @StorageProp('harmonyx.navigation_indicator_height') navigationIndicatorHeight: number =
@@ -329,6 +334,7 @@ export struct PostDetail {
   private keyboardListenerRegistered: boolean = false;
   private keyboardObserverGeneration: number = 0;
   private continuationScrollOffset: number = 0;
+  private focusedReplyContextKey: string = '';
   private lastPublishedContinuationOffset: number = -1;
   private gesturesShareCallback: (target: harmonyShare.SharableTarget) => void =
     (target: harmonyShare.SharableTarget): void => {
@@ -759,7 +765,8 @@ export struct PostDetail {
       reposted: live.reposted,
       bookmarked: live.bookmarked,
       isReply: live.isReply,
-      replyToTweetId: live.replyToTweetId,
+      replyToTweetId: live.replyToTweetId ?? current.replyToTweetId,
+      replyContext: (live.replyContext?.length ?? 0) > 0 ? live.replyContext : current.replyContext,
       replyToUsername: live.replyToUsername,
       conversationId: live.conversationId,
       isRepost: current.isRepost,
@@ -775,6 +782,7 @@ export struct PostDetail {
     this.tweet = stable;
     postViewCounts.remember(live.id, live.metrics.viewCount);
     this.syncActionStates(stable);
+    this.positionFocalReply();
   }
 
   private isXPostId(value: string): boolean {
@@ -1241,6 +1249,7 @@ export struct PostDetail {
       }
       TweetCard({
         tweet: row.tweet,
+        useDetailLayout: true, detailLayout: this.detailLayout,
         onPhotoOpen: (request: PhotoRequest): boolean => this.openCommentPhoto(request),
         readingState: readingState,
         roundedCard: !this.embedded && postCardUsesCustomSurface(this.pageBackgroundValue),
@@ -1585,6 +1594,10 @@ export struct PostDetail {
     if (content.length === 0 || current === null || this.replyCapsuleSending) {
       return false;
     }
+    if (weightedPostLength(content) > STANDARD_POST_CHARACTERS) {
+      this.openReplyComposer(content, '', '');
+      return true;
+    }
     this.replyCapsuleSending = true;
     try {
       const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -1669,6 +1682,7 @@ export struct PostDetail {
   // the reason has to be read out of the payload: an account-level posting
   // limit and a dead session both used to collapse into "无法连接 X".
   private privateActionError(result: XPrivateResult, action: Resource): string {
+    if (result.isBlockedByAuthor()) { return this.text($r('app.string.post_blocked_by_author')); }
     if (result.status === 401 || result.status === 403) {
       return this.text($r('app.string.private_session_expired'));
     }
@@ -1954,25 +1968,10 @@ export struct PostDetail {
 
   private async shareCurrentPost(): Promise<void> {
     const post: Tweet | null = this.tweet;
-    if (post === null) {
-      return;
-    }
-    const sharedData: systemShare.SharedData = new systemShare.SharedData({
-      utd: utd.UniformDataType.HYPERLINK,
-      content: this.postShareUrl(post),
-      title: post.author.name + ' on X',
-      description: post.text
-    });
-    const controller: systemShare.ShareController = new systemShare.ShareController(sharedData);
-    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
-    try {
-      await controller.show(context, {
-        selectionMode: systemShare.SelectionMode.SINGLE,
-        previewMode: systemShare.SharePreviewMode.DEFAULT
-      });
-    } catch {
-      promptAction.showToast({ message: this.text($r('app.string.share_failed')), duration: 2000 });
-    }
+    if (post === null) { return; }
+    const params: PostShareRoute = { post: post };
+    if (this.embedded) { this.onEmbeddedNavigate(); }
+    this.pageStack.pushPath({ name: 'PostShare', param: params });
   }
 
   private useSplitReplyCapsule(): boolean {
@@ -2185,6 +2184,12 @@ export struct PostDetail {
     if (width > 0 && Math.abs(width - this.actionBarWidth) > 0.5) {
       this.actionBarWidth = width;
     }
+  }
+
+  private detailSystemBarStyle(): SystemBarStyle {
+    const ink: ColorMetrics = ColorMetrics.resourceColor(pageTextColor($r('app.color.text_primary'),
+      this.pageBackgroundValue, Color.Transparent));
+    return { statusBarContentColor: ink.red + ink.green + ink.blue > 382 ? '#FFFFFF' : '#000000' };
   }
 
   private postActionColor(color: ResourceColor): ResourceColor {
@@ -2608,7 +2613,8 @@ export struct PostDetail {
               }
             }
             .width('100%')
-            Text('@' + this.tweet.author.username).fontFamily(this.appFontFamily)
+            Text('@' + this.tweet.author.username + (this.detailLayout === 1 ?
+              ' · ' + formatPostDetailTime(this.tweet.createdAt, this.postTimeNow) : '')).fontFamily(this.appFontFamily)
               .fontSize($r('sys.float.Body_M'))
               .fontColor(pageTextColor($r('app.color.text_secondary'), this.embedded ? '' : this.pageBackgroundValue, postCardSurfaceColor(this.transparentEmbeddedBackground() ? Color.Transparent :
         avatarTintSurface(this.avatarPalette, this.tweet.author.avatarUrl ?? '',
@@ -2925,9 +2931,36 @@ export struct PostDetail {
     }
   }
 
+  private focalAncestors(): Tweet[] {
+    return this.embedded ? [] : this.tweet?.replyContext ?? [];
+  }
+
+  private positionFocalReply(): void {
+    const count: number = this.focalAncestors().length;
+    if (this.tweet === null || count === 0 || this.continuationScrollOffset > 0) { return; }
+    const key: string = this.tweet.id + ':' + count;
+    if (key === this.focusedReplyContextKey) { return; }
+    setTimeout((): void => {
+      if (!this.alive || this.tweet === null || key !== this.tweet.id + ':' + this.focalAncestors().length) { return; }
+      try {
+        this.scroller.scrollToIndex(count, false, ScrollAlign.START);
+        this.focusedReplyContextKey = key;
+      } catch (error) { /* A wide layout can display a separate primary pane. */ }
+    }, 40);
+  }
+
   @Builder
   private SingleThreadLayout(): void {
     List({ scroller: this.scroller }) {
+      ForEach(this.focalAncestors(), (ancestor: Tweet, index: number): void => {
+        ListItem() {
+          TweetCard({ tweet: ancestor, showActions: false,
+            useDetailLayout: true, detailLayout: this.detailLayout, connectAbove: index > 0, connectBelow: true,
+            onOpen: (post: Tweet, source: string): void => this.openPost(post, source),
+            onAuthorTapped: (post: Tweet): void => this.openUser(post.author),
+            onMentionTapped: (handle: string): void => this.openMention(handle) })
+        }.width('100%')
+      }, (ancestor: Tweet): string => 'parent-' + ancestor.id)
       ListItem() { this.PrimaryPane() }.width('100%').margin({ bottom: 8 })
       this.CommentListItems()
     }
@@ -3198,6 +3231,7 @@ export struct PostDetail {
     })
     .onShown((): void => {
       this.onDetailShown();
+      this.positionFocalReply();
     })
     .titleMode(HdsNavDestinationTitleMode.MINI)
     .hideBackButton(false)
@@ -3268,6 +3302,7 @@ export struct PostDetail {
       style: destinationTitleBarStyle(ScrollEffectType.GRADIENT_BLUR, this.themeDisplayMode,
         this.themeDarkSurface, this.titleBarStyleMode, this.replyCapsuleExpanded)
     })
+    .systemBarStyle(this.detailSystemBarStyle(), this.detailSystemBarStyle())
     // Transparent while the row expands, so the list is not blanked out by a
     // freshly mounted page before the expansion has covered it.
     .backgroundColor(this.sharedElementId.length > 0 ? Color.Transparent :
