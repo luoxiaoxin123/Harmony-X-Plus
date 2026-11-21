@@ -11,7 +11,8 @@ const component = tree.statements.find(node => ts.isClassDeclaration(node) && no
 function harness(names) {
   const methods = names.map(name => component.members.find(node => ts.isMethodDeclaration(node) &&
     node.name.getText(tree) === name).getText(tree)).join('\n');
-  return new (new Function('hilog', `${compile(`class Home { ${methods} }`)}; return Home;`)({ info: () => {} }))();
+  return new (new Function('hilog', 'HOME_TAB_INDEX',
+    `${compile(`class Home { ${methods} }`)}; return Home;`)({ info: () => {} }, 0))();
 }
 const post = id => ({ id, author: { id: `author-${id}`, name: id } });
 function refreshFixture(incoming, offset = 0) {
@@ -56,6 +57,29 @@ test('an in-flight refresh cannot publish its capsule into a different feed', as
   finish(); await request;
   assert.deepEqual(home.timeline.map(tweet => tweet.id), ['following']);
   assert.deepEqual(home.pendingNewPosts, []);
+});
+
+test('pull refresh restores the first post once its indicator retracts on the same feed', () => {
+  const changes = [];
+  let activeKey = 'for-you';
+  const home = Object.assign(harness(['restoreHomeTopAfterRefresh', 'onHomeRefreshOffsetChange']), {
+    homeRefreshTopKey: activeKey, homeRefreshPullOffset: 64, refreshing: true, currentTab: 0,
+    navPathStack: { size: () => 0 }, homeTabIndex: () => 0, tabKey: () => activeKey,
+    setHomeHeaderCollapsed: value => changes.push(['header', value]), setChromeHidden: () => {},
+    jumpToNewestPost: () => changes.push(['top']), scrollDepth: 112, fabHidden: true
+  });
+  home.onHomeRefreshOffsetChange(24);
+  home.refreshing = false;
+  home.restoreHomeTopAfterRefresh();
+  assert.deepEqual(changes, []);
+  home.onHomeRefreshOffsetChange(0);
+  home.onHomeRefreshOffsetChange(0);
+  assert.deepEqual(changes, [['header', false], ['top']]);
+  assert.equal(home.scrollDepth, 0);
+
+  home.homeRefreshTopKey = 'for-you'; activeKey = 'following';
+  home.onHomeRefreshOffsetChange(0);
+  assert.equal(changes.length, 2);
 });
 
 test('feed snapshots retain their pending posts across switching away and back', () => {
@@ -172,4 +196,10 @@ test('tapping the capsule merges once and scrolls its own page after the new lay
   idle(2000000);
   assert.deepEqual(scrolled, [['first', 'top']]);
   reveal.revealPendingPosts(); assert.equal(frames.length, 1);
+  selected = 0;
+  home.tabKey = index => home.homeTabItems()[index].key;
+  home.refreshing = true;
+  home.jumpToNewestPost();
+  assert.equal(home.homeRefreshTopKey, 'for-you');
+  assert.equal(frames.length, 1);
 });
