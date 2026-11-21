@@ -119,15 +119,16 @@ test('the next incoming message in an existing thread gets its own notification'
     ['account-a:dm:100-200:42', 'account-a:dm:100-200:43']);
 });
 
-test('tap-to-share resumes the selected recipient after PIN and closes after actual send', async () => {
+test('tap-to-share resumes multiple recipients after PIN and retries only the unsuccessful share', async () => {
   const calls = [];
   let unlocked = false;
   let rejectPin = true;
+  let rejectSecond = true;
   const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
-    'PostShareSheetHost', ['sendSelected']), {}, {
+    'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants']), {}, {
     xPrivateClient: { sessionIdentity: () => 'viewer' },
     xChatService: {
-      async prepare() { calls.push('prepare'); },
+      async prepare(_context, ids) { calls.push(['prepare', ...ids]); },
       isUnlocked: () => unlocked,
       async unlock(pin) {
         assert.equal(pin, '1234');
@@ -135,13 +136,19 @@ test('tap-to-share resumes the selected recipient after PIN and closes after act
         if (rejectPin) { throw new Error('InvalidPin'); }
         unlocked = true;
       },
-      async sharePost(...args) { calls.push(args); }
+      conversationTransport: () => 'encrypted',
+      async sharePost(...args) {
+        calls.push(args);
+        if (args[0] === '100-300' && rejectSecond) { throw new Error('send_http_503'); }
+      }
     },
     postShareUrl: () => 'https://x.com/example/status/123',
     $r: name => name
   });
+  const alice = { conversationId: '100-200', title: 'Alice', participantIds: [], group: false };
+  const bob = { conversationId: '100-300', title: 'Bob', participantIds: [], group: false };
   const subject = Object.assign(new Subject(), {
-    account: 'viewer', current: { post: { id: '123' } }, selected: { conversationId: '100-200', participantIds: ['200'] },
+    account: 'viewer', current: { post: { id: '123' } }, selected: [alice, bob], sentIds: [], linkRecipients: [],
     note: ' note ', open: true,
     context: () => ({ resourceManager: { getStringSync: name => name } }),
     getUIContext: () => ({ getPromptAction: () => ({ showToast: () => calls.push('sent') }) })
@@ -154,9 +161,45 @@ test('tap-to-share resumes the selected recipient after PIN and closes after act
   assert.equal(subject.open, true);
   rejectPin = false;
   await subject.sendSelected('1234');
+  assert.deepEqual(subject.selected, [bob]);
+  assert.deepEqual(subject.sentIds, ['100-200']);
+  assert.match(subject.sendError, /Bob.*HTTP 503/);
+  assert.equal(subject.open, true);
+  rejectSecond = false;
+  await subject.sendSelected();
   assert.equal(subject.open, false);
   assert.equal(subject.sending, false);
-  assert.deepEqual(calls, ['prepare', 'unlock', 'unlock', ['100-200', '123', 'https://x.com/example/status/123', 'note'], 'sent']);
+  const url = 'https://x.com/example/status/123';
+  assert.deepEqual(calls, [['prepare', '100', '200'], 'unlock', 'unlock', ['prepare', '100', '200'],
+    ['100-200', '123', url, 'note'], ['prepare', '100', '300'], ['100-300', '123', url, 'note'],
+    ['prepare', '100', '300'], ['100-300', '123', url, 'note'], 'sent']);
+});
+
+test('a legacy conversation sends a raw link only after that separate action is chosen', async () => {
+  const plaintext = [];
+  const contact = { id: '200' };
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants', 'sendLegacyLink']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100' },
+    xChatService: { prepare: async () => {}, isUnlocked: () => true, conversationTransport: () => 'plaintext',
+      async sharePost() { throw new Error('recipient_key_unavailable'); } },
+    chatContactService: { async load(_context, id) { assert.equal(id, '200'); return contact; },
+      async sendPlaintext(_context, receiver, id, text) { plaintext.push([receiver, id, text]); } },
+    postShareUrl: () => 'https://x.com/example/status/123',
+    $r: name => name
+  });
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: [{ conversationId: '100-200', title: 'Alice', group: false }],
+    note: 'note', open: true, sentIds: [], linkRecipients: [],
+    context: () => ({ resourceManager: { getStringSync: name => name } }),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast() {} }) })
+  });
+  await subject.sendSelected();
+  assert.deepEqual(plaintext, []);
+  assert.deepEqual(subject.linkRecipients, ['100-200']);
+  await subject.sendSelected(undefined, true);
+  assert.deepEqual(plaintext, [[contact, '100-200', 'note\nhttps://x.com/example/status/123']]);
+  assert.equal(subject.open, false);
 });
 
 test('native pull state still starts refresh and times out cleanly without a second inbox request', async () => {

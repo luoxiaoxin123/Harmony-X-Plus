@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "Cotización"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Contenido multimedia del perfil por defecto"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Enviar como enlace"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "No hay una clave de chat para este destinatario"
     }
   ]
 }

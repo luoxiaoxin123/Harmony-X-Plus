@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "Aktienkurs"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Standardmedien im Profil"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Als Link senden"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "Für diesen Empfänger ist kein Chat-Schlüssel verfügbar"
     }
   ]
 }

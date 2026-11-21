@@ -54,7 +54,7 @@ import { HOME_FLOATING_COMPOSE, HOME_FLOATING_REFRESH, HOME_FLOATING_TOP, HOME_F
   STORAGE_KEY_PHOTO_FULLSCREEN, STORAGE_KEY_REFRESH_ON_FOREGROUND,
   STORAGE_KEY_FLOATING_COMPOSE_MATERIAL_TINT,
   STORAGE_KEY_REFRESH_ON_HOME_TAB, STORAGE_KEY_HOME_SINGLE_TAP_TOP, STORAGE_KEY_HOME_DOUBLE_TAP_LATEST, STORAGE_KEY_HOME_PULL_REFRESH_LATEST,
-  STORAGE_KEY_CONFIRM_APP_EXIT, interactionSettingsStore } from '../services/InteractionSettingsStore';
+  STORAGE_KEY_CONFIRM_APP_EXIT, STORAGE_KEY_PROFILE_PHOTOS_FIRST, interactionSettingsStore } from '../services/InteractionSettingsStore';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import {
   DEFAULT_SHEET_MATERIAL_ENABLED,
@@ -655,6 +655,7 @@ export struct SettingsSection {
   @StorageProp(STORAGE_KEY_HOME_SINGLE_TAP_TOP) homeSingleTapTop: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_DOUBLE_TAP_LATEST) homeDoubleTapLatest: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_PULL_REFRESH_LATEST) homePullRefreshLatest: boolean = true;
+  @StorageProp(STORAGE_KEY_PROFILE_PHOTOS_FIRST) private profilePhotosFirst: boolean = false;
   @StorageProp(STORAGE_KEY_CONFIRM_APP_EXIT) confirmAppExit: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_SPACE_CAPSULE_ENABLED) homeSpaceCapsuleEnabled: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_SPACE_CAPSULE_HIDDEN_FOR_SESSION) homeSpaceCapsuleHiddenForSession: boolean = false;
@@ -3939,6 +3940,16 @@ export struct SettingsSection {
   @Builder
   private PhotosContent(): void {
     Column({ space: 18 }) {
+      Row({ space: 12 }) {
+        Text($r('app.string.settings_profile_default_media')).fontFamily(this.appFontFamily)
+          .fontSize($r('sys.float.Body_L')).layoutWeight(1)
+        Select([{ value: $r('app.string.profile_videos_tab') }, { value: $r('app.string.profile_photos_tab') }])
+          .selected(this.profilePhotosFirst ? 1 : 0)
+          .value(this.profilePhotosFirst ? $r('app.string.profile_photos_tab') : $r('app.string.profile_videos_tab'))
+          .onSelect((index: number): void => {
+            this.interactionSaved(interactionSettingsStore.saveProfilePhotosFirst(getContext(this), index === 1));
+          })
+      }.width('100%')
       this.AutoHideSwitchRow($r('app.string.settings_photo_fullscreen'),
         $r('app.string.settings_photo_fullscreen_desc'), this.photoFullscreen,
         (value: boolean): void => { this.interactionSaved(interactionSettingsStore.savePhotoFullscreen(

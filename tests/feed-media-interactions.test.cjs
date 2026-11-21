@@ -199,10 +199,35 @@ test('video surfaces wire viewer hold playback and keep inline menus exclusive w
   assert.equal((media.match(/\.onTouch\(\(event: TouchEvent\): void => this\.onHoldSpeedTouch\(event\)\)/g) || []).length, 2);
   assert.equal((media.match(/LongPressGesture\(\{ fingers: 1, repeat: this\.mediaViewerLayout \|\| this\.fullscreen \|\| this\.inlineVideoHoldPlay, duration: HOLD_SEEK_DURATION_MS \}\)\s*\.onAction\(\(event: GestureEvent\): void => this\.onVideoLongPress\(event\)\)\s*\.onActionEnd\(\(\): void => this\.finishHoldGesture\(\)\)\s*\.onActionCancel\(\(\): void => this\.finishHoldGesture\(\)\)/g) || []).length, 2);
   assert.match(media, /onMenuRequest: onLongPress/);
-  assert.doesNotMatch(media, /showDownloadButton && media\.type === 'video'/);
+  assert.doesNotMatch(media, /showDownloadButton|MediaDownloadButton/);
   assert.doesNotMatch(media, /arrow_up_left_and_arrow_down_right[\s\S]{0,240}post_card_title_overlay/);
   assert.match(actions,
     /preview: this\.media\.type === 'photo' \? MenuPreviewMode\.IMAGE : MenuPreviewMode\.NONE/);
+});
+
+test('landscape post body opens the same viewer as tapping a playable video', () => {
+  const video = { id: 'video', type: 'video', mediaUrl: 'https://example.com/video.mp4' };
+  const post = { id: 'post', attachments: [{ type: 'photo' }, video] };
+  const calls = [];
+  const Card = methods('components/TweetCard', 'TweetCard', ['openCardPost'], {
+    requestVideoViewer: (tweet, media, position) => calls.push(['request', tweet, media, position]),
+    videoPlaybackPositionStore: { positionFor: () => 12 }
+  });
+  const card = Object.assign(new Card(), { postWindowWidth: 1000, photoWindowHeight: 700, videoFeedEnabled: true,
+    onOpen: (tweet, source) => calls.push(['post', tweet, source]),
+    onVideoOpen: (tweet, media) => calls.push(['video', tweet, media]) });
+  card.openCardPost(post, 'source');
+  assert.deepEqual(calls.pop(), ['video', post, video]);
+  card.videoFeedEnabled = false;
+  card.openCardPost(post, 'source');
+  assert.deepEqual(calls.pop(), ['request', post, video, 12]);
+  video.sensitive = true;
+  card.openCardPost(post, 'source');
+  assert.deepEqual(calls.pop(), ['post', post, 'source']);
+  video.sensitive = false;
+  card.postWindowWidth = 360;
+  card.openCardPost(post, 'source');
+  assert.deepEqual(calls.pop(), ['post', post, 'source']);
 });
 
 function holdVideo(options = {}) {

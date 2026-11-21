@@ -43,6 +43,15 @@ test('an explicitly disabled fullscreen preference survives the new default', ()
   assert.equal(new api.InteractionSettingsStore().load({}).photoFullscreen, false);
 });
 
+test('new profiles default to videos and restore the saved photo preference', () => {
+  const { api, storage } = settingsFixture();
+  const store = api.interactionSettingsStore;
+  assert.equal(store.load({}).profilePhotosFirst, false);
+  assert.equal(store.saveProfilePhotosFirst({}, true), true);
+  assert.equal(new api.InteractionSettingsStore().load({}).profilePhotosFirst, true);
+  assert.equal(storage.get(api.STORAGE_KEY_PROFILE_PHOTOS_FIRST), true);
+});
+
 test('Home header action and follow suggestions persist independently and publish only successful saves', () => {
   const f = settingsFixture(), store = f.api.interactionSettingsStore;
   const initial = store.load({});

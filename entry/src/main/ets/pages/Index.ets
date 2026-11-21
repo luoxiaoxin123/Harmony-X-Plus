@@ -637,6 +637,8 @@ struct Index {
   @State private homeHeaderParked: boolean = false;
   private homeHeaderMotion: number = 0;
   private homeDrawerSwipeStarted: boolean = false;
+  private sidebarOverlayActive: boolean = true;
+  @State private homeDrawerDragWidth: number = -1;
   // 0 = For you (recommended), 1 = Following.
   @State homeFeedMode: number = 0;
   @State private homeTabPosition: number = 0;
@@ -1521,13 +1523,22 @@ struct Index {
     return Math.min(280, viewportWidth * 0.72);
   }
 
+  private usesOverlaySideDrawer(): boolean {
+    if (this.videoLayoutBreakpoint) { return this.sidebarOverlayActive; }
+    return !this.isLargeScreen() || (this.windowWidth > 0 && this.windowHeight > this.windowWidth);
+  }
+
+  private visibleSideDrawerWidth(): number {
+    return this.homeDrawerDragWidth >= 0 ? this.homeDrawerDragWidth : (this.showSideDrawer ? this.sideDrawerWidth() : 0);
+  }
+
   onBackPress(): boolean {
     if (this.showStartupCover) {
       this.exitBackRequestedAt = 0;
       this.showStartupCover = false;
       return true;
     }
-    if (!this.isLargeScreen() && this.showSideDrawer) {
+    if (this.usesOverlaySideDrawer() && this.showSideDrawer) {
       this.exitBackRequestedAt = 0;
       this.showSideDrawer = false;
       return true;
@@ -1882,6 +1893,12 @@ struct Index {
 
   private onHomeViewportChanged(): void {
     if (this.videoLayoutBreakpoint.length > 0) { return; }
+    const overlay: boolean = this.usesOverlaySideDrawer();
+    if (overlay !== this.sidebarOverlayActive) {
+      this.sidebarOverlayActive = overlay;
+      this.cancelHomeDrawerSwipe();
+      this.showSideDrawer = !overlay && !this.isDesktopLayout();
+    }
     this.beginHomeViewportChange();
   }
 
@@ -2153,13 +2170,14 @@ struct Index {
     }
     this.closeDesktopRail();
     this.beginHomeViewportChange();
+    this.sidebarOverlayActive = this.usesOverlaySideDrawer();
     if (ResponsiveLayout.isSmall(this.breakpoint)) {
       this.showSideDrawer = false;
       this.updateNavigationMode();
       this.syncAllWaterFlowSections();
       return;
     }
-    this.showSideDrawer = !this.isDesktopLayout() && this.isLargeScreen();
+    this.showSideDrawer = !this.isDesktopLayout() && !this.usesOverlaySideDrawer();
     this.updateNavigationMode();
     this.syncAllWaterFlowSections();
   }
@@ -2197,7 +2215,7 @@ struct Index {
   private openContentDestination(): void {
     ResponsiveLayout.openContentDestination();
     this.updateNavigationMode();
-    if (this.isDesktopLayout() || !this.isLargeScreen()) {
+    if (this.isDesktopLayout() || this.usesOverlaySideDrawer()) {
       this.showSideDrawer = false;
     }
   }
@@ -2314,8 +2332,9 @@ struct Index {
     if (!this.supportsHdsNavigation()) {
       return 12;
     }
-    if (this.exploreTitleContentBottom > 0) {
-      return Math.max(0, Math.max(this.exploreTitleContentBottom,
+    const titleBottom: number = this.exploreHeaderBottom();
+    if (titleBottom > 0) {
+      return Math.max(0, Math.max(titleBottom,
         this.titleBarSurfaceTop + this.exploreNativeTitleHeight) - this.exploreContentTop) +
         this.rootTitleBarContentClearance();
     }
@@ -2323,6 +2342,18 @@ struct Index {
     return RootTitleBarLayout.contentTopInset(EXPLORE_TAB_INDEX, this.useTitleBarLogo(),
       this.statusBarHeight, false, 0, this.rootTitleBarContentClearance(),
       this.exploreLayoutDimension($r('app.float.explore_search_categories_gap')));
+  }
+
+  private exploreHeaderBottom(): number {
+    const contentHeight: number = this.exploreTitleContentHeight();
+    if (this.activeExploreQuery.length > 0) {
+      return this.exploreTitleIdentityBottom > 0 ? this.exploreTitleIdentityBottom + contentHeight : 0;
+    }
+    // The category row can be recreated on return from search. Its previous
+    // measurement is still useful, but the current rows set the minimum.
+    const layoutBottom: number = this.exploreTitleIdentityBottom > 0 ?
+      this.exploreTitleIdentityBottom + contentHeight : 0;
+    return Math.max(this.exploreTitleContentBottom, layoutBottom);
   }
 
   private messagesContentTopInset(): number {
@@ -2341,8 +2372,8 @@ struct Index {
   private rootTitleBarBottomHeight(): number {
     if (this.currentTab === ME_TAB_INDEX) { return 0; }
     if (this.isDesktopLayout()) { return Math.max(0, this.desktopHeaderHeight() - this.desktopTitleBarHeight()); }
-    if (this.chromeTab === EXPLORE_TAB_INDEX && this.exploreTitleContentBottom > 0) {
-      return RootTitleBarLayout.measuredBottomHeight(this.exploreTitleContentBottom - this.titleBarSurfaceTop,
+    if (this.chromeTab === EXPLORE_TAB_INDEX && this.exploreHeaderBottom() > 0) {
+      return RootTitleBarLayout.measuredBottomHeight(this.exploreHeaderBottom() - this.titleBarSurfaceTop,
         this.exploreNativeTitleHeight);
     }
     return RootTitleBarLayout.bottomHeight(this.chromeTab, this.useTitleBarLogo(),
@@ -5568,6 +5599,12 @@ struct Index {
   private openVideoFeed(tweet: Tweet, media: MediaAttachment,
     requestedSource: MediaViewerSource | undefined = undefined): void {
     if (!this.hasPlayableVideo(tweet) || media.id.length === 0) { return; }
+    const names: string[] = this.navPathStack.getAllPathName();
+    const top: number = names.length - 1;
+    if (names[top] === 'VideoFeedViewer') {
+      const active: VideoFeedRouteParam | undefined = this.navPathStack.getParamByIndex(top) as VideoFeedRouteParam | undefined;
+      if (active?.startMediaId === media.id) { return; }
+    }
     videoPlayerHandoff.request(media.id);
     const source: MediaViewerSource | undefined = requestedSource ?? pendingMediaViewerSource.take(media.id);
     const param: VideoFeedRouteParam = {
@@ -6245,7 +6282,7 @@ struct Index {
   }
 
   private openHelpCenter(): void {
-    if (!this.isLargeScreen()) {
+    if (this.usesOverlaySideDrawer()) {
       this.showSideDrawer = false;
     }
     this.openRootContent({ name: 'HelpCenter' });
@@ -6254,14 +6291,14 @@ struct Index {
   // Account switcher: its own destination, so the list is reachable from the
   // drawer, from Settings and from the Me tab with the same code.
   private openAccounts(): void {
-    if (!this.isLargeScreen()) {
+    if (this.usesOverlaySideDrawer()) {
       this.showSideDrawer = false;
     }
     this.openRootContent({ name: 'Accounts' });
   }
 
   private showDrawerFeature(feature: string): void {
-    if (!this.isLargeScreen()) {
+    if (this.usesOverlaySideDrawer()) {
       this.showSideDrawer = false;
     }
     if (feature === 'search') { this.showSearchPage(); return; }
@@ -6336,7 +6373,7 @@ struct Index {
     // the root tabs. Selecting the tab alone leaves that destination visible.
     this.showLinkPreview = false;
     this.linkPreviewUrl = '';
-    if (!this.isLargeScreen()) {
+    if (this.usesOverlaySideDrawer()) {
       this.showSideDrawer = false;
     }
     ResponsiveLayout.closeToMain(this.navPathStack);
@@ -6356,7 +6393,7 @@ struct Index {
   }
 
   private openOwnProfile(): void {
-    if (!this.isLargeScreen()) { this.showSideDrawer = false; }
+    if (this.usesOverlaySideDrawer()) { this.showSideDrawer = false; }
     this.showLinkPreview = false;
     this.linkPreviewUrl = '';
     if (!this.hasAnySession()) { this.goLogin(); return; }
@@ -7010,7 +7047,7 @@ struct Index {
       }
     }
     this.beginHomeViewportChange();
-    this.showSideDrawer = !this.isDesktopLayout() && this.isLargeScreen();
+    this.showSideDrawer = !this.isDesktopLayout() && !this.usesOverlaySideDrawer();
     this.updateNavigationMode();
     this.syncAllWaterFlowSections();
   }
@@ -7666,6 +7703,33 @@ struct Index {
         .id('system-sidebar-host')
   }
 
+  @Builder
+  private OverlaySideDrawer(): void {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column().width('100%').height('100%').backgroundColor(Color.Black)
+        .opacity(0.22 * this.visibleSideDrawerWidth() / this.sideDrawerWidth())
+        .animation({ duration: this.homeDrawerDragWidth >= 0 || this.reduceMotion ? 0 : 240, curve: Curve.EaseOut })
+        .hitTestBehavior(this.showSideDrawer ? HitTestMode.Default : HitTestMode.None)
+        .onClick((): void => { this.showSideDrawer = false; })
+      Column() { this.SideBarPanelBuilder(this.sidebarMaterialType) }
+        .width(this.sideDrawerWidth()).height('100%')
+        .backgroundColor(this.sidebarMaterialType === SIDEBAR_MATERIAL_SYSTEM || this.desktopRailMaterialLevel < 0 ?
+          this.themedPageSurface() : Color.Transparent)
+        .position({ x: isAppRtl(this.appLocale) ? Math.max(0, this.windowWidth - this.sideDrawerWidth()) : 0, y: 0 })
+        .translate({ x: (this.visibleSideDrawerWidth() - this.sideDrawerWidth()) * (isAppRtl(this.appLocale) ? -1 : 1) })
+        .animation({ duration: this.homeDrawerDragWidth >= 0 || this.reduceMotion ? 0 : 240, curve: Curve.EaseOut })
+        .hitTestBehavior(this.showSideDrawer ? HitTestMode.Default : HitTestMode.None)
+        .accessibilityLevel(this.showSideDrawer ? 'auto' : 'no-hide-descendants')
+        .parallelGesture(PanGesture({ fingers: 1,
+          direction: isAppRtl(this.appLocale) ? PanDirection.Right : PanDirection.Left, distance: 24 })
+          .onActionEnd((event: GestureEvent): void => {
+            if (Math.abs(event.offsetX) >= 56) { this.showSideDrawer = false; }
+          }))
+    }.width('100%').height('100%').clip(true).hitTestBehavior(HitTestMode.Transparent)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      .zIndex(20)
+  }
+
   private showDeviceTimeline(): boolean {
     return !this.deviceFullFeatures && (this.deviceType === 'wearable' || this.deviceType === 'tv');
   }
@@ -7721,7 +7785,9 @@ struct Index {
         Stack() {
           // Each mode owns a distinct host. Destroying the previous branch
           // clears native blur/material state instead of mutating one host.
-          if (this.sidebarMaterialType === SIDEBAR_MATERIAL_SYSTEM) {
+          if (this.usesOverlaySideDrawer()) {
+            this.ContentPanelBuilder()
+          } else if (this.sidebarMaterialType === SIDEBAR_MATERIAL_SYSTEM) {
             if (this.desktopRailMaterialLevel >= 0) { this.SystemSideBarHost() }
             else { this.CustomSideBarHost(SIDEBAR_MATERIAL_SYSTEM) }
           } else if (this.sidebarMaterialType === SIDEBAR_MATERIAL_BLUR) {
@@ -7739,16 +7805,8 @@ struct Index {
         this.ContentPanelBuilder();
       }
 
-      if (this.supportsHdsNavigation() && !this.isLargeScreen() && this.showSideDrawer) {
-        Column()
-          .width(Math.max(0, (this.windowWidth > 0 ? this.windowWidth : 390) - this.sideDrawerWidth()))
-          .height('100%')
-          .backgroundColor(Color.Transparent)
-          .position({ x: isAppRtl(this.appLocale) ? 0 : this.sideDrawerWidth(), y: 0 })
-          .zIndex(20)
-          .onClick((): void => {
-            this.showSideDrawer = false;
-          })
+      if (this.supportsHdsNavigation() && !this.isDesktopLayout() && this.usesOverlaySideDrawer() && !this.showDeviceTimeline()) {
+        this.OverlaySideDrawer()
       }
 
       // 半模态以宿主节点 id 作为 key（引擎侧 SheetKey(targetId)），一个节点只能挂一个。
@@ -8492,13 +8550,10 @@ struct Index {
     if (Number(area.height) > 0 && Math.abs(bottom - this.exploreTitleIdentityBottom) > 0.5) {
       this.exploreTitleIdentityBottom = bottom;
     }
-    if (this.chromeTab === EXPLORE_TAB_INDEX && !this.useTitleBarLogo() && this.activeExploreQuery.length > 0) {
-      if (Math.abs(bottom - this.exploreTitleContentBottom) > 0.5) { this.exploreTitleContentBottom = bottom; }
-    }
   }
 
   private captureExploreTitleContent(area: Area): void {
-    if (this.chromeTab !== EXPLORE_TAB_INDEX || this.isDesktopLayout()) { return; }
+    if (this.chromeTab !== EXPLORE_TAB_INDEX || this.isDesktopLayout() || this.activeExploreQuery.length > 0) { return; }
     // The native top slot constrains its builder's outer height. Read the
     // final visible row's actual bottom, including overflow, instead.
     const bottom: number = Number(area.globalPosition.y) + Number(area.height);
@@ -8572,8 +8627,8 @@ struct Index {
   // mounted at the material slot's top and lifted by that same top edge, so a
   // global bottom reading is exactly the height it needs.
   private titleBarMaterialExtent(): number {
-    if (this.chromeTab === EXPLORE_TAB_INDEX && this.exploreTitleContentBottom > 0) {
-      return Math.max(this.exploreTitleContentBottom, this.titleBarSurfaceTop + this.exploreNativeTitleHeight) +
+    if (this.chromeTab === EXPLORE_TAB_INDEX && this.exploreHeaderBottom() > 0) {
+      return Math.max(this.exploreHeaderBottom(), this.titleBarSurfaceTop + this.exploreNativeTitleHeight) +
         TITLE_BAR_SURFACE_OVERSCAN_VP;
     }
     if (this.rootTitleBarBottomHeight() === 0) {
@@ -9239,10 +9294,24 @@ struct Index {
   private finishHomeDrawerSwipe(event: GestureEvent): void {
     const started: boolean = this.homeDrawerSwipeStarted;
     this.homeDrawerSwipeStarted = false;
-    if (started && this.canOpenDrawerFromHome() && event.offsetX >= 56 &&
-      event.offsetX > Math.abs(event.offsetY) * 1.5) {
-      this.openSideDrawer();
+    if (!started) { return; }
+    const width: number = this.sideDrawerWidth();
+    const shouldOpen: boolean = this.canOpenDrawerFromHome() &&
+      (event.offsetX >= width / 2 || (event.offsetX >= 56 && event.velocityX > 500)) &&
+      event.offsetX > Math.abs(event.offsetY) * 1.5;
+    this.showSideDrawer = shouldOpen;
+    this.homeDrawerDragWidth = -1;
+  }
+
+  private updateHomeDrawerSwipe(event: GestureEvent): void {
+    if (this.homeDrawerSwipeStarted) {
+      this.homeDrawerDragWidth = Math.max(0, Math.min(this.sideDrawerWidth(), event.offsetX));
     }
+  }
+
+  private cancelHomeDrawerSwipe(): void {
+    this.homeDrawerSwipeStarted = false;
+    this.homeDrawerDragWidth = -1;
   }
 
   @Builder
@@ -9262,10 +9331,14 @@ struct Index {
         .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing || this.postSwipeLeft !== POST_SWIPE_OFF || this.postSwipeRight !== POST_SWIPE_OFF)
         .onGestureRecognizerJudgeBegin((event: BaseGestureEvent, current: GestureRecognizer,
           others: GestureRecognizer[]): GestureJudgeResult => this.judgeHomeDrawerSwipe(event, current, others))
-        .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.Right, distance: 18 }).tag('home-open-drawer')
-          .onActionStart((): void => { this.homeDrawerSwipeStarted = this.canOpenDrawerFromHome(); })
+        .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.Right, distance: 10 }).tag('home-open-drawer')
+          .onActionStart((event: GestureEvent): void => {
+            this.homeDrawerSwipeStarted = this.canOpenDrawerFromHome();
+            this.updateHomeDrawerSwipe(event);
+          })
+          .onActionUpdate((event: GestureEvent): void => this.updateHomeDrawerSwipe(event))
           .onActionEnd((event: GestureEvent): void => this.finishHomeDrawerSwipe(event))
-          .onActionCancel((): void => { this.homeDrawerSwipeStarted = false; }))
+          .onActionCancel((): void => this.cancelHomeDrawerSwipe()))
         .onContentWillScroll((event: SwiperContentWillScrollResult): boolean =>
           this.tabKey(event.currentIndex) !== 'for-you' || (isAppRtl(this.appLocale) ? event.offset >= 0 : event.offset <= 0))
         .onAppear((): void => { this.homeTabPosition = this.homeTabIndex(); })
@@ -9794,7 +9867,6 @@ struct Index {
           homeTimelineVideo: true,
           exploreHeroVideo: true,
           exploreHeroMuted: this.exploreHeroMuted,
-          showDownloadButton: false,
           onVideoOpen: (media: MediaAttachment): void => {
             this.openHeroVideo(hero, media);
           }
@@ -10184,10 +10256,14 @@ struct Index {
     .width('100%')
     .height(56)
     .alignItems(VerticalAlign.Center)
-    // HDS large-screen buttons occupy 32..72vp at either edge. Keep the
-    // custom field 8vp clear of both native controls without replacing them.
-    .padding({ left: this.isDesktopLayout() ? $r('app.float.desktop_search_button_inset') : 64,
-      right: showFilter ? (this.isDesktopLayout() ? $r('app.float.desktop_search_button_inset') : 64) : 16 })
+    .padding({ start: LengthMetrics.vp(this.searchTitleButtonInset()),
+      end: LengthMetrics.vp(showFilter ? this.searchTitleButtonInset() : 16) })
+  }
+
+  private searchTitleButtonInset(): number {
+    if (this.isDesktopLayout()) { return this.exploreLayoutDimension($r('app.float.desktop_search_button_inset')); }
+    // The built-in Pad actions extend to 72vp from the edge.
+    return this.isLargeScreen() ? 80 : 64;
   }
 
   @Builder
@@ -10820,9 +10896,6 @@ struct Index {
       .borderRadius(this.exploreSearchRadius())
       .clip(false)
       .attributeModifier(materialModifier(this.exploreSearchMaterialCache.material(this.accentColor, true)))
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        if (this.useTitleBarLogo() && this.activeExploreQuery.length > 0) { this.captureExploreTitleContent(newValue); }
-      })
     } else {
       Search({
         value: this.searchText,
@@ -10840,9 +10913,6 @@ struct Index {
         .defaultFocus(false)
         .focusOnTouch(false)
         .focusable(false)
-        .onAreaChange((_oldValue: Area, newValue: Area): void => {
-          if (this.useTitleBarLogo() && this.activeExploreQuery.length > 0) { this.captureExploreTitleContent(newValue); }
-        })
         .onClick((): void => {
           this.showSearchPage();
         })

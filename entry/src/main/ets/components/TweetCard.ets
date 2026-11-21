@@ -1,6 +1,9 @@
 import { POST_SWIPE_BOOKMARK, POST_SWIPE_LIKE, POST_SWIPE_NOT_INTERESTED, POST_SWIPE_OFF, POST_SWIPE_REPLY, POST_SWIPE_REPOST, POST_SWIPE_SHARE } from '../services/TimelineSettingsStore';
 import { POST_CARD_CLASSIC, POST_CARD_COMPACT, POST_CARD_WIDE, STORAGE_KEY_POST_CARD_LAYOUT, STORAGE_KEY_POST_MEDIA_SCALE } from '../services/PostDisplaySettingsStore';
 import { openPostShare } from '../services/PostShareRequest';
+import { STORAGE_KEY_SHOW_SENSITIVE_MEDIA } from '../services/MediaSettingsStore';
+import { videoPlaybackPositionStore } from '../services/VideoPlaybackPositionStore';
+import { requestVideoViewer } from '../utils/VideoViewerRequest';
 import { PostLinkMenu } from '../components/PostLinkMenu';
 import type { PostCardReadingState } from '../services/PostCardReadingState';
 import { PostTranslationInfo } from '../components/PostTranslationInfo';
@@ -215,7 +218,9 @@ export struct TweetCard {
   @State private mediaPanProgress: number = 0;
   @StorageProp(STORAGE_KEY_POST_ACTIONS_MASK) private actionsMask: number = DEFAULT_POST_ACTIONS_MASK;
   @State private cardWidth: number = 0;
+  @StorageProp('harmonyx.window_width') private postWindowWidth: number = 0;
   @StorageProp('harmonyx.window_height') private photoWindowHeight: number = 0;
+  @StorageProp(STORAGE_KEY_SHOW_SENSITIVE_MEDIA) private showSensitiveMedia: boolean = false;
   private visibleForViews: boolean = false;
   // The row sinks under the finger while it is pressed.
   @State private pressScale: number = 1;
@@ -224,6 +229,21 @@ export struct TweetCard {
   private pressStartY: number = 0;
   @StorageLink(STORAGE_KEY_PRESS_EFFECT_ENABLED) pressEffectEnabled: boolean = false;
   @StorageLink('harmonyx.accent_color') accentColor: string = '#007DFF';
+
+  private openCardPost(tweet: Tweet, sourceId: string): void {
+    if (this.photoWindowHeight > 0 && this.postWindowWidth > this.photoWindowHeight &&
+      tweet.presentation?.visibility?.hidden !== true) {
+      const video: MediaAttachment | undefined = tweet.attachments?.find((item: MediaAttachment): boolean =>
+        item.type === 'video' && item.id.length > 0 && item.mediaUrl.length > 0 &&
+        (item.sensitive !== true || this.showSensitiveMedia));
+      if (video !== undefined) {
+        if (this.videoFeedEnabled) { this.onVideoOpen(tweet, video); }
+        else { requestVideoViewer(tweet, video, videoPlaybackPositionStore.positionFor(video.id)); }
+        return;
+      }
+    }
+    this.onOpen(tweet, sourceId);
+  }
 
   aboutToAppear(): void {
     this.loadModeration();
@@ -755,7 +775,7 @@ export struct TweetCard {
           accentColor: this.accentColor,
           sharedElementId: this.quotedSharedElementId(),
           onOpen: (quoted: Tweet): void => {
-            this.onOpen(quoted, this.quotedSharedElementId());
+            this.openCardPost(quoted, this.quotedSharedElementId());
           }
         })
       }
@@ -778,7 +798,7 @@ export struct TweetCard {
     }
     .width('100%')
     .padding({ start: LengthMetrics.vp(this.mediaStartInset()), end: LengthMetrics.vp(8), bottom: LengthMetrics.vp(4) })
-    .onClick((): void => { this.onOpen(this.tweet, this.sharedElementId); })
+    .onClick((): void => { this.openCardPost(this.tweet, this.sharedElementId); })
   }
 
   private async toggleRepost(): Promise<void> {
@@ -852,7 +872,6 @@ export struct TweetCard {
           limitNaturalHeight: true,
           // Use the same autoplay and visibility policy as the ordinary feed.
           hideInlineControls: true,
-          showDownloadButton: false,
           onVideoOpen: (media: MediaAttachment): void => this.onVideoOpen(this.tweet, media)
         }).width('100%')
       }
@@ -874,7 +893,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.translatedText)
             .bindMenu(this.translatedLinkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.translatedLinkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           } else if (this.tweet.text.length > 0) {
           Text() {
             PostLinkSpans(this.getUIContext(), this.tweet.text, $r('app.float.timeline_column_body_font'), this.systemEmojiEnabled, (url: string): void => this.selectPostLink(url))
@@ -884,7 +903,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.tweet.text)
             .bindMenu(this.linkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.linkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           }
           if (!this.translationReplaceOriginal && this.translatedText.length > 0 && !this.showingOriginal) {
           Text() {
@@ -895,7 +914,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.translatedText)
             .bindMenu(this.translatedLinkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.translatedLinkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           }
         }
         if (!this.narrowHasMedia() && (this.interactivePoll() !== undefined || this.tweet.card !== undefined ||
@@ -912,7 +931,7 @@ export struct TweetCard {
           QuotedPostCard({ quoted: this.tweet.quotedTweet, narrowColumn: true, accentColor: this.accentColor,
             onPhotoOpen: this.onPhotoOpen,
             sharedElementId: this.quotedSharedElementId(),
-            onOpen: (quoted: Tweet): void => this.onOpen(quoted, this.quotedSharedElementId()) })
+            onOpen: (quoted: Tweet): void => this.openCardPost(quoted, this.quotedSharedElementId()) })
         }
         Row({ space: 4 }) {
           Row({ space: 4 }) {
@@ -1078,7 +1097,7 @@ export struct TweetCard {
               .editMenuOptions(new EmojiCopyMenu(this.getUIContext(), this.translatedTextController, this.translatedText, this.systemEmojiEnabled))
               .bindMenu(this.linkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.linkMenuVisible = false; } })
               .onClick((): void => {
-                this.onOpen(this.tweet, this.sharedElementId);
+                this.openCardPost(this.tweet, this.sharedElementId);
               })
           } else if (this.tweet.text.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
             Text(undefined, { controller: this.bodyTextController }) {
@@ -1118,7 +1137,7 @@ export struct TweetCard {
               // Clickable spans handle mentions, hashtags and links first. This
               // handler opens the post when the rest of the body is tapped.
               .onClick((): void => {
-                this.onOpen(this.tweet, this.sharedElementId);
+                this.openCardPost(this.tweet, this.sharedElementId);
               })
           }
 
@@ -1209,7 +1228,7 @@ export struct TweetCard {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
         .onClick((): void => {
-          this.onOpen(this.tweet, this.sharedElementId);
+          this.openCardPost(this.tweet, this.sharedElementId);
         })
       }
       .width('100%')
@@ -1267,12 +1286,12 @@ export struct TweetCard {
     // rebuilds under the opening page.
     .transition(TransitionEffect.opacity(0.99))
     .focusable(true).focusOnTouch(false).hoverEffect(HoverEffect.Highlight)
-    .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.onOpen(this.tweet, this.sharedElementId)))
+    .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.openCardPost(this.tweet, this.sharedElementId)))
     .onMouse((event: MouseEvent): void => contextInputMouse(event, (): void => {
       this.inputMenuRequest++;
     }))
     .onClick((): void => {
-      this.onOpen(this.tweet, this.sharedElementId);
+      this.openCardPost(this.tweet, this.sharedElementId);
     })
     .onTouch((event?: TouchEvent): void => {
       this.onCardTouch(event);

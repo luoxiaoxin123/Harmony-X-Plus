@@ -73,7 +73,7 @@ import {
 } from '../services/TimelineSettingsStore';
 import { ProfileTabMotion } from '../utils/ProfileTabMotion';
 import { ProfileHeaderAnchor, ProfileHeaderMotion } from '../utils/ProfileHeaderMotion';
-import { STORAGE_KEY_HOME_FLOATING_ACTION, HOME_FLOATING_COMPOSE, HOME_FLOATING_HIDDEN,
+import { STORAGE_KEY_HOME_FLOATING_ACTION, STORAGE_KEY_PROFILE_PHOTOS_FIRST, HOME_FLOATING_COMPOSE, HOME_FLOATING_HIDDEN,
   HOME_FLOATING_TOP } from '../services/InteractionSettingsStore';
 import { destinationTitleBarFullStyleEnabled } from '../utils/DestinationTitleBar';
 import { SystemMaterialUtil } from '../utils/SystemMaterial';
@@ -189,6 +189,7 @@ export struct UserDetail {
     new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(),
     new ProfileActivityPage(), new ProfileActivityPage()];
   @State private mediaFilter: string = 'video';
+  @StorageProp(STORAGE_KEY_PROFILE_PHOTOS_FIRST) private profilePhotosFirst: boolean = false;
   @State private postsFilter: string = 'posts';
   @State private notificationOpen: boolean = false;
   @State private notificationMode: number = -1;
@@ -221,6 +222,7 @@ export struct UserDetail {
   private webClient: XWebClient = new XWebClient();
 
   aboutToAppear(): void {
+    this.mediaFilter = this.profilePhotosFirst ? 'photo' : 'video';
     setTimeout((): void => {
       this.loadRoute();
       const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;

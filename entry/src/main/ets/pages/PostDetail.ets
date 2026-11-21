@@ -3067,8 +3067,7 @@ export struct PostDetail {
                 playbackEnabled: index === this.wideMediaIndex, naturalVideoSize: true,
                 fillVideoViewport: true, videoViewportHeight: this.wideMediaHeight(),
                 photoViewportHeight: this.wideMediaHeight(), photoViewerAttachments: this.tweet?.attachments ?? [],
-                onPhotoViewerReturn: (sourceIndex: number): void => { this.wideMediaIndex = sourceIndex; },
-                showDownloadButton: true })
+                onPhotoViewerReturn: (sourceIndex: number): void => { this.wideMediaIndex = sourceIndex; } })
                 .width('100%')
             }, (media: MediaAttachment): string => media.id)
           }.index(this.wideMediaIndex).loop(false).width('100%').height(this.wideMediaHeight())

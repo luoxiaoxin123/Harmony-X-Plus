@@ -521,6 +521,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     ]),
   new SettingsCategory('photos', 'experience', 'media', $r('app.string.settings_category_photos'),
     $r('app.string.settings_category_photos_desc'), $r('sys.symbol.ohos_photo'), '', [
+      $r('app.string.settings_profile_default_media'),
       $r('app.string.settings_photo_fullscreen'),
       $r('app.string.settings_photo_fullscreen_desc'),
       $r('app.string.settings_menu_photo')

@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "शेयर भाव"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "प्रोफ़ाइल का डिफ़ॉल्ट मीडिया"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "लिंक के रूप में भेजें"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "इस प्राप्तकर्ता के लिए चैट कुंजी उपलब्ध नहीं है"
     }
   ]
 }

@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "Stock quote"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Default profile media"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Send as a link"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "No chat key is available for this recipient"
     }
   ]
 }

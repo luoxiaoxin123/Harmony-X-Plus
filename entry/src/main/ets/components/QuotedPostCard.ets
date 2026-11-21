@@ -167,7 +167,7 @@ export struct QuotedPostCard {
       if (this.firstMedia() !== null && this.quoted.presentation?.visibility?.hidden !== true) {
         PostMedia({ sourceTweet: this.asTweet(), attachments: this.quoted.attachments ?? [],
           onPhotoOpen: this.onPhotoOpen,
-          playbackEnabled: false, showDownloadButton: false, hideInlineControls: true,
+          playbackEnabled: false, hideInlineControls: true,
           naturalVideoSize: true,
           onVideoOpen: (): void => this.onOpen(this.asTweet()) }).width('100%')
       }

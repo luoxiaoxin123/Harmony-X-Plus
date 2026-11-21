@@ -102,6 +102,32 @@ test('post sharing sends the note and an attachment rather than a URL as message
   assert.equal(calls[0].name, 'SendMessageCreateMutation');
 });
 
+test('a first share after a missing conversation uses the newest key for each direct participant', async () => {
+  reset();
+  const service = new XChatService();
+  queue.push(ok({data:{user_results_by_rest_ids:[user('100','2'), user('200','2'), user('200','10')]}}));
+  await service.prepare({}, ['200']);
+  const native = service.callNative.bind(service);
+  let encrypts = 0;
+  service.callNative = async (method, input) => {
+    if (method === 'encrypt' && ++encrypts <= 2) { return {ok:false,error:'no cached conversation key'}; }
+    return native(method, input);
+  };
+  nativeByMethod.prepareConversation = {ok:true,data:{conversation_id:'100-200',conversation_key_version:'30',participant_keys:[]}};
+  nativeByMethod.encrypt = {ok:true,data:{message_id:'post-share',conversation_id:'100-200',
+    encoded_message_create_event:'ciphertext',encoded_message_event_signature:'signature'}};
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'post-share',conversationId:'100-200',senderId:'100',
+    verified:true,content:{content_type:'Text',text:'look'}}]}};
+  queue.push({ok:false,status:404}, ok({data:{xchat_add_encrypted_conversation_key:{error_code:null}}}),
+    ok({data:{get_conversation_page:{encoded_message_events:[]}}}),
+    ok({data:{xchat_send_create_message_event:{encoded_message_event:'confirmed'}}}));
+  await service.sharePost('100-200', '123', 'https://x.com/example/status/123', 'look');
+  const change = nativeCalls.find(call => call.method === 'prepareConversation').input;
+  assert.equal(change.conversation_id, '100-200');
+  assert.deepEqual(change.public_keys.map(key => [key.user_id,key.key_version]), [['100','2'],['200','10']]);
+  assert.equal(calls.filter(call => call.name === 'SendMessageCreateMutation').length, 1);
+});
+
 test('XChat Post shares retain an explicit URL or derive one from the authenticated status ID',async()=>{
   reset();const s=new XChatService();
   nativeResult={ok:true,data:{messages:[{id:'share',sequenceId:'10',conversationId:'100-200',senderId:'200',

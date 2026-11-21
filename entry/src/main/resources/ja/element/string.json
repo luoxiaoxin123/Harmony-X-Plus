@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "株価"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "プロフィールで最初に表示するメディア"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "リンクとして送信"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "この受信者のチャットキーがありません"
     }
   ]
 }
