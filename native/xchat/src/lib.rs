@@ -202,7 +202,9 @@ impl Session {
                 self.recovery.configure(a.proxy);
                 let config = JuiceboxConfig::from_x_api_json(&a.config.to_string()).map_err(|e| e.to_string())?;
                 self.chat.update_config(config);
-                self.runtime.block_on(self.chat.unlock(pin.as_bytes())).map_err(|e| e.to_string())?;
+                self.runtime.block_on(async {
+                    tokio::time::timeout(std::time::Duration::from_secs(35), self.chat.unlock(pin.as_bytes())).await
+                }).map_err(|_| "recovery_timeout".to_string())?.map_err(|e| e.to_string())?;
                 if !self.chat.matches_registered_key(&a.public_key).map_err(|e| e.to_string())? {
                     self.chat.lock();
                     return Err("registered_key_mismatch".into());
@@ -227,6 +229,12 @@ impl Session {
                     Ok(false) => { self.chat.lock(); Err("registered_key_mismatch".into()) }
                     Err(error) => { self.chat.lock(); Err(error.to_string()) }
                 }
+            }
+            "inspectInbox" => {
+                let events: Vec<String> = serde_json::from_str(input).map_err(|e| e.to_string())?;
+                let messages: Vec<Value> = events.iter().filter_map(|event|
+                    ChatCore::inspect_inbox_event(event).ok().flatten()).collect();
+                Ok(json!({"messages": messages}))
             }
             "decrypt" => {
                 let a: DecryptArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -767,6 +775,20 @@ mod tests {
         assert_eq!(message["verified"], true);
         assert!(result.get("conversation_keys").is_none());
         assert!(!result.to_string().contains(v["conversation_key_b64"].as_str().unwrap()));
+    }
+
+    #[test]
+    fn locked_inbox_exposes_routing_metadata_only() {
+        let v = fixture();
+        let mut s = Session::new().unwrap();
+        let input = json!([v["event_message_b64"], v["event_key_change_b64"], "invalid-base64"]);
+        let result = s.call("inspectInbox", &input.to_string()).unwrap();
+        let messages = result["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0]["senderId"], v["event_sender_id"]);
+        assert_eq!(messages[0]["conversationId"], v["event_conversation_id"]);
+        assert!(messages[0].get("text").is_none());
+        assert!(!s.chat.is_unlocked());
     }
 
     #[test]

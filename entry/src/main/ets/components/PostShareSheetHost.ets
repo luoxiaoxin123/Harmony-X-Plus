@@ -221,7 +221,9 @@ export struct PostShareSheetHost {
     this.sending = true;
     this.sendError = '';
     try {
-      await xChatService.prepare(this.context(), recipient.participantIds);
+      if (pin === undefined) {
+        await xChatService.prepare(this.context(), recipient.participantIds);
+      }
       if (account !== xPrivateClient.sessionIdentity() || this.current !== request || !this.open) { return; }
       if (!xChatService.isUnlocked()) {
         if (pin === undefined) { this.askingPin = true; return; }
@@ -232,10 +234,14 @@ export struct PostShareSheetHost {
       await xChatService.sharePost(recipient.conversationId, request.post.id, postShareUrl(request.post), this.note.trim());
       if (this.current !== request || !this.open) { return; }
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.chat_sent') });
+      this.sending = false;
       this.open = false;
     } catch (error) {
       if (this.current === request && this.open) {
-        const resource: Resource = this.askingPin ? $r('app.string.dm_unlock_failed') : $r('app.string.chat_action_failed');
+        const reason: string = (error as Error).message;
+        const incorrect: boolean = reason.includes('InvalidPin') || reason.includes('Invalid PIN');
+        const resource: Resource = !this.askingPin ? $r('app.string.chat_action_failed') :
+          incorrect ? $r('app.string.dm_pin_incorrect') : $r('app.string.dm_unlock_failed');
         this.sendError = this.context().resourceManager.getStringSync(resource);
       }
     } finally {
@@ -421,11 +427,12 @@ export struct PostShareSheetHost {
   @Builder
   private ShareContent(): void {
     if (this.askingPin) {
-      Column() {
+      Scroll() {
         ChatPinPad({ busy: this.sending, error: this.sendError,
           onSubmit: (pin: string): void => { void this.sendSelected(pin); },
           onClose: (): void => { this.askingPin = false; this.sendError = ''; } })
-      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+      }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Auto)
+        .padding({ bottom: this.centered() ? 0 : this.bottomInset })
     } else {
       this.Panel()
     }

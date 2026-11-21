@@ -103,10 +103,10 @@ index a0da1992fd3e2611896a8c4e8e701b205f79d373..a6ed4a2f0e23322f0ee175756f89eb7b
              .attachments
 diff --git a/crates/core/src/core/harmonyx.rs b/crates/core/src/core/harmonyx.rs
 new file mode 100644
-index 0000000000000000000000000000000000000000..dea4f62884c96ea5c5a9df70e9f1d2146c1f9357
+index 0000000000000000000000000000000000000000..588c3470e422bf709d31dfc4c72540a60002099f
 --- /dev/null
 +++ b/crates/core/src/core/harmonyx.rs
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,219 @@
 +use super::ChatCore;
 +use crate::protocol::serialization::base64_encode;
 +use crate::error::SdkError;
@@ -160,6 +160,23 @@ index 0000000000000000000000000000000000000000..dea4f62884c96ea5c5a9df70e9f1d214
 +}
 +
 +impl ChatCore {
++    /// Read routing metadata from an inbox event without decrypting its contents.
++    pub fn inspect_inbox_event(event_b64: &str) -> Result<Option<serde_json::Value>, SdkError> {
++        let event = Self::parse_event_b64(event_b64)?;
++        let value = match event.detail {
++            Some(MessageEventDetail::MessageCreateEvent(_)) => serde_json::json!({
++                "type": "message", "conversationId": event.conversation_id, "senderId": event.sender_id,
++                "sequenceId": event.sequence_id, "timestampMs": event.created_at_msec,
++            }),
++            Some(MessageEventDetail::MarkConversationReadEvent(read)) => serde_json::json!({
++                "type": "read", "conversationId": event.conversation_id, "senderId": event.sender_id,
++                "seenUntilId": read.seen_until_sequence_id,
++            }),
++            _ => return Ok(None),
++        };
++        Ok(Some(value))
++    }
++
 +    pub fn inspect_event_encryption(event_b64: &str) -> Result<Option<(String, bool)>, SdkError> {
 +        let event = Self::parse_event_b64(event_b64)?;
 +        let encrypted = match event.detail {

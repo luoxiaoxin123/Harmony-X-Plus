@@ -94,15 +94,19 @@ export struct ChatPinPad {
             .onClick((): void => { this.pin = this.pin.substring(0, Math.max(0, this.pin.length - 1)); })
         }.width('100%')
       }.width('100%')
-      Button($r('app.string.chat_continue')).width('100%').height(48)
-        .fontSize($r('sys.float.Body_L')).fontColor($r('app.color.text_on_accent'))
+      Button({ type: ButtonType.Capsule }) {
+        Row({ space: 8 }) {
+          if (this.busy) { LoadingProgress().width(20).height(20).color($r('app.color.text_on_accent')) }
+          Text($r('app.string.chat_continue')).fontFamily(this.appFontFamily)
+            .fontSize($r('sys.float.Body_L')).fontColor($r('app.color.text_on_accent'))
+        }
+      }.width('100%').height(48)
         .backgroundColor(this.accentColor).enabled(this.pin.length === 4 && !this.busy)
         .visualEffect(this.keyLightEffect('continue'))
         .overlay(this.HdrKeyLight('continue'))
         .animation({ duration: 300, curve: Curve.Smooth })
         .onTouch((event: TouchEvent): void => { this.updatePointLight('continue', event); })
         .onClick((): void => { const pin: string = this.pin; this.pin = ''; this.onSubmit(pin); })
-      if (this.busy) { LoadingProgress().width(22).height(22).color(this.accentColor) }
-    }.width('100%').padding({ left: 24, right: 24, top: 12, bottom: 24 })
+    }.width('100%').constraintSize({ maxWidth: 360 }).padding({ left: 24, right: 24, top: 12, bottom: 24 })
   }
 }

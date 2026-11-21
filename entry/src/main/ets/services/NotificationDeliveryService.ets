@@ -155,7 +155,8 @@ export class NotificationDeliveryService {
       const row: DirectMessage = rows[i];
       const deliveredText: string = this.loadDeliveredText(context, accountId);
       const deliveredId: string = this.messageDeliveryId(row);
-      if (row.unread <= 0 || deliveredId.length === 0 || this.containsDelivered(deliveredText, deliveredId)) {
+      if (row.unread <= 0 || row.muted === true || row.hidden === true ||
+        deliveredId.length === 0 || this.containsDelivered(deliveredText, deliveredId)) {
         continue;
       }
       await this.waitForPublish();
@@ -328,10 +329,14 @@ export class NotificationDeliveryService {
   }
 
   private messageDeliveryId(row: DirectMessage): string {
+    const conversationId: string = row.conversationId ?? '';
+    const sequenceId: string = row.latestSequenceId ?? '';
+    if (conversationId.length > 0 && sequenceId.length > 0) {
+      return 'dm:' + conversationId.replace(':', '-') + ':' + sequenceId;
+    }
     if (row.id.length > 0) {
       return 'dm:' + row.id;
     }
-    const conversationId: string = row.conversationId === undefined ? '' : row.conversationId;
     if (conversationId.length > 0) {
       return 'dm:' + conversationId;
     }
