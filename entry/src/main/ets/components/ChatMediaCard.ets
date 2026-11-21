@@ -70,7 +70,7 @@ export struct ChatMediaCard {
     this.busy = true; this.failed = false;
     try {
       const path: string = await xChatMedia.receive(this.context(), this.conversationId, this.attachment.mediaHash,
-        this.keyVersion, this.attachment.mediaType);
+        this.keyVersion, this.attachment.mediaType, this.attachment.rawEvent);
       if (this.active) { this.path = path; await this.preparePoster(); }
     } catch (error) { if (this.active) { this.failed = true; } }
     finally { if (this.active) { this.busy = false; } }

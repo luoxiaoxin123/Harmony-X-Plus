@@ -69,6 +69,10 @@
       "value": "Penjejakan wajah disokong. Kamera hanya bermula apabila anda mengetik Mula pada halaman bacaan."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Peranti Huawei yang disokong"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Peranti ini tidak menyokong penjejakan wajah yang diperlukan. Gunakan sentuhan atau papan kekunci."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Tetapkan semula sembang"
+      "value": "Kunci Sembang"
     },
     {
       "name": "chat_phone",

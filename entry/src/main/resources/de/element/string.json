@@ -69,6 +69,10 @@
       "value": "Gesichtsverfolgung wird unterstützt. Die Kamera startet erst über Start auf einer Leseseite."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Unterstützte Huawei-Geräte"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Dieses Gerät unterstützt die erforderliche Gesichtsverfolgung nicht. Verwenden Sie Touch oder Tastatur."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Chat zurücksetzen"
+      "value": "Chat sperren"
     },
     {
       "name": "chat_phone",

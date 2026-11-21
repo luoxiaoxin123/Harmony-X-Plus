@@ -69,6 +69,10 @@
       "value": "顔の追跡に対応しています。閲覧ページで開始を押すとカメラが起動します。"
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Huaweiの対応機種"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "この端末は必要な顔の追跡に対応していません。タッチまたはキーボードをご利用ください。"
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "チャットをリセット"
+      "value": "チャットをロック"
     },
     {
       "name": "chat_phone",

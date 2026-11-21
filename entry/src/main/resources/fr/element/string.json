@@ -69,6 +69,10 @@
       "value": "Le suivi du visage est disponible. La caméra ne démarre qu’en touchant Démarrer dans une page de lecture."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Appareils Huawei compatibles"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Cet appareil ne prend pas en charge le suivi du visage requis. Utilisez le tactile ou le clavier."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Réinitialiser Chat"
+      "value": "Verrouiller le Chat"
     },
     {
       "name": "chat_phone",

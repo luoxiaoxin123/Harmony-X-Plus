@@ -69,6 +69,10 @@
       "value": "Pelacakan wajah didukung. Kamera hanya menyala saat Anda mengetuk Mulai di halaman baca."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Perangkat Huawei yang didukung"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Perangkat ini tidak mendukung pelacakan wajah yang diperlukan. Gunakan sentuhan atau papan ketik."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Reset obrolan"
+      "value": "Kunci Chat"
     },
     {
       "name": "chat_phone",

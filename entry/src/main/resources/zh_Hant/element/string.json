@@ -69,8 +69,12 @@
       "value": "此裝置支援臉部追蹤。進入閱讀頁後，點「開始眼動」才會開啟相機。"
     },
     {
+      "name": "huawei_supported_models",
+      "value": "華為官方支援機型"
+    },
+    {
       "name": "eye_reading_unsupported",
-      "value": "此裝置不支援所需的臉部追蹤功能，請繼續使用觸控或鍵盤閱讀。"
+      "value": "系統未向 Harmony X 開放人臉追蹤。華為閱讀的眼動翻頁支援以華為官方機型清單為準。"
     },
     {
       "name": "eye_reading_dwell",
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "重置聊天"
+      "value": "鎖定聊天"
     },
     {
       "name": "chat_phone",

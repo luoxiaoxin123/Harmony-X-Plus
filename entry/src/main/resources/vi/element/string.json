@@ -69,6 +69,10 @@
       "value": "Thiết bị hỗ trợ theo dõi khuôn mặt. Camera chỉ bật khi bạn nhấn Bắt đầu trên trang đọc."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Thiết bị Huawei được hỗ trợ"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Thiết bị không hỗ trợ tính năng theo dõi khuôn mặt cần thiết. Hãy dùng cảm ứng hoặc bàn phím."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Đặt lại trò chuyện"
+      "value": "Khóa Chat"
     },
     {
       "name": "chat_phone",

@@ -253,6 +253,7 @@ export interface DmAttachment {
   width: number;
   height: number;
   durationMs?: number;
+  rawEvent?: string;
 }
 
 export interface DmInboxPage {

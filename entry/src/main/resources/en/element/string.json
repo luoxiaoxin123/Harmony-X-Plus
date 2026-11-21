@@ -69,8 +69,12 @@
       "value": "Face tracking is supported. The camera starts only when you tap Start eye control on a reading page."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Huawei supported devices"
+    },
+    {
       "name": "eye_reading_unsupported",
-      "value": "This device does not support the required face tracking. Continue reading with touch or a keyboard."
+      "value": "The system did not report face tracking support for Harmony X. Check Huawei’s list for Huawei Books."
     },
     {
       "name": "eye_reading_dwell",
@@ -5746,7 +5750,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Reset Chat"
+      "value": "Lock Chat"
     },
     {
       "name": "chat_phone",

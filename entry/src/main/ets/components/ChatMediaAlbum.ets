@@ -77,7 +77,7 @@ export struct ChatMediaAlbum {
         let path: string = '';
         try {
           path = await xChatMedia.receive(this.context(), this.conversationId,
-            attachment.mediaHash, this.keyVersion, attachment.mediaType);
+            attachment.mediaHash, this.keyVersion, attachment.mediaType, attachment.rawEvent);
         } catch (error) {
           if (attachment.mediaHash === selected.mediaHash) { throw error as Error; }
           continue;

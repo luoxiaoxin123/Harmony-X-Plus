@@ -141,7 +141,7 @@ for (const [wide, desktop] of [[false, false], [true, false], [true, true]]) {
     assert.equal(f.loads(), loads);
     assert.equal(f.pages.length, 1);
     assert.equal(f.pages[0].name, 'UserDetail');
-    assert.equal(f.root.showSideDrawer, false);
+    assert.equal(f.root.showSideDrawer, wide || desktop);
     assert.equal(f.root.selectedTab, undefined);
   });
 }

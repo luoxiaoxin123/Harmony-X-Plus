@@ -69,6 +69,10 @@
       "value": "Il rilevamento del viso è supportato. La fotocamera si avvia solo premendo Avvia nella pagina di lettura."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Dispositivi Huawei supportati"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Questo dispositivo non supporta il rilevamento del viso richiesto. Usa il tocco o la tastiera."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Reimposta le chat"
+      "value": "Blocca la chat"
     },
     {
       "name": "chat_phone",

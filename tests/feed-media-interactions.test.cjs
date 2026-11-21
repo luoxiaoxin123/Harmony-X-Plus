@@ -347,20 +347,20 @@ test('native inline player removes its own control height before manual playback
   assert.equal(player.playerContainerHeight(),296,'the preference applies only to inline post videos');
 });
 
-test('inline video taps reveal local controls instead of opening the fullscreen viewer', () => {
+test('inline video taps open the viewer and fall back to local controls when unavailable', () => {
   const Player=methods('components/PostMedia','SurfaceVideoPlayer',['usesInlineOverlayControls','onVideoSurfaceTap']);
   let controls=0, viewers=0;
   const player=Object.assign(new Player(), { inlineVideoOverlayControls:true, mediaViewerLayout:false,
     fullscreen:false, adaptiveShortVideo:false, controlsAtScreenBottom:false, linkCardVideo:false,
     holdSeekDirection:0, suppressVideoTapUntil:0, hideVideoChrome:()=>false, hideInlineVideoControls:()=>false,
     toggleControls:()=>controls++, onFullscreenIntent:()=>{ viewers++;return true; }, isAnimatedGif:()=>false });
-  player.onVideoSurfaceTap();player.onVideoSurfaceTap();
-  assert.equal(controls,2);assert.equal(viewers,0);
-  player.inlineVideoOverlayControls=false;player.onVideoSurfaceTap();
-  assert.equal(controls,3);assert.equal(viewers,0,'a surface tap must not open another player');
+  player.onVideoSurfaceTap();
+  assert.equal(controls,0);assert.equal(viewers,1);
+  player.onFullscreenIntent=()=>false;player.onVideoSurfaceTap();
+  assert.equal(controls,1);assert.equal(viewers,1);
 });
 
-test('feed preview taps start the inline player without opening the video feed viewer', () => {
+test('feed preview opens the viewer before falling back to inline playback', () => {
   const source = fs.readFileSync('entry/src/main/ets/components/PostMedia.ets', 'utf8')
     .replace(/\bstruct PostMedia\s*\{/, 'class PostMedia {');
   const tree = ts.createSourceFile('component.ts', source, ts.ScriptTarget.Latest, true);
@@ -368,9 +368,7 @@ test('feed preview taps start the inline player without opening the video feed v
     ts.isClassDeclaration(node) && node.name.text === 'PostMedia');
   const previewTap = component.members.find(node =>
     ts.isMethodDeclaration(node) && node.name.getText(tree) === 'VideoActionContent').getText(tree);
-  assert.doesNotMatch(previewTap, /openVideo\(media\)/,
-    'tapping the feed preview must not mount VideoFeedViewer');
-  assert.match(previewTap, /if \(this\.canStream\(media\)\) \{ this\.activate\(media, true\); \}/);
+  assert.match(previewTap, /if \(!this\.openVideo\(media\) && this\.canStream\(media\)\) \{ this\.activate\(media, true\); \}/);
 });
 
 test('explicit inline fullscreen action still opens the viewer at the current position', () => {
