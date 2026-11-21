@@ -14,6 +14,7 @@
 export struct RootRefreshIndicator {
   @Prop topInset: number = 0;
   @Prop pullOffset: number = 0;
+  @Prop triggerOffset: number = 0;
   @Prop refreshing: boolean = false;
   // The phone layout draws the title bar over the page. The desktop shell keeps
   // its header in normal flow, so there Refresh's own spinner is already clear.
@@ -32,7 +33,8 @@ export struct RootRefreshIndicator {
     .margin({ top: this.phoneLayout ? this.topInset : 0 })
     // Opacity rather than add/remove: the spinner appears and disappears while
     // the finger is moving, and a conditional node would re-measure the stack.
-    .opacity(this.phoneLayout && (this.refreshing || this.pullOffset > 0) ? 1 : 0)
+    .opacity(this.phoneLayout && (this.refreshing ||
+      (this.pullOffset > 0 && this.pullOffset >= this.triggerOffset)) ? 1 : 0)
     .hitTestBehavior(HitTestMode.None)
   }
 }

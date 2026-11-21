@@ -457,6 +457,7 @@ const SEARCH_PRODUCT_IDS: string[] = ['Top', 'Latest', 'People', 'Media', 'Lists
 const TITLE_BAR_TITLE_SLOT_HEIGHT_VP = 63;
 const TITLE_BAR_LABELS_HOME_HEIGHT_VP = 54;
 const HOME_HEADER_COLLAPSE_DEPTH_VP = 36;
+const HOME_REFRESH_TRIGGER_OFFSET_VP = 88;
 // Where each label row starts, measured against the top slot's own top edge.
 // The two rows lay their content out differently, so the offsets that keep
 // them on the baseline they had inside HDS's page-label slot differ too. Both
@@ -2236,13 +2237,17 @@ struct Index {
   // Home owns its identity row and feed switch inside its own tab page. Keep
   // the list clear of that fixed overlay, independently of the outer
   // navigation container and of the other mounted tab pages.
-  private homeContentTopInset(): number {
+  private homeContentTopInset(collapsed: boolean = this.homeHeaderCollapsed): number {
     if (this.isDesktopLayout()) { return 0; }
     if (!this.supportsHdsNavigation()) {
       return 12;
     }
     return RootTitleBarLayout.contentTopInset(HOME_TAB_INDEX, this.useTitleBarLogo(),
-      this.statusBarHeight, this.homeHeaderCollapsed, this.homeSpaceHeight(), this.rootTitleBarContentClearance());
+      this.statusBarHeight, collapsed, this.homeSpaceHeight(), this.rootTitleBarContentClearance());
+  }
+
+  private homeHeaderCollapseDepth(): number {
+    return Math.max(HOME_HEADER_COLLAPSE_DEPTH_VP, this.homeContentTopInset(false) - this.homeContentTopInset(true));
   }
 
   private homeSpace(): SpaceRoom | null {
@@ -6067,9 +6072,17 @@ struct Index {
   // scrollOffset is the per-frame delta: positive when the user swipes up and
   // reads deeper into the feed; negative when the user swipes down toward its
   // top. Home keeps the compose action; double-tapping its tab refreshes it.
-  private onFeedScroll(scrollOffset: number): void {
-    if (this.currentTab === HOME_TAB_INDEX && this.homeRefreshTopKey) { return; }
-    if (this.currentTab === HOME_TAB_INDEX) { this.rememberHomeVisibleItem(this.homeFirstVisibleItem); }
+  private onFeedScroll(scrollOffset: number, scrollState: ScrollState = ScrollState.Scroll): void {
+    if (this.currentTab === HOME_TAB_INDEX) {
+      if (this.homeRefreshTopKey) { return; }
+      if (scrollState === ScrollState.Idle) {
+        if (this.homeHeaderCollapsed && this.currentHomeOffset() <= this.homeHeaderCollapseDepth()) {
+          this.setHomeHeaderCollapsed(false);
+        }
+        return;
+      }
+      this.rememberHomeVisibleItem(this.homeFirstVisibleItem);
+    }
     if (this.currentTab !== 0 && this.currentTab !== 1) {
       return;
     }
@@ -6091,7 +6104,7 @@ struct Index {
       if (!this.homeHeaderCollapseEnabled || scrollOffset < 0) {
         this.setHomeHeaderCollapsed(false);
       } else {
-        this.setHomeHeaderCollapsed(this.scrollDepth > HOME_HEADER_COLLAPSE_DEPTH_VP);
+        this.setHomeHeaderCollapsed(this.scrollDepth > this.homeHeaderCollapseDepth());
       }
       this.fabMode = 'compose';
     } else if (this.scrollDepth >= FAB_SWITCH_DEPTH) {
@@ -6107,7 +6120,7 @@ struct Index {
     if (this.currentTab === HOME_TAB_INDEX) { this.rememberHomeVisibleItem(this.homeFirstVisibleItem); }
     this.onChromeScrollStop();
     if (this.currentTab === 0) {
-      if (this.currentHomeOffset() <= HOME_HEADER_COLLAPSE_DEPTH_VP) {
+      if (this.currentHomeOffset() <= this.homeHeaderCollapseDepth()) {
         this.setHomeHeaderCollapsed(false);
       }
       this.saveCurrentFeedSnapshot();
@@ -6934,7 +6947,8 @@ struct Index {
   private videoDownloadNoticeRowOffset(): number {
     if (this.navPathStack.size() > 0 || this.photoOverlayOpen) { return 0; }
     const homeCapsule: boolean = this.isHomeChromeVisible() && this.pendingNewPosts.length > 0;
-    const refreshing: boolean = this.currentTab === HOME_TAB_INDEX ? this.refreshing || this.homeRefreshPullOffset > 0 :
+    const refreshing: boolean = this.currentTab === HOME_TAB_INDEX ?
+      this.refreshing || this.homeRefreshPullOffset >= HOME_REFRESH_TRIGGER_OFFSET_VP :
       this.currentTab === EXPLORE_TAB_INDEX ? this.exploreHomeRefreshing || this.exploreRefreshPullOffset > 0 :
       this.currentTab === NOTIFICATIONS_TAB_INDEX ? this.notificationsRefreshing || this.notificationsRefreshPullOffset > 0 :
       this.currentTab === MESSAGES_TAB_INDEX ? this.messagesRefreshing || this.messagesRefreshPullOffset > 0 :
@@ -9049,7 +9063,9 @@ struct Index {
   private HomeStatusLine(index: number = this.homeTabIndex()): void {
     Column() {
       if (this.isDesktopLayout()) { this.DesktopInlineComposer() }
-      else { Column().width('100%').height(this.homeContentTopInset()) }
+      // The spacer scrolls out with the list. Resizing it when the overlay
+      // fades changes the current scroll anchor and can reverse the scroll.
+      else { Column().width('100%').height(this.homeContentTopInset(false)) }
       if (this.filteredTimeline(index).length === 0 &&
         (index === this.homeTabIndex() ? this.loading : !this.homeSnapshotAt(index).loaded)) {
         LoadingProgress().width(18).height(18).color(this.accentColor).margin({ top: 32, bottom: 16 })
@@ -9124,7 +9140,9 @@ struct Index {
         if (!this.homeViewportChanging && last >= this.timeline.length - 6) { this.requestMoreTimeline(); }
       }
     })
-    .onDidScroll((offset: number): void => { if (index === this.homeTabIndex()) { this.onFeedScroll(offset); } })
+    .onDidScroll((offset: number, state: ScrollState): void => {
+      if (index === this.homeTabIndex()) { this.onFeedScroll(offset, state); }
+    })
     .onScrollStop((): void => { scrollStopped(this.contentPageScroller('home', this.homeTabItems()[index].key)); if (index === this.homeTabIndex()) { this.onFeedScrollStop(); } })
     .onReachEnd((): void => {
       if (index === this.homeTabIndex() && !this.homeViewportChanging) { this.requestMoreTimeline(); }
@@ -9169,8 +9187,8 @@ struct Index {
           this.requestMoreTimeline();
         }
       })
-      .onDidScroll((scrollOffset: number): void => {
-        if (index === this.homeTabIndex()) { this.onFeedScroll(scrollOffset); }
+      .onDidScroll((scrollOffset: number, state: ScrollState): void => {
+        if (index === this.homeTabIndex()) { this.onFeedScroll(scrollOffset, state); }
       })
       .onScrollStop((): void => { scrollStopped(this.contentPageScroller('home', this.homeTabItems()[index].key));
         if (index === this.homeTabIndex()) { this.onFeedScrollStop(); }
@@ -9259,12 +9277,13 @@ struct Index {
         })
         .onAnimationEnd((index: number): void => { this.homeTabPosition = index; })
     }.width('100%').height('100%')
+      .refreshOffset(HOME_REFRESH_TRIGGER_OFFSET_VP)
       .onOffsetChange((offset: number): void => this.onHomeRefreshOffsetChange(offset))
       .onRefreshing((): void => {
       if (this.homeViewportChanging) { this.refreshing = false; } else { this.onRefresh(this.homePullRefreshLatest, '', true); }
     })
     RootRefreshIndicator({ topInset: this.homeContentTopInset(), pullOffset: this.homeRefreshPullOffset,
-      refreshing: this.refreshing, phoneLayout: !this.isDesktopLayout() })
+      triggerOffset: HOME_REFRESH_TRIGGER_OFFSET_VP, refreshing: this.refreshing, phoneLayout: !this.isDesktopLayout() })
     }.width('100%').height('100%')
   }
 

@@ -59,6 +59,47 @@ function indexHarness(methods, globals) {
   return new Function(...Object.keys(globals), js + '\nreturn Harness;')(...Object.values(globals));
 }
 
+test('the Home spacer keeps its expanded height while the overlay changes during a scroll', () => {
+  const states = { Idle: 0, Scroll: 1, Fling: 2 };
+  const Harness = indexHarness(['homeContentTopInset', 'homeHeaderCollapseDepth', 'onFeedScroll'], {
+    HOME_TAB_INDEX: 0, HOME_HEADER_COLLAPSE_DEPTH_VP: 36, FAB_SWITCH_DEPTH: 160,
+    RootTitleBarLayout: layout, ScrollState: states
+  });
+  let offset = 0;
+  const root = Object.assign(new Harness(), { currentTab: 0, statusBarHeight: 32, homeHeaderCollapseEnabled: true,
+    homeHeaderCollapsed: false, autoHideFab: true, isDesktopLayout: () => false, supportsHdsNavigation: () => true,
+    useTitleBarLogo: () => true, homeSpaceHeight: () => 0, rootTitleBarContentClearance: () => 0,
+    getHomeScroller: () => ({ currentOffset: () => ({ yOffset: offset }) }), currentHomeOffset: () => offset,
+    rememberHomeVisibleItem: () => {},
+    setHomeHeaderCollapsed: collapsed => { root.homeHeaderCollapsed = collapsed; }, onChromeScroll: () => {} });
+  assert.match(indexMethod('HomeStatusLine'), /height\(this\.homeContentTopInset\(false\)\)/);
+  assert.equal(root.homeContentTopInset(false), 136);
+  assert.equal(root.homeHeaderCollapseDepth(), 96);
+  offset = 180;
+  root.onFeedScroll(180, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, true);
+  assert.equal(root.homeContentTopInset(false), 136);
+  offset = 115;
+  root.onFeedScroll(-65, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, false);
+  root.onFeedScroll(96, states.Idle);
+  assert.equal(root.homeHeaderCollapsed, false);
+  offset = 180;
+  root.onFeedScroll(65, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, true);
+  offset = 0;
+  root.onFeedScroll(-180, states.Idle);
+  assert.equal(root.homeHeaderCollapsed, false);
+});
+
+test('the Home refresh gesture and spinner use the same threshold', () => {
+  const home = indexMethod('HomeTab');
+  assert.match(home, /\.refreshOffset\(HOME_REFRESH_TRIGGER_OFFSET_VP\)/);
+  assert.match(home, /triggerOffset: HOME_REFRESH_TRIGGER_OFFSET_VP/);
+  const distance = Number(/const HOME_REFRESH_TRIGGER_OFFSET_VP = (\d+)/.exec(indexSource)?.[1]);
+  assert.ok(distance > 64);
+});
+
 test('home chrome finishes fading before the native title slot is hidden', () => {
   const completions = [];
   const Harness = indexHarness(['setHomeHeaderCollapsed'], { Curve: { EaseInOut: 'ease' } });
