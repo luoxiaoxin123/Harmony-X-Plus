@@ -1705,6 +1705,24 @@ export class XPrivateClient {
     return this.graphql('user_with_profile_tweets_query_v2', variables);
   }
 
+  userOriginalsWeb(userId: string, cursor: string, count: number): Promise<XPrivateResult> {
+    const name: string = 'UserOriginalsTimeline';
+    if (!this.session.isUsable() || !/^\d+$/.test(userId)) {
+      return Promise.resolve(new XPrivateResult(false, 0, '', 'invalid_profile', name));
+    }
+    const operation: PostContentOperation = postContentOperation(name);
+    const variables: Record<string, Object> = {
+      'userId': userId, 'count': count, 'includePromotedContent': false,
+      'withQuickPromoteEligibilityTweetFields': false, 'withVoice': true
+    };
+    if (cursor.length > 0) { variables['cursor'] = cursor; }
+    const query: string = '?variables=' + encodeURIComponent(JSON.stringify(variables)) +
+      '&features=' + encodeURIComponent(JSON.stringify(operation.features)) +
+      '&fieldToggles=' + encodeURIComponent(JSON.stringify(operation.toggles));
+    return this.send('GET', WEB_GRAPHQL_BASE + '/' + operation.id + '/' + name + query,
+      '', GRAPHQL_ACCEPT, name, '', true, '', this.sessionGeneration());
+  }
+
   // Likes are a viewer scoped profile timeline. The operation table supplies
   // the query id and any newer optional variables as X updates the endpoint.
   userLikes(userId: string, cursor: string, count: number): Promise<XPrivateResult> {
@@ -3592,9 +3610,20 @@ export class XPrivateClient {
     return this.rest('POST', path, { 'user_id': userId });
   }
 
-  block(userId: string, blocking: boolean): Promise<XPrivateResult> {
+  async block(userId: string, blocking: boolean): Promise<XPrivateResult> {
     const path: string = blocking ? '/1.1/blocks/create.json' : '/1.1/blocks/destroy.json';
-    return this.rest('POST', path, { 'user_id': userId });
+    if (!this.session.isUsable() || !/^\d+$/.test(userId)) {
+      return new XPrivateResult(false, 0, '', 'invalid_block_request', path);
+    }
+    const generation: number = this.sessionGeneration();
+    const form: string = 'user_id=' + userId;
+    const primary: string = blocking ? REST_BASE : 'https://x.com/i/api';
+    const result: XPrivateResult = await this.send('POST', primary + path, form, 'application/json',
+      path, 'application/x-www-form-urlencoded', false, '', generation);
+    if (result.status !== 404 && result.status !== 405) { return result; }
+    const fallback: string = blocking ? 'https://x.com/i/api' : 'https://api.x.com';
+    return this.send('POST', fallback + path, form, 'application/json', path,
+      'application/x-www-form-urlencoded', false, '', generation);
   }
 }
 

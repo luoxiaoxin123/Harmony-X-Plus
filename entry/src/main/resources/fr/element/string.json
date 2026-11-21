@@ -13250,7 +13250,7 @@
     },
     {
       "name": "post_stock_quote",
-      "value": "Cours de l’action · Données éventuellement différées"
+      "value": "Cours de l’action"
     }
   ]
 }

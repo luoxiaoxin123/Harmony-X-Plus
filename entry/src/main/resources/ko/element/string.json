@@ -13250,7 +13250,7 @@
     },
     {
       "name": "post_stock_quote",
-      "value": "주가 · 데이터가 지연될 수 있음"
+      "value": "주가"
     }
   ]
 }

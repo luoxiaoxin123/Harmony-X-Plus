@@ -59,7 +59,7 @@ import { videoPosterStore, videoPosterSource, videoPosterRendition } from '../se
 import { videoPlaybackCache, VideoCacheLease, VideoDataSourceLease } from '../services/VideoPlaybackCache';
 import { videoPlaybackPositionStore } from '../services/VideoPlaybackPositionStore';
 import { requestVideoViewer } from '../utils/VideoViewerRequest';
-import { captureMediaViewerSource, createMediaSourcePrefix, MediaViewerSource,
+import { captureMediaViewerSource, createMediaSourcePrefix, fittedMediaViewerRect, MediaViewerRect, MediaViewerSource,
   pendingMediaViewerSource } from '../utils/MediaViewerMotion';
 import { videoPlaybackCoordinator, STORAGE_KEY_VIDEO_FEED_ACTIVE } from '../services/VideoPlaybackCoordinator';
 import { videoPlayerHandoff, VideoPlayerHandoffPayload, VideoPlayerReturnTarget } from '../services/VideoPlayerHandoff';
@@ -249,6 +249,7 @@ function streamSource(media: MediaAttachment, videoQuality: number,
 @Component
 struct MediaCover {
   @Prop photoSourceId: string = '';
+  @Prop photoFrameWidth: number = 0;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
   @Prop media: MediaAttachment;
   @Prop imageQuality: number = IMAGE_QUALITY_ORIGINAL;
@@ -274,6 +275,8 @@ struct MediaCover {
   };
   onLongPress: () => void = (): void => {};
   @State private pixels: image.PixelMap | null = null;
+  @State private photoWidth: number = 0;
+  @State private photoHeight: number = 0;
   private alive: boolean = true;
 
   aboutToAppear(): void {
@@ -299,6 +302,18 @@ struct MediaCover {
 
   private imageSource(url: string): string {
     return isVideoLike(this.media) ? url : imageUrlForQuality(url, this.imageQuality);
+  }
+
+  private photoResponseRegion(): Rectangle {
+    if (!this.photoContain || this.photoFrameWidth <= 0) {
+      return { x: 0, y: 0, width: '100%', height: '100%' };
+    }
+    const frame: MediaViewerRect = new MediaViewerRect();
+    frame.width = this.photoFrameWidth;
+    frame.height = this.mediaHeight;
+    const rect: MediaViewerRect = fittedMediaViewerRect(this.photoWidth || this.media.width,
+      this.photoHeight || this.media.height, frame);
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
   }
 
   private pickUp(): void {
@@ -339,7 +354,11 @@ struct MediaCover {
     } else if (!isVideoLike(this.media) && this.photoSourceId.length > 0) {
       MediaPhotoSurface({ sourceId: this.photoSourceId,
         url: this.imageSource(this.media.previewUrl.length > 0 ? this.media.previewUrl : this.media.mediaUrl),
-        displayHeight: this.mediaHeight, contain: this.photoContain })
+        displayHeight: this.mediaHeight, contain: this.photoContain,
+        onDimensions: (width: number, height: number): void => {
+          this.photoWidth = width;
+          this.photoHeight = height;
+        } })
         .borderRadius(this.cornerRadius).clip(true)
     } else if (this.media.previewUrl.length > 0) {
       ProxyMediaImage({
@@ -418,6 +437,7 @@ struct MediaCover {
     // Media sits inside a card that also opens the post. Without event
     // monopoly one tap can push both PhotoViewer and PostDetail, leaving two
     // shared-element transitions fighting over the return path.
+    .responseRegion(this.photoResponseRegion())
     .monopolizeEvents(true)
     .gesture(GestureGroup(GestureMode.Exclusive,
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
@@ -6716,7 +6736,7 @@ export struct PostMedia {
     MediaCover({
       photoSourceId: this.mediaSourceId(media),
       media: media, imageQuality: this.imageQuality, mediaHeight: this.photoRunHeight(startIndex),
-      photoContain: true,
+      photoContain: true, photoFrameWidth: this.photoCellWidth(startIndex, media),
       onTap: (): void => this.openPhoto(media), onLongPress: onLongPress
     }).width(this.photoCellWidth(startIndex, media)).id(this.mediaSourceId(media))
   }
