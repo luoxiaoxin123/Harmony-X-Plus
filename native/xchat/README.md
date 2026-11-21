@@ -65,7 +65,8 @@ with the optional note as message text.
 
 Chat transport uses the account's existing cookie session and registered
 GraphQL operations (`GetPublicKeys`, `GetConversationPageQuery`, and
-`SendMessageCreateMutation`). Existing registered keys are recovered using the
+`SendMessageMutation`). An HTTP 503 retry uses the same signed event and message
+ID. Existing registered keys are recovered using the
 user's current X Chat PIN; no registration, PIN reset or key replacement is
 performed. A send is confirmed only by the returned server event.
 Recovery uses the official Juicebox protocol over a native HTTP transport with

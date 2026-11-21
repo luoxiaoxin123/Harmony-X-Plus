@@ -613,7 +613,7 @@ export class XChatService {
         'encrypted_conversation_key': key.encrypted_key, 'public_key_version': key.public_key_version }));
     await xChatActions.action('AddEncryptedConversationKeysMutation', {
       'conversation_id': payload.conversation_id ?? conversationId,
-      'conversation_key_version': payload.conversation_key_version ?? '', 'participants': participants,
+      'conversation_key_version': payload.conversation_key_version ?? '', 'conversation_participant_keys': participants,
       'action_signatures': XChatService.actionInputs(payload.action_signatures ?? [])
     }, 'xchat_add_encrypted_conversation_key');
     if (generation !== this.generation) { throw new Error('account_changed'); }
@@ -1185,12 +1185,17 @@ export class XChatService {
       this.pendingSends.set(conversationId, pending);
     }
     const payload: XChatNativeData = pending.payload;
-    const result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', {
+    const wire: Record<string, Object> = {
       'conversation_id': payload.conversation_id ?? conversationId,
       'message_id': payload.message_id ?? '',
       'encoded_message_create_event': payload.encoded_message_create_event ?? '',
       'encoded_message_event_signature': payload.encoded_message_event_signature ?? ''
-    });
+    };
+    let result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
+    if (!result.ok && result.status === 503 && generation === this.generation) {
+      // Resubmit the exact signed event so a lost acknowledgement cannot duplicate the message.
+      result = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
+    }
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!result.ok) { throw new Error('send_http_' + result.status.toString()); }
     const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;

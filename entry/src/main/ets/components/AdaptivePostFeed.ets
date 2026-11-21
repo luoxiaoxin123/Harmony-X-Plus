@@ -10,6 +10,7 @@ import { PostFeedDataSource, PostFeedItem } from '../utils/PostFeedDataSource';
 export struct AdaptivePostFeed {
   @Prop @Watch('syncSections') itemKeys: string[] = [];
   @Prop @Watch('syncSections') allowColumns: boolean = true;
+  @Prop @Watch('syncSections') landscapeColumns: boolean = false;
   @Prop @Watch('syncSections') lazyItems: boolean = false;
   @Prop useList: boolean = false;
   @Prop @Watch('syncSections') singleColumnGap: number = 0;
@@ -38,7 +39,8 @@ export struct AdaptivePostFeed {
   aboutToAppear(): void { this.syncSections(); }
 
   private columns(): number {
-    return this.allowColumns ? PostFeedLayout.columns(this.paneWidth, this.preferredColumns) : 1;
+    if (!this.allowColumns) { return 1; }
+    return this.landscapeColumns ? 2 : PostFeedLayout.columns(this.paneWidth, this.preferredColumns);
   }
 
   private gap(resource: Resource): number {

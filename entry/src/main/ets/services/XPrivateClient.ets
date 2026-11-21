@@ -412,8 +412,27 @@ export class XPrivateClient {
     if (XPrivateClient.sendsListFieldToggles(operation.operation)) {
       body['fieldToggles'] = XPrivateClient.webListFieldToggles();
     }
-    const posted: XPrivateResult = await this.send('POST', url, JSON.stringify(body),
-      GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', -1, minimalHeaders);
+    const generation: number = this.sessionGeneration();
+    if (operation.operation === 'SendMessageCreateMutation') {
+      // Cookie-authenticated X Chat uses the web client's XChat-safety mutation.
+      const chatQueryId: string = 'LkAIEchf8AGj-WgeLoTVcw';
+      const chatBody: Record<string, Object | null> = { 'variables': resolved, 'queryId': chatQueryId };
+      const chatResult: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + chatQueryId + '/SendMessageMutation',
+        JSON.stringify(chatBody), GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation);
+      if (chatResult.status !== 404 || generation !== this.sessionGeneration()) {
+        return this.finish(operation.operation, cacheable, cacheKey, chatResult);
+      }
+    }
+    let posted: XPrivateResult = await this.send('POST', url, JSON.stringify(body),
+      GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation, minimalHeaders);
+    if (operation.operation === 'GetConversationPageQuery' && (posted.status === 404 || posted.status === 503) &&
+      generation === this.sessionGeneration()) {
+      const webQueryId: string = 'IVlXls9JTnbgQ1gxsGAfJA';
+      const webBody: Record<string, Object | null> = { 'variables': resolved, 'queryId': webQueryId };
+      const alternate: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + webQueryId + '/' + operation.operation,
+        JSON.stringify(webBody), GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation);
+      if (alternate.ok || posted.status === 404) { posted = alternate; }
+    }
     return this.finish(operation.operation, cacheable, cacheKey, posted);
   }
 

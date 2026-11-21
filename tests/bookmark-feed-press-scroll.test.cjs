@@ -39,6 +39,8 @@ test('bookmarks use the Home List feed for single-column press and drag routing'
   const call = around(bookmarks, "feedId: 'bookmarks-post-feed'");
 
   assert.match(mode, /ResponsiveLayout\.isLarge\(this\.windowBreakpoint\)/);
+  assert.match(mode, /this\.isLandscape\(\)/);
+  assert.match(call, /landscapeColumns:\s*this\.isLandscape\(\)/);
   assert.match(mode, /TIMELINE_COLUMNS_TWO/);
   assert.match(mode, /TIMELINE_COLUMNS_AUTO_TWO/);
   assert.match(call, /useList:\s*this\.useListFeed\(\)/);

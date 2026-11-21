@@ -113,7 +113,9 @@ test('a first share after a missing conversation uses the newest key for each di
     if (method === 'encrypt' && ++encrypts <= 2) { return {ok:false,error:'no cached conversation key'}; }
     return native(method, input);
   };
-  nativeByMethod.prepareConversation = {ok:true,data:{conversation_id:'100-200',conversation_key_version:'30',participant_keys:[]}};
+  nativeByMethod.prepareConversation = {ok:true,data:{conversation_id:'100-200',conversation_key_version:'30',
+    participant_keys:[{user_id:'100',encrypted_key:'envelope-100',public_key_version:'2'},
+      {user_id:'200',encrypted_key:'envelope-200',public_key_version:'10'}]}};
   nativeByMethod.encrypt = {ok:true,data:{message_id:'post-share',conversation_id:'100-200',
     encoded_message_create_event:'ciphertext',encoded_message_event_signature:'signature'}};
   nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'post-share',conversationId:'100-200',senderId:'100',
@@ -125,6 +127,9 @@ test('a first share after a missing conversation uses the newest key for each di
   const change = nativeCalls.find(call => call.method === 'prepareConversation').input;
   assert.equal(change.conversation_id, '100-200');
   assert.deepEqual(change.public_keys.map(key => [key.user_id,key.key_version]), [['100','2'],['200','10']]);
+  const mutation = calls.find(call => call.name === 'AddEncryptedConversationKeysMutation').args;
+  assert.deepEqual(mutation.conversation_participant_keys.map(key => key.encrypted_conversation_key), ['envelope-100','envelope-200']);
+  assert.equal(mutation.participants, undefined);
   assert.equal(calls.filter(call => call.name === 'SendMessageCreateMutation').length, 1);
 });
 
@@ -255,6 +260,20 @@ test('retry after uncertain delivery reuses the same encrypted message id',async
   assert.equal(nativeCalls.filter(x=>x.method==='encrypt').length,1);
   assert.equal(calls[0].args.message_id,calls[1].args.message_id);
   assert.equal(calls[0].args.encoded_message_create_event,calls[1].args.encoded_message_create_event);
+});
+
+test('a 503 automatically retries the same signed post message once', async () => {
+  reset();
+  const service = new XChatService();
+  nativeByMethod.encrypt = {ok:true,data:{message_id:'same-id',conversation_id:'100-200',
+    encoded_message_create_event:'ciphertext',encoded_message_event_signature:'signature'}};
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'same-id',conversationId:'100-200',
+    senderId:'100',verified:true,content:{content_type:'Text',text:''},attachments:[{attachment_type:'Post',rest_id:'123'}]}]}};
+  queue.push({ok:false,status:503}, ok({data:{xchat_send_create_message_event:{encoded_message_event:'confirmed'}}}));
+  await service.sharePost('100-200','123','https://x.com/example/status/123','');
+  assert.equal(nativeCalls.filter(call => call.method === 'encrypt').length, 1);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].args, calls[1].args);
 });
 
 test('a server failure event rejects delivery and allows fresh encryption on retry',async()=>{
