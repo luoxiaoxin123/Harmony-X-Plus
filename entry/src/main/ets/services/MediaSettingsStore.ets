@@ -18,10 +18,10 @@ export const STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON: string = 'harmonyx.video_downloa
 export const STORAGE_KEY_VIDEO_COMMENT_PROGRESS_RING: string = 'harmonyx.video_comment_progress_ring';
 export const STORAGE_KEY_VIDEO_QUALITY: string = 'harmonyx.video_quality';
 export const STORAGE_KEY_VIDEO_AUTO_BITRATE_CAP: string = 'harmonyx.video_auto_bitrate_cap';
-// Detail pages hand a running video over to the system picture-in-picture
-// window once the reader scrolls past it. Readers who would rather have the
-// video stop turn this off.
+// Readers can opt in to automatic picture-in-picture when a playing video
+// scrolls out of view in a post detail page.
 export const STORAGE_KEY_VIDEO_AUTO_PIP: string = 'harmonyx.video_auto_pip';
+export const DEFAULT_VIDEO_AUTO_PIP: boolean = false;
 export const STORAGE_KEY_VIDEO_IMMERSIVE_FILL: string = 'harmonyx.video_immersive_fill';
 export const STORAGE_KEY_VIDEO_FEED_CONTROLS_ALWAYS_VISIBLE: string = 'harmonyx.video_feed_controls_always_visible';
 export const STORAGE_KEY_VIDEO_CAPTIONS_ENABLED: string = 'harmonyx.video_captions_enabled';
@@ -397,9 +397,9 @@ export class MediaSettingsStore {
     try {
       const options: preferences.Options = { name: MediaSettingsStore.STORE_NAME };
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
-      return store.getSync(MediaSettingsStore.VIDEO_AUTO_PIP_KEY, true) as boolean;
+      return store.getSync(MediaSettingsStore.VIDEO_AUTO_PIP_KEY, DEFAULT_VIDEO_AUTO_PIP) as boolean;
     } catch (error) {
-      return true;
+      return DEFAULT_VIDEO_AUTO_PIP;
     }
   }
 

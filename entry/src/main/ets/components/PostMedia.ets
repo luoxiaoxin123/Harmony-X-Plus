@@ -97,6 +97,7 @@ import {
   STORAGE_KEY_VIEWER_VIDEO_MUTED,
   STORAGE_KEY_SHOW_SENSITIVE_MEDIA,
   STORAGE_KEY_VIDEO_AUTO_PIP,
+  DEFAULT_VIDEO_AUTO_PIP,
   STORAGE_KEY_VIDEO_AUTOPLAY,
   STORAGE_KEY_VIDEO_BACKGROUND_MODE,
   STORAGE_KEY_VIDEO_CONTROL_STYLE,
@@ -687,7 +688,7 @@ export struct SurfaceVideoPlayer {
   homeVideoMuted: boolean = true;
   @StorageLink(STORAGE_KEY_VIEWER_VIDEO_MUTED) @Watch('onViewerVideoMutedChanged')
   viewerVideoMuted: boolean = true;
-  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) autoPip: boolean = true;
+  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) autoPip: boolean = DEFAULT_VIDEO_AUTO_PIP;
   @StorageLink(STORAGE_KEY_VIDEO_CONTROL_STYLE) videoControlStyle: number = VIDEO_CONTROL_STYLE_SPACED;
   @StorageLink(STORAGE_KEY_VIDEO_FEED_CONTROLS_ALWAYS_VISIBLE)
   @Watch('onVideoFeedControlsAlwaysVisibleChanged')

@@ -212,6 +212,7 @@ import {
   STORAGE_KEY_VIDEO_COMMENT_PROGRESS_RING,
   STORAGE_KEY_SHOW_SENSITIVE_MEDIA,
   STORAGE_KEY_VIDEO_AUTO_PIP,
+  DEFAULT_VIDEO_AUTO_PIP,
   STORAGE_KEY_VIDEO_BACKGROUND_MODE,
   STORAGE_KEY_VIDEO_HOLD_SPEED,
   STORAGE_KEY_VIDEO_REMEMBER_SPEED,
@@ -682,7 +683,7 @@ export struct SettingsSection {
   @StorageProp(STORAGE_KEY_MEDIA_COMMENT_BACKGROUND) mediaCommentBackground: boolean = true;
   @StorageProp(STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON) private videoDownloadButton: boolean = true;
   @StorageProp(STORAGE_KEY_VIDEO_COMMENT_PROGRESS_RING) videoCommentProgressRing: boolean = true;
-  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) videoAutoPip: boolean = true;
+  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) videoAutoPip: boolean = DEFAULT_VIDEO_AUTO_PIP;
   @StorageLink(STORAGE_KEY_VIDEO_IMMERSIVE_FILL) videoImmersiveFill: boolean = false;
   @StorageLink(STORAGE_KEY_VIDEO_REMEMBER_SPEED) videoRememberSpeed: boolean = true;
   @StorageLink(STORAGE_KEY_VIDEO_HOLD_SPEED) videoHoldSpeed: boolean = true;

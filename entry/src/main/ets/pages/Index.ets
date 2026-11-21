@@ -202,7 +202,6 @@ import { ProxySettingsBuilder } from './ProxySettings';
 import { DnsSettingsBuilder } from './DnsSettings';
 import { HelpCenterBuilder } from './HelpCenter';
 import { AboutBuilder } from './About';
-import { LogoUniverseBuilder } from './LogoUniverse';
 import { UserDetailBuilder } from './UserDetail';
 import { EditProfileBuilder } from './EditProfile';
 import { STORAGE_KEY_EDITED_PROFILE, lastEditedProfile } from '../services/ProfileEditService';
@@ -8109,8 +8108,6 @@ struct Index {
       DownloadManagerBuilder();
     } else if (name === 'DataStorage') {
       DataStorageBuilder();
-    } else if (name === 'LogoUniverse') {
-      LogoUniverseBuilder();
     } else if (name === 'About') {
       AboutBuilder();
     } else if (name === 'HelpCenter') {
@@ -9172,6 +9169,11 @@ struct Index {
 
   private judgeHomeDrawerSwipe(event: BaseGestureEvent, current: GestureRecognizer,
     others: GestureRecognizer[]): GestureJudgeResult {
+    if (event.source === SourceType.TouchScreen && this.homeFeedMode === 0 && this.activeHomeTopicId.length === 0 &&
+      current.isBuiltIn() && current.getType() === GestureControl.GestureType.PAN_GESTURE &&
+      current.getEventTargetInfo().getId() === 'home-feed-pager' && (event as PanGestureEvent).offsetX > 0) {
+      return GestureJudgeResult.REJECT;
+    }
     if (current.getTag() !== 'home-open-drawer') { return GestureJudgeResult.CONTINUE; }
     if (event.source !== SourceType.TouchScreen || !this.canOpenDrawerFromHome()) {
       return GestureJudgeResult.REJECT;
@@ -9205,6 +9207,8 @@ struct Index {
           else { this.HomeList(index) }
         }, (item: IconTabItem): string => item.key)
       }.width('100%').height('100%').index(this.homeTabIndex()).loop(false).indicator(false).cachedCount(1)
+        .id('home-feed-pager')
+        .effectMode(this.homeFeedMode === 0 && this.activeHomeTopicId.length === 0 ? EdgeEffect.None : EdgeEffect.Spring)
         .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing || this.postSwipeLeft !== POST_SWIPE_OFF || this.postSwipeRight !== POST_SWIPE_OFF)
         .onGestureRecognizerJudgeBegin((event: BaseGestureEvent, current: GestureRecognizer,
           others: GestureRecognizer[]): GestureJudgeResult => this.judgeHomeDrawerSwipe(event, current, others))
@@ -9213,7 +9217,7 @@ struct Index {
           .onActionEnd((event: GestureEvent): void => this.finishHomeDrawerSwipe(event))
           .onActionCancel((): void => { this.homeDrawerSwipeStarted = false; }))
         .onContentWillScroll((event: SwiperContentWillScrollResult): boolean =>
-          !this.homeDrawerSwipeStarted || event.offset <= 0)
+          this.tabKey(event.currentIndex) !== 'for-you' || (isAppRtl(this.appLocale) ? event.offset >= 0 : event.offset <= 0))
         .onAppear((): void => { this.homeTabPosition = this.homeTabIndex(); })
         .onChange((index: number): void => {
           this.selectHomeTabAt(index);
