@@ -53,6 +53,56 @@ test('collapsed chrome keeps the HDS status-bar band for immersive gradient blur
   assert.match(titleBar, /ScrollEffectType\.IMMERSIVE_GRADIENT_BLUR/);
 });
 
+function indexHarness(methods, globals) {
+  const source = `class Harness { ${methods.map(indexMethod).join('\n')} }`;
+  const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
+  return new Function(...Object.keys(globals), js + '\nreturn Harness;')(...Object.values(globals));
+}
+
+test('home chrome finishes fading before the native title slot is hidden', () => {
+  const completions = [];
+  const Harness = indexHarness(['setHomeHeaderCollapsed'], { Curve: { EaseInOut: 'ease' } });
+  const root = Object.assign(new Harness(), { homeHeaderCollapsed: false, homeHeaderParked: false,
+    homeHeaderMotion: 0, reduceMotion: false, preferredMotionDuration: 300,
+    getUIContext: () => ({ animateTo: (options, update) => { update(); completions.push(options.onFinish); } }) });
+  root.setHomeHeaderCollapsed(true);
+  assert.equal(root.homeHeaderCollapsed, true);
+  assert.equal(root.homeHeaderParked, false);
+  root.setHomeHeaderCollapsed(false);
+  completions.shift()();
+  assert.equal(root.homeHeaderParked, false);
+  root.setHomeHeaderCollapsed(true);
+  completions.pop()();
+  assert.equal(root.homeHeaderParked, true);
+  root.setHomeHeaderCollapsed(false);
+  assert.equal(root.homeHeaderParked, false);
+});
+
+test('rightward drags open the drawer from For You in portrait without claiming a photo strip', () => {
+  const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe'], {
+    HOME_TAB_INDEX: 0, POST_SWIPE_OFF: 0, SourceType: { TouchScreen: 'touch' },
+    GestureJudgeResult: { REJECT: false, CONTINUE: true }
+  });
+  let opened = 0;
+  const root = Object.assign(new Harness(), { currentTab: 0, homeFeedMode: 0, activeHomeTopicId: '',
+    windowWidth: 390, windowHeight: 844, showSideDrawer: false, refreshing: false, postSwipeRight: 0,
+    navPathStack: { size: () => 0 }, isDesktopLayout: () => false, openSideDrawer: () => opened++ });
+  const event = { source: 'touch' };
+  const gesture = { getTag: () => 'home-open-drawer' };
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, [{
+    getEventTargetInfo: () => ({ getId: () => 'post-photo-list-0' })
+  }]), false);
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), true);
+  root.homeDrawerSwipeStarted = true;
+  root.finishHomeDrawerSwipe({ offsetX: 65, offsetY: 20 });
+  assert.equal(opened, 1);
+  root.homeFeedMode = 1;
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
+  root.homeFeedMode = 0;
+  root.windowWidth = 1100;
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
+});
+
 test('compact header removes the displaced rows while retaining Explore categories', () => {
   for (const [tab, normal, compact] of [[0, 54, 12], [1, 100, 64], [2, 52, 12], [3, 56, 12], [4, 0, 12]]) {
     assert.equal(layout.bottomHeight(tab, true, false, 0, false), normal);

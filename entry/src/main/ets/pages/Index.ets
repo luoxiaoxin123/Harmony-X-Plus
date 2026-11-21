@@ -632,9 +632,11 @@ struct Index {
   private sidebarSearchMaterialCache: TitleBarControlMaterialCache = new TitleBarControlMaterialCache();
   private sideBarPanelBuilder: CustomBuilder = (): void => { this.SideBarPanelBuilder(SIDEBAR_MATERIAL_SYSTEM); };
   private contentPanelBuilder: CustomBuilder = (): void => { this.ContentPanelBuilder(); };
-  // While reading down the Home feed, the feed switch moves beside the avatar
-  // and the centered brand mark fades out as one title-bar transition.
+  // Keep the native title slot mounted until the Home chrome finishes fading.
   @State private homeHeaderCollapsed: boolean = false;
+  @State private homeHeaderParked: boolean = false;
+  private homeHeaderMotion: number = 0;
+  private homeDrawerSwipeStarted: boolean = false;
   // 0 = For you (recommended), 1 = Following.
   @State homeFeedMode: number = 0;
   @State private homeTabPosition: number = 0;
@@ -2217,7 +2219,9 @@ struct Index {
   private onCompactWindowChanged(): void {
     if (this.videoLayoutBreakpoint.length > 0) { return; }
     this.beginHomeViewportChange();
+    this.homeHeaderMotion++;
     this.homeHeaderCollapsed = false;
+    this.homeHeaderParked = false;
     this.setChromeHidden(false);
     this.fabHidden = false;
   }
@@ -2337,7 +2341,7 @@ struct Index {
         this.exploreNativeTitleHeight);
     }
     return RootTitleBarLayout.bottomHeight(this.chromeTab, this.useTitleBarLogo(),
-      this.homeHeaderCollapsed, this.homeSpaceHeight(), this.activeExploreQuery.length > 0,
+      this.homeHeaderParked, this.homeSpaceHeight(), this.activeExploreQuery.length > 0,
       this.exploreLayoutDimension($r('app.float.explore_search_categories_gap')));
   }
 
@@ -2362,7 +2366,7 @@ struct Index {
   private titleBarStyle(): TitleBarStyleOptions {
     const style: TitleBarStyleOptions = rootTitleBarStyle(this.displayMode, this.darkSurface,
       this.titleBarStyleMode, this.isDesktopLayout());
-    if (this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed()) {
+    if (this.currentTab === ME_TAB_INDEX || this.homeTitleBarParked()) {
       style.scrollEffectOpts = { enableScrollEffect: false };
       style.originalStyle = { backgroundStyle: { backgroundColor: Color.Transparent },
         contentStyle: style.originalStyle?.contentStyle };
@@ -2558,12 +2562,17 @@ struct Index {
   // Same structure as the Yunshang reference: scrolling drives one shared
   // chrome state, and HdsNavigation owns the title-bar inset animation.
   private titleBarShouldHide(): boolean {
-    return this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed() ||
+    if (this.currentTab === HOME_TAB_INDEX && this.homeHeaderCollapseEnabled) { return this.homeTitleBarParked(); }
+    return this.currentTab === ME_TAB_INDEX ||
       (this.titleBarHidden && (this.autoHideTitleBar || this.compactWindow) && !this.isDesktopLayout());
   }
 
   private homeTitleBarCollapsed(): boolean {
     return this.currentTab === HOME_TAB_INDEX && this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed;
+  }
+
+  private homeTitleBarParked(): boolean {
+    return this.currentTab === HOME_TAB_INDEX && this.chromeTab === HOME_TAB_INDEX && this.homeHeaderParked;
   }
 
   private titleBarDynamicHideParams(): DynamicHideParams {
@@ -6078,7 +6087,17 @@ struct Index {
     if (this.homeHeaderCollapsed === collapsed) {
       return;
     }
-    this.getUIContext().animateTo({ duration: 280, curve: Curve.EaseInOut }, (): void => {
+    const motion: number = ++this.homeHeaderMotion;
+    if (!collapsed) { this.homeHeaderParked = false; }
+    const duration: number = this.reduceMotion ? 0 : Math.round(280 * this.preferredMotionDuration / 300);
+    if (duration <= 0) {
+      this.homeHeaderCollapsed = collapsed;
+      this.homeHeaderParked = collapsed;
+      return;
+    }
+    this.getUIContext().animateTo({ duration: duration, curve: Curve.EaseInOut, onFinish: (): void => {
+      if (this.homeHeaderMotion === motion && this.homeHeaderCollapsed) { this.homeHeaderParked = true; }
+    } }, (): void => {
       this.homeHeaderCollapsed = collapsed;
     });
   }
@@ -7176,7 +7195,7 @@ struct Index {
   }
 
   private desktopTitleBarHeight(): number {
-    if (this.currentTab === HOME_TAB_INDEX && this.homeHeaderCollapsed) { return 0; }
+    if (this.homeTitleBarParked()) { return 0; }
     return this.currentTab === EXPLORE_TAB_INDEX ? Math.max(56, this.exploreSearchHeight() + 16) : 56;
   }
 
@@ -7184,6 +7203,9 @@ struct Index {
   private DesktopTitleBarContent(): void {
     Column() { this.DesktopHeader() }.width('100%').height(this.desktopTitleBarHeight())
       .justifyContent(FlexAlign.Center)
+      .opacity(this.homeTitleBarCollapsed() ? 0 : 1)
+      .translate({ y: this.homeTitleBarCollapsed() ? -16 : 0 })
+      .hitTestBehavior(this.homeTitleBarCollapsed() ? HitTestMode.None : HitTestMode.Default)
       .attributeModifier(materialModifier(this.currentTab === ME_TAB_INDEX ? undefined :
         titleBarGlassMaterial(this.titleBarStyleMode, this.titleBarGlassMaterialLevel)))
   }
@@ -7481,7 +7503,7 @@ struct Index {
       .titleBar(this.rootTitleBarOptions())
       .systemBarStyle(this.rootSystemBarStyle(), this.rootSystemBarStyle())
       .titleMode(HdsNavigationTitleMode.MINI)
-      .hideTitleBar(this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed())
+      .hideTitleBar(this.currentTab === ME_TAB_INDEX || this.homeTitleBarParked())
       .mode(this.mainNavigationMode)
       .enableModeChangeAnimation(!this.isDesktopLayout() || this.currentTab !== MESSAGES_TAB_INDEX)
       .navBarWidth(this.isDesktopLayout() ? 360 : 480)
@@ -8370,7 +8392,10 @@ struct Index {
     .width('100%')
     .height('100%')
     .clip(false)
-    .hitTestBehavior(HitTestMode.Transparent)
+    .opacity(this.homeTitleBarCollapsed() ? 0 : 1)
+    .translate({ y: this.homeTitleBarCollapsed() ? -16 : 0 })
+    .hitTestBehavior(this.homeTitleBarCollapsed() ? HitTestMode.None : HitTestMode.Transparent)
+    .accessibilityLevel(this.homeTitleBarCollapsed() ? 'no-hide-descendants' : 'auto')
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.captureTitleBarSurfaceTop(newValue);
     })
@@ -8518,7 +8543,7 @@ struct Index {
   }
 
   private titleBarLabelsHeight(): number {
-    if (this.homeTitleBarCollapsed()) { return 0; }
+    if (this.homeTitleBarParked()) { return 0; }
     return RootTitleBarLayout.labelsHeight(this.chromeTab, this.useTitleBarLogo(),
       this.homeSpaceHeight(), this.activeExploreQuery.length > 0,
       this.exploreLayoutDimension($r('app.float.explore_search_categories_gap')));
@@ -8546,7 +8571,7 @@ struct Index {
   private TitleBarMaterialLayer(): void {
     // 只有"玻璃材质"这一档才挂我们自制的这块玻璃面板；另外两档完全交给 HDS
     // 自己的标题栏样式，所以这里连背景都不留。
-    if (this.chromeTab !== ME_TAB_INDEX && !this.homeTitleBarCollapsed() &&
+    if (this.chromeTab !== ME_TAB_INDEX && !this.homeTitleBarParked() &&
       customTitleBarGlassEnabled(this.titleBarStyleMode)) {
       if (this.supportsImmersiveMaterial()) {
         Column()
@@ -8589,7 +8614,10 @@ struct Index {
       if (this.chromeTab === 0 && this.homeSpace() !== null) {
         Row() { this.HomeSpaceCapsule(); }.width('100%').height(60).justifyContent(FlexAlign.Center)
       }
-    }.width('100%')
+    }.width('100%').opacity(this.homeTitleBarCollapsed() ? 0 : 1)
+      .translate({ y: this.homeTitleBarCollapsed() ? -16 : 0 })
+      .hitTestBehavior(this.homeTitleBarCollapsed() ? HitTestMode.None : HitTestMode.Default)
+      .accessibilityLevel(this.homeTitleBarCollapsed() ? 'no-hide-descendants' : 'auto')
   }
 
   @Builder
@@ -8666,10 +8694,7 @@ struct Index {
       }.width(32).height(36).padding(6).margin({ right: 12 }).backgroundColor(Color.Transparent)
         .id('home-manage-timelines').accessibilityText(this.text($r('app.string.timeline_manage')))
         .onClick((): void => this.openTimelineManager())
-    }.width('100%').height(this.homeHeaderCollapsed ? 0 : height).clip(this.homeHeaderCollapsed)
-      .opacity(this.homeHeaderCollapsed ? 0 : 1)
-      .hitTestBehavior(this.homeHeaderCollapsed ? HitTestMode.None : HitTestMode.Default)
-      .accessibilityLevel(this.homeHeaderCollapsed ? 'no-hide-descendants' : 'auto')
+    }.width('100%').height(height)
   }
 
   @Builder
@@ -8772,10 +8797,6 @@ struct Index {
         .width(30)
         .height(30)
         .id('current-app-icon-foreground')
-        .opacity(this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0 : 1)
-        .scale({ x: this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0.8 : 1,
-          y: this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0.8 : 1 })
-        .hitTestBehavior(this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? HitTestMode.None : HitTestMode.Default)
         .gesture(
           TapGesture({ count: 2 })
             .onAction((): void => {
@@ -8796,9 +8817,6 @@ struct Index {
     .width('100%')
     .height(this.useTitleBarLogo() ? 36 : $r('app.float.title_bar_compact_row_height'))
     .translate({ y: this.titleBarIdentityOffset() })
-    .opacity(this.homeTitleBarCollapsed() ? 0 : 1)
-    .hitTestBehavior(this.homeTitleBarCollapsed() ? HitTestMode.None : HitTestMode.Default)
-    .accessibilityLevel(this.homeTitleBarCollapsed() ? 'no-hide-descendants' : 'auto')
     .id('harmonyx-root-identity-row')
     .onAreaChange((_oldValue: Area, newValue: Area): void => { this.captureExploreTitleIdentity(newValue); })
   }
@@ -9146,6 +9164,35 @@ struct Index {
     Column().width('100%').height('1vp')
   }
 
+  private canOpenDrawerFromHome(): boolean {
+    return this.currentTab === HOME_TAB_INDEX && this.homeFeedMode === 0 && this.activeHomeTopicId.length === 0 &&
+      this.windowWidth > 0 && this.windowHeight > this.windowWidth && !this.isDesktopLayout() &&
+      !this.showSideDrawer && !this.refreshing && this.navPathStack.size() === 0;
+  }
+
+  private judgeHomeDrawerSwipe(event: BaseGestureEvent, current: GestureRecognizer,
+    others: GestureRecognizer[]): GestureJudgeResult {
+    if (current.getTag() !== 'home-open-drawer') { return GestureJudgeResult.CONTINUE; }
+    if (event.source !== SourceType.TouchScreen || !this.canOpenDrawerFromHome()) {
+      return GestureJudgeResult.REJECT;
+    }
+    const nestedSwipe: boolean = others.some((recognizer: GestureRecognizer): boolean => {
+      const target: string = recognizer.getEventTargetInfo().getId();
+      return target.includes('photo-list-') || target.endsWith('mixed-media-strip') ||
+        (this.postSwipeRight !== POST_SWIPE_OFF && recognizer.getTag() === 'home-post-swipe');
+    });
+    return nestedSwipe ? GestureJudgeResult.REJECT : GestureJudgeResult.CONTINUE;
+  }
+
+  private finishHomeDrawerSwipe(event: GestureEvent): void {
+    const started: boolean = this.homeDrawerSwipeStarted;
+    this.homeDrawerSwipeStarted = false;
+    if (started && this.canOpenDrawerFromHome() && event.offsetX >= 56 &&
+      event.offsetX > Math.abs(event.offsetY) * 1.5) {
+      this.openSideDrawer();
+    }
+  }
+
   @Builder
   private HomeTab(): void {
     Stack({ alignContent: Alignment.Top }) {
@@ -9159,6 +9206,14 @@ struct Index {
         }, (item: IconTabItem): string => item.key)
       }.width('100%').height('100%').index(this.homeTabIndex()).loop(false).indicator(false).cachedCount(1)
         .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing || this.postSwipeLeft !== POST_SWIPE_OFF || this.postSwipeRight !== POST_SWIPE_OFF)
+        .onGestureRecognizerJudgeBegin((event: BaseGestureEvent, current: GestureRecognizer,
+          others: GestureRecognizer[]): GestureJudgeResult => this.judgeHomeDrawerSwipe(event, current, others))
+        .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.Right, distance: 18 }).tag('home-open-drawer')
+          .onActionStart((): void => { this.homeDrawerSwipeStarted = this.canOpenDrawerFromHome(); })
+          .onActionEnd((event: GestureEvent): void => this.finishHomeDrawerSwipe(event))
+          .onActionCancel((): void => { this.homeDrawerSwipeStarted = false; }))
+        .onContentWillScroll((event: SwiperContentWillScrollResult): boolean =>
+          !this.homeDrawerSwipeStarted || event.offset <= 0)
         .onAppear((): void => { this.homeTabPosition = this.homeTabIndex(); })
         .onChange((index: number): void => {
           this.selectHomeTabAt(index);

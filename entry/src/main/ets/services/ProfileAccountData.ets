@@ -7,6 +7,7 @@ export class ProfileActivityPage {
   loading: boolean = false;
   status: string = '';
   webPosts: boolean = false;
+  publicPosts: boolean = false;
 }
 
 export class AccountAbout {

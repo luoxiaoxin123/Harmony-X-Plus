@@ -119,7 +119,7 @@ test('Me and collapsed Home disable blur and material in every saved appearance 
   for (const mode of [0, 1, 2, 3]) {
     let collapsed = false;
     const root = Object.assign(new Root(), { currentTab: 4, titleBarStyleMode: mode,
-      isDesktopLayout: () => false, homeTitleBarCollapsed: () => collapsed });
+      isDesktopLayout: () => false, homeTitleBarParked: () => collapsed });
     const style = root.titleBarStyle();
     assert.equal(style.scrollEffectOpts.enableScrollEffect, false);
     assert.equal(style.systemMaterialEffect.materialType, 0);

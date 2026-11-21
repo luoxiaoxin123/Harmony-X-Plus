@@ -129,7 +129,8 @@ test('OAuth and public web fallback retain publication time and timezone', () =>
   const parsed = XApiClient.parseTweets(JSON.stringify({ data: [{ id: 'post', created_at: iso }] }));
   assert.equal(parsed[0].createdAt, iso);
   const { XWebClient } = loadEts('services/XWebClient', {
-    '@ohos.net.http': {}, '@ohos.hilog': {}, './ProxyStore': {}
+    '@ohos.net.http': {}, '@ohos.hilog': {}, './ProxyStore': {},
+    './XTimelineParser': {}, './XUserAgent': {}
   });
   const web = new XWebClient();
   const raw = 'Fri Oct 02 13:51:00 +0000 2026';

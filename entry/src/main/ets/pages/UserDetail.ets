@@ -203,6 +203,8 @@ export struct UserDetail {
   @State private listStatus: string = '';
   private listCursor: string = '';
   private alive: boolean = true;
+  private visible: boolean = false;
+  private webUnblockViewerId: string = '';
   @State private suggestionGroups: FollowSuggestionGroup[] = [];
   @State private headerScrollOffset: number = 0;
   @State private headerPullOffset: number = 0;
@@ -674,6 +676,7 @@ export struct UserDetail {
     const cursor: string = replace ? '' : state.cursor;
     const generation: number = xPrivateClient.sessionGeneration();
     const revealBlocked: boolean = tab === 0 && this.blocking && this.showBlockedPosts;
+    if (replace) { state.publicPosts = false; }
     state.loading = true;
     state.status = '';
     this.notifyActivityChanged();
@@ -681,11 +684,19 @@ export struct UserDetail {
     let result: XPrivateResult | null = null;
     try {
       if (revealBlocked && (replace || state.webPosts)) {
-        result = await xPrivateClient.userOriginalsWeb(userId, cursor, 20);
+        result = await xPrivateClient.userOriginalsWeb(this.authorHandle().substring(1), cursor, 20);
         page = result.ok ? XTimelineParser.parse(result.body) : null;
         if (replace) {
           state.webPosts = page !== null && (page.tweets.length > 0 || page.nextToken.length > 0);
           if (!state.webPosts) { page = null; }
+        }
+      }
+      if (revealBlocked && replace && (page === null || page.tweets.length === 0)) {
+        const publicPage: TweetPage | null = await this.webClient.fetchPublicProfilePosts(this.authorHandle().substring(1));
+        if (publicPage !== null) {
+          page = publicPage;
+          state.publicPosts = true;
+          state.webPosts = false;
         }
       }
       if (page === null && this.privateProfileAvailable && (!revealBlocked || replace || !state.webPosts)) {
@@ -734,7 +745,7 @@ export struct UserDetail {
         (result !== null && result.status > 0 ? ' · HTTP ' + result.status : '');
     } else {
       state.posts = ProfileTweetPage.merge(tab, state.posts, page.tweets, replace);
-      state.cursor = page.nextToken === cursor ? '' : page.nextToken;
+      state.cursor = state.publicPosts || page.nextToken === cursor ? '' : page.nextToken;
       state.loaded = true;
     }
     this.notifyActivityChanged();
@@ -767,8 +778,8 @@ export struct UserDetail {
     return 'https://x.com/' + encodeURIComponent(this.authorHandle().substring(1));
   }
 
-  private openWeb(url: string, title: string): void {
-    const param: ProfileWebRouteParam = { url: url, title: title };
+  private openWeb(url: string, title: string, accountSettings: boolean = false): void {
+    const param: ProfileWebRouteParam = { url: url, title: title, accountSettings: accountSettings };
     this.pageStack.pushPath({ name: 'ProfileWeb', param: param });
   }
 
@@ -1142,6 +1153,11 @@ export struct UserDetail {
       const result: XPrivateResult = await xPrivateClient.block(userId, next);
       if (!this.alive || generation !== xPrivateClient.sessionGeneration()) { return; }
       if (!result.ok) {
+        if (!next && (result.status === 403 || result.status === 404 || result.status === 405)) {
+          this.webUnblockViewerId = xPrivateClient.viewerId();
+          this.openWeb(this.profileUrl(), this.text(action), true);
+          return;
+        }
         promptAction.showToast({
           message: this.text($r('app.string.block_failed')) + ' · HTTP ' + result.status,
           duration: 2000
@@ -1163,6 +1179,43 @@ export struct UserDetail {
       // A dismissed confirmation rejects without submitting the change.
     } finally {
       this.blockPending = false;
+    }
+  }
+
+  private async refreshBlockAfterWeb(): Promise<void> {
+    const viewer: string = this.webUnblockViewerId;
+    this.webUnblockViewerId = '';
+    if (viewer.length === 0 || viewer !== xPrivateClient.viewerId()) { return; }
+    const generation: number = xPrivateClient.sessionGeneration();
+    const userId: string = this.resolvedUserId();
+    const result: XPrivateResult = await xPrivateClient.userByRestId(userId, true);
+    if (!this.alive || !result.ok || userId !== this.resolvedUserId() || generation !== xPrivateClient.sessionGeneration()) {
+      return;
+    }
+    const profile: UserProfile | null = XUserParser.parse(result.body);
+    if (profile === null || profile.blocking !== false) { return; }
+    this.profile = profile;
+    this.blocking = false;
+    this.showBlockedPosts = false;
+    this.following = profile.following === true;
+    void this.syncReaderModeration();
+    const tab: number = this.activitySource(this.selectedTab);
+    this.activityPages[tab] = new ProfileActivityPage();
+    void this.loadProfilePage(tab, true);
+  }
+
+  private async revealBlockedProfile(): Promise<void> {
+    this.showBlockedPosts = true;
+    this.postsFilter = 'posts';
+    const state: ProfileActivityPage = new ProfileActivityPage();
+    this.activityPages[0] = state;
+    const generation: number = xPrivateClient.sessionGeneration();
+    const loading: Promise<void> = this.loadProfilePage(0, true);
+    this.selectTab(0);
+    await loading;
+    if (this.alive && this.visible && this.blocking && this.showBlockedPosts && state === this.activityPages[0] &&
+      generation === xPrivateClient.sessionGeneration() && state.posts.length === 0) {
+      this.openWeb(this.profileUrl(), this.authorName(), true);
     }
   }
 
@@ -1749,13 +1802,7 @@ export struct UserDetail {
         if (this.blocking && !this.showBlockedPosts) {
           Button($r('app.string.profile_show_blocked_posts')).fontFamily(this.appFontFamily).fontColor(this.accentColor)
             .backgroundColor(Color.Transparent)
-            .onClick((): void => {
-              this.showBlockedPosts = true;
-              this.postsFilter = 'posts';
-              this.activityPages[0] = new ProfileActivityPage();
-              this.selectTab(0);
-              void this.loadProfilePage(0, true);
-            })
+            .onClick((): void => { void this.revealBlockedProfile(); })
         } else if (this.currentTabLoading(tab)) {
           LoadingProgress().width(26).height(26).color(this.accentColor)
         } else if (this.currentTabStatus(tab).length > 0) {
@@ -1768,10 +1815,11 @@ export struct UserDetail {
         } else if (this.tabPosts(tab).length === 0) {
           Text($r('app.string.profile_activity_empty')).fontFamily(this.appFontFamily).fontSize(15).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
         }
-        if (this.blocking && this.showBlockedPosts && !this.currentTabLoading(tab) && this.tabPosts(tab).length === 0) {
+        if (this.blocking && this.showBlockedPosts && !this.currentTabLoading(tab) &&
+          (this.activityPages[this.activitySource(tab)].publicPosts || this.tabPosts(tab).length === 0)) {
           Button($r('app.string.post_share_open_x')).fontFamily(this.appFontFamily).fontColor(this.accentColor)
             .backgroundColor(Color.Transparent)
-            .onClick((): void => this.openWeb(this.profileUrl(), this.authorName()))
+            .onClick((): void => this.openWeb(this.profileUrl(), this.authorName(), true))
         }
       }
       .width('100%').padding({ top: 24, bottom: 100, left: 20, right: 20 }).constraintSize({ minHeight: 180 })
@@ -1937,6 +1985,8 @@ export struct UserDetail {
     .scale({ x: this.pageMotion.scale, y: this.pageMotion.scale })
     .opacity(this.pageMotion.opacity)
     .onReady((context: NavDestinationContext): void => { this.pageMotion.attach(context); })
+    .onShown((): void => { this.visible = true; void this.refreshBlockAfterWeb(); })
+    .onHidden((): void => { this.visible = false; })
     .systemTransition(pageSystemTransition(this.pageTransitionMode))
     .hideTitleBar(true).hideBackButton(true)
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
