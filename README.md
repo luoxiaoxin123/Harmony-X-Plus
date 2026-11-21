@@ -1,8 +1,12 @@
 <p align="center">
-  <img src="AppScope/resources/base/media/app_icon.png" width="132" alt="Harmony X 应用图标">
+  <img src="AppScope/resources/base/media/app_icon.png" width="132" alt="Harmony X+ 应用图标">
 </p>
 
-<h1 align="center">Harmony X</h1>
+<h1 align="center">Harmony X+</h1>
+
+> 本项目完全开源，0 广告、0 收费、0 会员。赞助完全自愿，赞助不会带来额外功能或特权。
+>
+> App 不向第三方服务器上传设备硬件 ID 或 X Cookie，也没有强制更新接口。X Cookie 用于登录和直接访问 X。
 
 <p align="center">
   面向 HarmonyOS 的原生 X 客户端。<br>
@@ -144,6 +148,6 @@ queryId 会随 X 前端发版轮换，过期的 ID 会返回 400。`server/tools
 
 ## 上游与许可证
 
-Harmony X 基于 [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit) 二次开发。仓库保留 Apache-2.0 许可证及适用的上游署名；本项目的新增内容包括应用身份、视觉系统、本地化界面、OAuth 流程、响应式 UI 优化和文档。
+Harmony X+ 基于 [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit) 二次开发，并参考 [haohaoai0/HarmonyX](https://github.com/haohaoai0/HarmonyX) 的公开发布记录。仓库保留 Apache-2.0 许可证及适用的上游署名。
 
 本项目采用 [Apache-2.0](LICENSE) 许可证。
