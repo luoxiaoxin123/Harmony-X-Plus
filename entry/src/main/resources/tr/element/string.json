@@ -474,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Harmony X giriş modülü"
+      "value": "HarmonyX+ giriş modülü"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Harmony X ana ekranı"
+      "value": "HarmonyX+ ana ekranı"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -490,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Harmony X'e hoş geldiniz"
+      "value": "HarmonyX+'e hoş geldiniz"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · Stage modeli"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · Stage modeli"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Harmony X'e giriş yapın"
+      "value": "HarmonyX+'e giriş yapın"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Giriş yapıldı. Harmony X açılıyor…"
+      "value": "Giriş yapıldı. HarmonyX+ açılıyor…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Harmony X'in içerik görünümünü ayarlayın."
+      "value": "HarmonyX+'in içerik görünümünü ayarlayın."
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Harmony X'in dilini seçin. Değişiklik hemen uygulanır ve sonraki açılışta korunur."
+      "value": "HarmonyX+'in dilini seçin. Değişiklik hemen uygulanır ve sonraki açılışta korunur."
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Harmony X'te sistem dilini kullan."
+      "value": "HarmonyX+'te sistem dilini kullan."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Harmony X simgesini seçin. Ana ekran, uygulama listesi ve son uygulamalar bu simgeyi kullanır."
+      "value": "HarmonyX+ simgesini seçin. Ana ekran, uygulama listesi ve son uygulamalar bu simgeyi kullanır."
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Sistem ayarlarından Harmony X bildirimlerine izin verin"
+      "value": "Sistem ayarlarından HarmonyX+ bildirimlerine izin verin"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "X hesabınızın hassas medya ayarını eşitler ve Harmony X'e uygular."
+      "value": "X hesabınızın hassas medya ayarını eşitler ve HarmonyX+'e uygular."
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Harmony X'e hoş geldiniz"
+      "value": "HarmonyX+'e hoş geldiniz"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Aşağıdaki web sayfasından giriş yapın. Bitince Harmony X otomatik açılır."
+      "value": "Aşağıdaki web sayfasından giriş yapın. Bitince HarmonyX+ otomatik açılır."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Harmony X'i size uygun yapmak için birkaç seçenek."
+      "value": "HarmonyX+'i size uygun yapmak için birkaç seçenek."
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "X hesabınız bağlı. Harmony X'i kullanmaya başlayabilirsiniz."
+      "value": "X hesabınız bağlı. HarmonyX+'i kullanmaya başlayabilirsiniz."
     },
     {
       "name": "onboarding_finish",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "MeoW'u kurup takma adınızı bağlayın. Sürekli çalışan HTTPS aktarıcısı Harmony X kapalıyken X mesaj uyarılarını iletir."
+      "value": "MeoW'u kurup takma adınızı bağlayın. Sürekli çalışan HTTPS aktarıcısı HarmonyX+ kapalıyken X mesaj uyarılarını iletir."
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Cihaz açıldığından beri medya ve istekler dahil gerçek Harmony X trafiği. Yeniden başlatınca sayaçlar sıfırlanır."
+      "value": "Cihaz açıldığından beri medya ve istekler dahil gerçek HarmonyX+ trafiği. Yeniden başlatınca sayaçlar sıfırlanır."
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Filtreler yalnızca Harmony X'i etkiler. Hesap genelindeki sessize almaları Gizlilik ve güvenlik'ten yönetin."
+      "value": "Filtreler yalnızca HarmonyX+'i etkiler. Hesap genelindeki sessize almaları Gizlilik ve güvenlik'ten yönetin."
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "X hesabıyla eşitlenir, Harmony X'teki medyayı ayarlar."
+      "value": "X hesabıyla eşitlenir, HarmonyX+'teki medyayı ayarlar."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X şu an dinleme ve kayıtları destekler. Mikrofon sesi ve konuşma istekleri gönderilmez."
+      "value": "HarmonyX+ şu an dinleme ve kayıtları destekler. Mikrofon sesi ve konuşma istekleri gönderilmez."
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "Her bağlantı Harmony X’i tamamlar."
+      "value": "Her bağlantı HarmonyX+’i tamamlar."
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Sen de Harmony X’in bir parçasısın."
+      "value": "Sen de HarmonyX+’in bir parçasısın."
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Tüm gönderileri göster"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Bildirimlerde mesaj metnini göster"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Kilit ekranı dahil yerel sohbet bildirimlerinde mesaj metnini gösterir."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "Yeni bir mesajınız var"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Yazıyor…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Hisse fiyatı · Veriler gecikmeli olabilir"
     }
   ]
 }

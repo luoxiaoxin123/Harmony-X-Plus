@@ -392,6 +392,7 @@ import {
 import { notificationDeliveryService } from '../services/NotificationDeliveryService';
 import { meowPushService } from '../services/MeowPushService';
 import {
+  notificationSettingsStore,
   STORAGE_KEY_NOTIFICATION_DND_SILENT,
   STORAGE_KEY_SYSTEM_NOTIFICATIONS
 } from '../services/NotificationSettingsStore';
@@ -457,7 +458,6 @@ const SEARCH_PRODUCT_IDS: string[] = ['Top', 'Latest', 'People', 'Media', 'Lists
 const TITLE_BAR_TITLE_SLOT_HEIGHT_VP = 63;
 const TITLE_BAR_LABELS_HOME_HEIGHT_VP = 54;
 const HOME_HEADER_COLLAPSE_DEPTH_VP = 36;
-const HOME_HEADER_COLLAPSE_TRANSLATE_VP = 58;
 // Where each label row starts, measured against the top slot's own top edge.
 // The two rows lay their content out differently, so the offsets that keep
 // them on the baseline they had inside HDS's page-label slot differ too. Both
@@ -887,7 +887,7 @@ struct Index {
   // 显示设置里的两个自动隐藏开关，见 Settings.ets 的 AutoHideSection。
   @StorageLink(STORAGE_KEY_AUTO_HIDE_TITLE_BAR) autoHideTitleBar: boolean = false;
   @StorageLink(STORAGE_KEY_HOME_HEADER_COLLAPSE) @Watch('onHomeHeaderCollapseEnabledChanged')
-  homeHeaderCollapseEnabled: boolean = false;
+  homeHeaderCollapseEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_TITLE_BAR_LOGO) @Watch('onTitleBarLogoChanged')
   titleBarLogoEnabled: boolean = true;
   @StorageProp(STORAGE_KEY_COMPACT_SWITCH_STYLE) compactSwitchStyle: string = COMPACT_SWITCH_TABS;
@@ -3818,7 +3818,9 @@ struct Index {
             row.time = row.time || previous.time;
           }
         });
-        this.publishInbox(context, previews);
+        const deferMessagePreview: boolean = this.inboxPreviewRequest === undefined &&
+          xChatService.isUnlocked() && notificationSettingsStore.loadMessagePreview(context);
+        this.publishInbox(context, previews, deferMessagePreview);
         this.messagesFetchedAt = Date.now();
         this.messagesStatus = '';
         const snapshot: number = ++this.inboxSnapshot;
@@ -3859,11 +3861,11 @@ struct Index {
     }
   }
 
-  private publishInbox(context: common.UIAbilityContext, rows: DirectMessage[]): void {
+  private publishInbox(context: common.UIAbilityContext, rows: DirectMessage[], deferMessagePreview: boolean = false): void {
     xChatActions.applyInboxState(context, rows);
     rows.sort((first: DirectMessage, second: DirectMessage): number => (second.timestampMs ?? 0) - (first.timestampMs ?? 0));
     if (JSON.stringify(this.messages) !== JSON.stringify(rows)) { this.messages = rows; }
-    this.syncMessagesUnread(rows);
+    this.syncMessagesUnread(rows, deferMessagePreview);
   }
 
   private async updateInboxPreviews(context: common.UIAbilityContext, accountId: string, snapshot: number,
@@ -3875,6 +3877,8 @@ struct Index {
         this.publishInbox(context, decrypted);
       }
     } catch (error) {
+      if (generation === this.xPrivate.sessionGeneration() && accountStore.activeId(context) === accountId &&
+        snapshot === this.inboxSnapshot) { this.syncMessagesUnread(this.messages); }
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'inbox previews unavailable');
     }
   }
@@ -4290,14 +4294,15 @@ struct Index {
       this.notificationDndSilent).then((): void => {});
   }
 
-  private syncMessagesUnread(rows: DirectMessage[]): void {
+  private syncMessagesUnread(rows: DirectMessage[], deferMessagePreview: boolean = false): void {
     let unread: number = 0;
     for (let i: number = 0; i < rows.length; i++) {
       unread += Math.max(0, rows[i].unread);
     }
     this.messagesUnread = unread;
     this.unreadMessages = this.chatAlertsEnabled() && this.currentTab !== MESSAGES_TAB_INDEX ? unread : 0;
-    this.syncSystemMessages(rows, unread);
+    this.syncSystemMessages(deferMessagePreview ?
+      rows.filter((row: DirectMessage): boolean => row.preview.length > 0) : rows, unread);
   }
 
   private syncSystemMessages(rows: DirectMessage[], unread: number): void {
@@ -6040,7 +6045,7 @@ struct Index {
       this.scrollDepth = Math.max(0, this.scrollDepth + scrollOffset);
     }
     if (this.currentTab === HOME_TAB_INDEX) {
-      if (!this.useTitleBarLogo() || !this.homeHeaderCollapseEnabled || scrollOffset < 0) {
+      if (!this.homeHeaderCollapseEnabled || scrollOffset < 0) {
         this.setHomeHeaderCollapsed(false);
       } else {
         this.setHomeHeaderCollapsed(this.scrollDepth > HOME_HEADER_COLLAPSE_DEPTH_VP);
@@ -6066,7 +6071,7 @@ struct Index {
   }
 
   private setHomeHeaderCollapsed(collapsed: boolean): void {
-    if (!this.supportsHdsNavigation() || this.homeHeaderCollapsed === collapsed) {
+    if (this.homeHeaderCollapsed === collapsed) {
       return;
     }
     this.getUIContext().animateTo({ duration: 280, curve: Curve.EaseInOut }, (): void => {
@@ -6202,7 +6207,12 @@ struct Index {
       const param: FollowDiscoveryRouteParam = { tab: 0, contextualUserId: '' };
       this.navPathStack.pushPath({ name: 'FollowDiscovery', param: param }); return;
     }
-    if (feature === 'home') { this.selectRootTabPage(HOME_TAB_INDEX); return; }
+    if (feature === 'home') {
+      ResponsiveLayout.closeToMain(this.navPathStack);
+      this.selectRootTabPage(HOME_TAB_INDEX);
+      this.syncDesktopRoute();
+      return;
+    }
     if (feature === 'explore') {
       if (this.bottomBarVisible && !this.isBottomBarPageEnabled(EXPLORE_TAB_INDEX) && !this.isDesktopLayout()) {
         this.showSearchPage();
@@ -6589,6 +6599,7 @@ struct Index {
     // A tab switch lands on a fresh list, so both scrolling chrome surfaces
     // come back together.
     this.setChromeHidden(false);
+    if (changed) { this.setHomeHeaderCollapsed(false); }
     if (changed && index === HOME_TAB_INDEX && this.refreshOnHomeTab && this.navPathStack.size() === 0) {
       this.onRefresh(true);
     }
@@ -7153,7 +7164,7 @@ struct Index {
   }
 
   private desktopHeaderHeight(): number {
-    if (this.currentTab === HOME_TAB_INDEX) { return 56; }
+    if (this.currentTab === HOME_TAB_INDEX) { return this.desktopTitleBarHeight(); }
     if (this.currentTab === EXPLORE_TAB_INDEX) { return this.desktopTitleBarHeight() + this.exploreCategoriesHeight(); }
     if (this.currentTab === MESSAGES_TAB_INDEX) { return 112; }
     if (this.currentTab === NOTIFICATIONS_TAB_INDEX) { return 108; }
@@ -7161,6 +7172,7 @@ struct Index {
   }
 
   private desktopTitleBarHeight(): number {
+    if (this.currentTab === HOME_TAB_INDEX && this.homeHeaderCollapsed) { return 0; }
     return this.currentTab === EXPLORE_TAB_INDEX ? Math.max(56, this.exploreSearchHeight() + 16) : 56;
   }
 
@@ -7850,7 +7862,7 @@ struct Index {
         scroller: this.sidebarScroller,
         sidebarMaterialType: materialType,
         profile: this.profile,
-        fallbackName: this.handleText.length > 1 ? this.handleText.substring(1) : 'Harmony X',
+        fallbackName: this.handleText.length > 1 ? this.handleText.substring(1) : 'HarmonyX+',
         fallbackHandle: this.handleText.length > 0 ? this.handleText : '@harmonyx',
         onClose: (): void => { this.showSideDrawer = false; },
         onProfile: (): void => {
@@ -8476,8 +8488,6 @@ struct Index {
       // margin rather than position: a positioned stack would wrap its content
       // and lose the row height the HDS label slot used to provide.
       .margin({ top: this.titleBarLabelsOffset() })
-      .translate({ y: this.useTitleBarLogo() && this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ?
-        -HOME_HEADER_COLLAPSE_TRANSLATE_VP : 0 })
       .clip(false)
       // 这一层比页签本身高，上方那段空白会压住探索页搜索框的下半部分。Transparent
       // 让空白处不拦触摸、直接透给后面的搜索框，页签按钮仍然自己吃掉点击。
@@ -8504,6 +8514,7 @@ struct Index {
   }
 
   private titleBarLabelsHeight(): number {
+    if (this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed) { return this.homeSpaceHeight(); }
     return RootTitleBarLayout.labelsHeight(this.chromeTab, this.useTitleBarLogo(),
       this.homeSpaceHeight(), this.activeExploreQuery.length > 0,
       this.exploreLayoutDimension($r('app.float.explore_search_categories_gap')));
@@ -8650,7 +8661,10 @@ struct Index {
       }.width(32).height(36).padding(6).margin({ right: 12 }).backgroundColor(Color.Transparent)
         .id('home-manage-timelines').accessibilityText(this.text($r('app.string.timeline_manage')))
         .onClick((): void => this.openTimelineManager())
-    }.width('100%').height(height)
+    }.width('100%').height(this.homeHeaderCollapsed ? 0 : height).clip(this.homeHeaderCollapsed)
+      .opacity(this.homeHeaderCollapsed ? 0 : 1)
+      .hitTestBehavior(this.homeHeaderCollapsed ? HitTestMode.None : HitTestMode.Default)
+      .accessibilityLevel(this.homeHeaderCollapsed ? 'no-hide-descendants' : 'auto')
   }
 
   @Builder
@@ -8754,6 +8768,9 @@ struct Index {
         .height(30)
         .id('current-app-icon-foreground')
         .opacity(this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0 : 1)
+        .scale({ x: this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0.8 : 1,
+          y: this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? 0.8 : 1 })
+        .hitTestBehavior(this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed ? HitTestMode.None : HitTestMode.Default)
         .gesture(
           TapGesture({ count: 2 })
             .onAction((): void => {

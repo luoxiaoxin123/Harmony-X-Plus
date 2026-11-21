@@ -94,7 +94,7 @@ export async function createPushRelay({ publicBase, token, file, deliver = sendM
       cooldown.set(id, now() + 60000); cooldown.set(nickKey, now() + 60000);
       const code = randomInt(100000, 1000000).toString();
       const pendingId = key();
-      await deliver(nickname, { title: 'Harmony X 验证码', msg: `验证码：${code}。5 分钟内有效；请在 Harmony X 通知设置中填写。` });
+      await deliver(nickname, { title: 'HarmonyX+ 验证码', msg: `验证码：${code}。5 分钟内有效；请在 HarmonyX+ 通知设置中填写。` });
       pending.set(id, { pendingId, codeHash: digest(code), nickname, previews: body.previews === true, expires: now() + 300000, attempts: 0 });
       return { pendingId };
     }
@@ -126,7 +126,7 @@ export async function createPushRelay({ publicBase, token, file, deliver = sendM
     if (route === '/v1/meow/test') {
       if (now() - record.lastSendAt < 4000) throw fail(429, 'send_cooldown');
       record.lastSendAt = now();
-      await deliver(record.nickname, { title: 'Harmony X', msg: 'MeoW 测试通知。收到此消息表示中转到 MeoW 正常，X 私信接收仍需真实消息验证。', url: 'https://x.com/messages' });
+      await deliver(record.nickname, { title: 'HarmonyX+', msg: 'MeoW 测试通知。收到此消息表示中转到 MeoW 正常，X 私信接收仍需真实消息验证。', url: 'https://x.com/messages' });
       record.testAt = now(); await save(); return {};
     }
     throw fail(404, 'not_found');

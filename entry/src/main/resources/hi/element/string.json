@@ -474,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Harmony X प्रवेश मॉड्यूल"
+      "value": "HarmonyX+ प्रवेश मॉड्यूल"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Harmony X मुख्य स्क्रीन"
+      "value": "HarmonyX+ मुख्य स्क्रीन"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -490,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Harmony X में स्वागत है"
+      "value": "HarmonyX+ में स्वागत है"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · Stage मॉडल"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · Stage मॉडल"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Harmony X में लॉग इन करें"
+      "value": "HarmonyX+ में लॉग इन करें"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "लॉग इन हो गया। Harmony X खुल रहा है…"
+      "value": "लॉग इन हो गया। HarmonyX+ खुल रहा है…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Harmony X में सामग्री दिखने का तरीका बदलें।"
+      "value": "HarmonyX+ में सामग्री दिखने का तरीका बदलें।"
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Harmony X की भाषा चुनें। बदलाव तुरंत लागू होगा और अगली बार भी यही भाषा रहेगी।"
+      "value": "HarmonyX+ की भाषा चुनें। बदलाव तुरंत लागू होगा और अगली बार भी यही भाषा रहेगी।"
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Harmony X में सिस्टम की भाषा इस्तेमाल करें।"
+      "value": "HarmonyX+ में सिस्टम की भाषा इस्तेमाल करें।"
     },
     {
       "name": "settings_language_zh_cn",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Harmony X का आइकन चुनें। होम स्क्रीन, ऐप सूची और हाल के ऐप में यही दिखेगा।"
+      "value": "HarmonyX+ का आइकन चुनें। होम स्क्रीन, ऐप सूची और हाल के ऐप में यही दिखेगा।"
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "सिस्टम सेटिंग्स में Harmony X की सूचनाओं की अनुमति दें"
+      "value": "सिस्टम सेटिंग्स में HarmonyX+ की सूचनाओं की अनुमति दें"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "X खाते की संवेदनशील मीडिया सेटिंग सिंक करके Harmony X में लागू करें।"
+      "value": "X खाते की संवेदनशील मीडिया सेटिंग सिंक करके HarmonyX+ में लागू करें।"
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Harmony X में स्वागत है"
+      "value": "HarmonyX+ में स्वागत है"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "नीचे के वेब पेज में लॉग इन करें। पूरा होने पर Harmony X अपने आप खुलेगा।"
+      "value": "नीचे के वेब पेज में लॉग इन करें। पूरा होने पर HarmonyX+ अपने आप खुलेगा।"
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Harmony X को अपने हिसाब से बनाने के कुछ विकल्प।"
+      "value": "HarmonyX+ को अपने हिसाब से बनाने के कुछ विकल्प।"
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "आपका X खाता जुड़ा है। अब Harmony X इस्तेमाल कर सकते हैं।"
+      "value": "आपका X खाता जुड़ा है। अब HarmonyX+ इस्तेमाल कर सकते हैं।"
     },
     {
       "name": "onboarding_finish",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "MeoW इंस्टॉल कर अपना उपनाम जोड़ें। हमेशा चालू HTTPS रिले Harmony X बंद होने पर X संदेश अलर्ट भेज सकता है।"
+      "value": "MeoW इंस्टॉल कर अपना उपनाम जोड़ें। हमेशा चालू HTTPS रिले HarmonyX+ बंद होने पर X संदेश अलर्ट भेज सकता है।"
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "डिवाइस चालू होने से अब तक का Harmony X डेटा, मीडिया और अनुरोध समेत। रीबूट पर गिनती फिर शुरू होगी।"
+      "value": "डिवाइस चालू होने से अब तक का HarmonyX+ डेटा, मीडिया और अनुरोध समेत। रीबूट पर गिनती फिर शुरू होगी।"
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "ये फ़िल्टर सिर्फ़ Harmony X पर लागू हैं। खाते भर के म्यूट शब्द और लोग निजता और सुरक्षा में बदलें।"
+      "value": "ये फ़िल्टर सिर्फ़ HarmonyX+ पर लागू हैं। खाते भर के म्यूट शब्द और लोग निजता और सुरक्षा में बदलें।"
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "मौजूदा X खाते से सिंक करके Harmony X का मीडिया बदलता है।"
+      "value": "मौजूदा X खाते से सिंक करके HarmonyX+ का मीडिया बदलता है।"
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X अभी सुनने और रिकॉर्डिंग का सपोर्ट देता है। माइक्रोफ़ोन की आवाज़ और बोलने के अनुरोध नहीं भेजे जाते।"
+      "value": "HarmonyX+ अभी सुनने और रिकॉर्डिंग का सपोर्ट देता है। माइक्रोफ़ोन की आवाज़ और बोलने के अनुरोध नहीं भेजे जाते।"
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "हर मुलाकात Harmony X को और पूरा बनाती है।"
+      "value": "हर मुलाकात HarmonyX+ को और पूरा बनाती है।"
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "आप भी Harmony X का हिस्सा हैं।"
+      "value": "आप भी HarmonyX+ का हिस्सा हैं।"
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "सभी पोस्ट दिखाएँ"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "सूचनाओं में संदेश का टेक्स्ट दिखाएँ"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "लॉक स्क्रीन समेत स्थानीय चैट सूचनाओं में संदेश का टेक्स्ट दिखाएँ।"
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "आपको एक नया संदेश मिला है"
+    },
+    {
+      "name": "chat_typing",
+      "value": "टाइप कर रहे हैं…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "शेयर भाव · डेटा में देरी हो सकती है"
     }
   ]
 }

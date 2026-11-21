@@ -74,7 +74,7 @@
     },
     {
       "name": "eye_reading_unsupported",
-      "value": "系统未向 Harmony X 开放人脸跟踪。华为阅读的眼动翻页支持以华为官方机型清单为准。"
+      "value": "系统未向 HarmonyX+ 开放人脸跟踪。华为阅读的眼动翻页支持以华为官方机型清单为准。"
     },
     {
       "name": "eye_reading_dwell",
@@ -474,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Harmony X 应用入口模块"
+      "value": "HarmonyX+ 应用入口模块"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Harmony X 主界面"
+      "value": "HarmonyX+ 主界面"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -490,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "欢迎来到 Harmony X"
+      "value": "欢迎来到 HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2（API 22-26）· Stage 模型"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2（API 22-26）· Stage 模型"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "登录 Harmony X"
+      "value": "登录 HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "登录成功，正在打开 Harmony X…"
+      "value": "登录成功，正在打开 HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "管理 Harmony X 如何向你显示内容。"
+      "value": "管理 HarmonyX+ 如何向你显示内容。"
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "选择 Harmony X 的界面语言。更改会立即应用，并在下次打开应用时保留。"
+      "value": "选择 HarmonyX+ 的界面语言。更改会立即应用，并在下次打开应用时保留。"
     },
     {
       "name": "settings_language_system",
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "settings_language_zh_cn_desc",
-      "value": "使用简体中文浏览 Harmony X。"
+      "value": "使用简体中文浏览 HarmonyX+。"
     },
     {
       "name": "settings_language_en",
@@ -1546,7 +1546,7 @@
     },
     {
       "name": "settings_language_en_desc",
-      "value": "Use Harmony X in English."
+      "value": "Use HarmonyX+ in English."
     },
     {
       "name": "settings_language_it",
@@ -1554,7 +1554,7 @@
     },
     {
       "name": "settings_language_it_desc",
-      "value": "Usa Harmony X in italiano."
+      "value": "Usa HarmonyX+ in italiano."
     },
     {
       "name": "settings_font_size",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "为 Harmony X 挑一个图标。切换后桌面、应用列表和最近任务里的图标会一起更新。"
+      "value": "为 HarmonyX+ 挑一个图标。切换后桌面、应用列表和最近任务里的图标会一起更新。"
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "请在系统通知设置中允许 Harmony X 发送通知"
+      "value": "请在系统通知设置中允许 HarmonyX+ 发送通知"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "同步 X 账号的敏感媒体显示偏好，并应用到 Harmony X。"
+      "value": "同步 X 账号的敏感媒体显示偏好，并应用到 HarmonyX+。"
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "欢迎使用 Harmony X"
+      "value": "欢迎使用 HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "请在下方网页完成登录；成功后会自动进入 Harmony X。"
+      "value": "请在下方网页完成登录；成功后会自动进入 HarmonyX+。"
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "当前 X 账号已连接，可以直接开始使用 Harmony X。"
+      "value": "当前 X 账号已连接，可以直接开始使用 HarmonyX+。"
     },
     {
       "name": "onboarding_finish",
@@ -4918,7 +4918,7 @@
     },
     {
       "name": "follow_contacts_sdk_unavailable",
-      "value": "暂时无法在 Harmony X 同步本机通讯录。你可以在 X 官方客户端开启通讯录同步，再返回查看推荐。"
+      "value": "暂时无法在 HarmonyX+ 同步本机通讯录。你可以在 X 官方客户端开启通讯录同步，再返回查看推荐。"
     },
     {
       "name": "follow_contacts_open_x",
@@ -6290,7 +6290,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "安装 MeoW 后，在此绑定昵称。配置常驻 HTTPS 中转后，Harmony X 关闭时也可接收 X 发送的私信提醒。"
+      "value": "安装 MeoW 后，在此绑定昵称。配置常驻 HTTPS 中转后，HarmonyX+ 关闭时也可接收 X 发送的私信提醒。"
     },
     {
       "name": "meow_relay_url",
@@ -6594,7 +6594,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "统计 Harmony X 自本次开机以来的实际网络流量，包含媒体和请求。设备重启后重新计数。"
+      "value": "统计 HarmonyX+ 自本次开机以来的实际网络流量，包含媒体和请求。设备重启后重新计数。"
     },
     {
       "name": "storage_network_unavailable",
@@ -6818,7 +6818,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "这些过滤仅影响 Harmony X。X 账号中的静音词语和账号请在隐私与安全中管理。"
+      "value": "这些过滤仅影响 HarmonyX+。X 账号中的静音词语和账号请在隐私与安全中管理。"
     },
     {
       "name": "xsettings_muted_list",
@@ -7266,7 +7266,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "与当前 X 账号同步，也应用于 Harmony X 中的媒体显示。"
+      "value": "与当前 X 账号同步，也应用于 HarmonyX+ 中的媒体显示。"
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8558,7 +8558,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X 当前支持收听与回放，不上传麦克风音频，也不提交发言请求。"
+      "value": "HarmonyX+ 当前支持收听与回放，不上传麦克风音频，也不提交发言请求。"
     },
     {
       "name": "spaces_manage_title",
@@ -9390,7 +9390,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  字体预览  2026"
+      "value": "HarmonyX+  字体预览  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10186,7 +10186,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "每一次相遇，都让 Harmony X 更完整。"
+      "value": "每一次相遇，都让 HarmonyX+ 更完整。"
     },
     {
       "name": "logo_universe_hint",
@@ -10222,7 +10222,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Harmony X，也有你的一部分。"
+      "value": "HarmonyX+，也有你的一部分。"
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "导入失败，请选择有效的 HarmonyX 背景方案（不超过 48 MB）"
+      "value": "导入失败，请选择有效的 HarmonyX+ 背景方案（不超过 48 MB）"
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "无法生成片段，请试试其他起点或长度。"
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "显示所有帖子"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "在通知中显示私信内容"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "在本机私信通知（包括锁屏）中显示消息文字。"
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "你有一条新私信"
+    },
+    {
+      "name": "chat_typing",
+      "value": "正在输入"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "股票行情 · 报价可能延迟"
     }
   ]
 }

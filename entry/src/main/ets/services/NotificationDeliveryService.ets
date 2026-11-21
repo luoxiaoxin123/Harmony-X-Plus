@@ -5,6 +5,7 @@ import { notificationManager } from '@kit.NotificationKit';
 import hilog from '@ohos.hilog';
 import type { AppNotification, DirectMessage } from '../models/Tweet';
 import { accountStore } from './AccountStore';
+import { notificationSettingsStore } from './NotificationSettingsStore';
 
 const DOMAIN = 0xFF00;
 const TAG = 'HarmonyX-Notify';
@@ -214,7 +215,7 @@ export class NotificationDeliveryService {
   private async publishOne(context: common.UIAbilityContext, row: AppNotification,
     unreadCount: number, badgeCount: number, accountId: string): Promise<boolean> {
     try {
-    const title: string = row.authorName.length > 0 ? row.authorName : 'Harmony X';
+    const title: string = row.authorName.length > 0 ? row.authorName : 'HarmonyX+';
     const body: string = row.text.length > 0 ? row.text : row.postText;
     const additional: string = unreadCount > 1 ? unreadCount.toString() + ' unread' : row.time;
     const request: notificationManager.NotificationRequest = {
@@ -249,8 +250,10 @@ export class NotificationDeliveryService {
   private async publishMessageOne(context: common.UIAbilityContext, row: DirectMessage,
     unreadCount: number, badgeCount: number, deliveredId: string, accountId: string): Promise<boolean> {
     try {
-    const title: string = row.from.length > 0 ? row.from : 'Harmony X';
-    const body: string = row.preview.length > 0 ? row.preview : 'New direct message';
+    const agent: WantAgent = await this.createMessagesLaunchAgent(row, deliveredId, accountId);
+    const title: string = row.from.length > 0 ? row.from : 'HarmonyX+';
+    const body: string = row.preview.length > 0 && notificationSettingsStore.loadMessagePreview(context) ? row.preview :
+      context.resourceManager.getStringSync($r('app.string.notification_new_direct_message'));
     const additional: string = unreadCount > 1 ? unreadCount.toString() + ' unread messages' : row.time;
     const request: notificationManager.NotificationRequest = {
       id: this.notificationId(accountId + ':' + deliveredId),
@@ -260,7 +263,7 @@ export class NotificationDeliveryService {
       notificationSlotType: notificationManager.SlotType.SOCIAL_COMMUNICATION,
       tapDismissed: true,
       autoDeletedTime: Date.now() + 172800000,
-      wantAgent: await this.createMessagesLaunchAgent(row, deliveredId, accountId),
+      wantAgent: agent,
       content: {
         notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
         normal: {

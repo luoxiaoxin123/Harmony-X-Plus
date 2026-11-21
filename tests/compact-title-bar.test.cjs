@@ -142,7 +142,7 @@ test('existing installations retain the logo and compact choice survives other a
   assert.equal(f.store.load({}).titleBarLogoAutoContrast, true);
 });
 
-test('title-bar logo uses a transparent X-only default and tints only its alpha mask', () => {
+test('title-bar logo uses matching transparent SVG marks for light and dark modes', () => {
   const logoSource = fs.readFileSync('entry/src/main/ets/components/RootTitleBarLogo.ets', 'utf8');
   const iconSource = fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8');
   assert.match(logoSource, /titleBarLogoForeground\(this\.iconName\)/);
@@ -150,9 +150,12 @@ test('title-bar logo uses a transparent X-only default and tints only its alpha 
   assert.match(logoSource, /APP_ICON_X_BLACK/);
   assert.match(logoSource, /APP_ICON_X_WHITE/);
   assert.match(logoSource, /if \(this\.shouldTintX\(\)\)/);
-  assert.match(logoSource, /0, 0, 0, ink\.red \/ 255, 0/);
-  assert.match(iconSource, /if \(name === APP_ICON_DEFAULT\) \{\s*return \$r\('app\.media\.title_bar_logo_foreground'\);/);
-  assert.ok(fs.existsSync('entry/src/main/resources/base/media/title_bar_logo_foreground.png'));
+  assert.match(logoSource, /titleBarLogoForeground\(this\.isDarkMode\(\) \? APP_ICON_X_WHITE : APP_ICON_X_BLACK\)/);
+  assert.match(iconSource, /if \(name === APP_ICON_DEFAULT \|\| name === APP_ICON_X_BLACK\) \{\s*return \$r\('app\.media\.title_bar_logo_foreground'\);/);
+  const dark = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_foreground.svg', 'utf8');
+  const light = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_white.svg', 'utf8');
+  assert.match(dark, /<path d="[^"]+" fill="#000000"/);
+  assert.equal(dark.replace('fill="#000000"', 'fill="white"'), light);
 });
 
 test('special icon foregrounds bypass the X-only monochrome filter', () => {

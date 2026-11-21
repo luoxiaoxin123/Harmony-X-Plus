@@ -33,7 +33,6 @@ struct About {
   @StorageProp('harmonyx.status_bar_height') private statusBarHeight: number = 0;
   @StorageProp('harmonyx.navigation_indicator_height') private navigationIndicatorHeight: number = 0;
   @State private versionName: string = '';
-  @State private buildNumber: string = '';
   @State private developer: string = '';
   @State private linkFailed: boolean = false;
   private scroller: Scroller = new Scroller();
@@ -43,7 +42,6 @@ struct About {
       const info: bundleManager.BundleInfo = bundleManager.getBundleInfoForSelfSync(
         bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION);
       this.versionName = info.versionName;
-      this.buildNumber = info.versionCode.toString();
       this.developer = info.vendor;
     } catch (error) {
       // Keep an explicit unavailable state instead of showing an old resource version.
@@ -208,7 +206,6 @@ struct About {
           this.Introduction()
           Column({ space: $r('app.float.about_row_gap') }) {
             this.MetadataRow($r('app.string.about_version'), this.versionName)
-            this.MetadataRow($r('app.string.about_build'), this.buildNumber)
             this.MetadataRow($r('app.string.about_developer'), this.developer)
           }
           .width('100%')

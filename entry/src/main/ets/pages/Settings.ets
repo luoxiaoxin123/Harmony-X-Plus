@@ -238,6 +238,7 @@ import { materialModifier } from '../utils/SystemMaterial';
 import {
   notificationSettingsStore,
   STORAGE_KEY_NOTIFICATION_DND_SILENT,
+  STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW,
   STORAGE_KEY_SYSTEM_NOTIFICATIONS
 } from '../services/NotificationSettingsStore';
 import {
@@ -627,7 +628,7 @@ export struct SettingsSection {
   @StorageLink(STORAGE_KEY_ROOT_LIQUID_TAB_INDICATOR_ENABLED) rootLiquidTabIndicatorEnabled: boolean = false;
   @StorageLink(STORAGE_KEY_ROOT_TAB_GRADIENT_MASK_ENABLED) rootTabGradientMaskEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_AUTO_HIDE_FAB) autoHideFab: boolean = true;
-  @StorageLink(STORAGE_KEY_HOME_HEADER_COLLAPSE) homeHeaderCollapseEnabled: boolean = false;
+  @StorageLink(STORAGE_KEY_HOME_HEADER_COLLAPSE) homeHeaderCollapseEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_TITLE_BAR_LOGO) titleBarLogoEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_TITLE_BAR_LOGO_AUTO_CONTRAST) titleBarLogoAutoContrast: boolean = true;
   @StorageLink(STORAGE_KEY_COMPACT_SWITCH_STYLE) compactSwitchStyle: string = COMPACT_SWITCH_TABS;
@@ -701,6 +702,7 @@ export struct SettingsSection {
   @State private onlyChatPush: boolean = false;
   @StorageLink(STORAGE_KEY_SYSTEM_NOTIFICATIONS) systemNotificationsEnabled: boolean = true;
   @StorageLink(STORAGE_KEY_NOTIFICATION_DND_SILENT) notificationDndSilent: boolean = true;
+  @StorageLink(STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW) private messageNotificationPreview: boolean = false;
   @StorageProp(STORAGE_KEY_SPACE_TONES) private spaceTones: boolean = false;
   @StorageProp(STORAGE_KEY_POST_SWIPE_LEFT) private postSwipeLeft: number = 0;
   @StorageProp(STORAGE_KEY_POST_SWIPE_RIGHT) private postSwipeRight: number = 0;
@@ -4221,6 +4223,12 @@ export struct SettingsSection {
         this.SettingsSwitchRow($r('app.string.settings_system_notifications'),
           $r('app.string.settings_system_notifications_desc'), this.systemNotificationsEnabled,
           (value: boolean): void => this.setSystemNotificationsEnabled(value))
+        this.SettingsSwitchRow($r('app.string.settings_message_notification_preview'),
+          $r('app.string.settings_message_notification_preview_desc'), this.messageNotificationPreview,
+          (value: boolean): void => {
+            const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+            if (notificationSettingsStore.saveMessagePreview(context, value)) { this.messageNotificationPreview = value; }
+          })
         this.SettingsSwitchRow($r('app.string.settings_notification_dnd_silent'),
           $r('app.string.settings_notification_dnd_silent_desc'), this.notificationDndSilent,
           (value: boolean): void => this.setNotificationDndSilent(value))
@@ -4549,7 +4557,12 @@ export struct SettingsSection {
         Toggle({ type: ToggleType.Switch, isOn: this.translationReplaceOriginal })
           .selectedColor(mixedAccentRoleColor(this.accentTheme, 'control', this.accentColor))
           .onChange((value: boolean): void => {
+            if (value === this.translationReplaceOriginal) { return; }
             this.translationReplaceOriginal = value;
+            if (!translationStore.saveReplaceOriginal(getContext(this) as common.UIAbilityContext, value)) {
+              this.translationReplaceOriginal = !value;
+              promptAction.showToast({ message: this.text($r('app.string.settings_translation_save_failed')) });
+            }
           })
       }
       .width('100%')

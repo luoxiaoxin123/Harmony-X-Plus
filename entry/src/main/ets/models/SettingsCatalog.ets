@@ -674,6 +674,8 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
       $r('app.string.settings_system_notifications_desc'),
       $r('app.string.settings_notification_dnd_silent'),
       $r('app.string.settings_notification_dnd_silent_desc'),
+      $r('app.string.settings_message_notification_preview'),
+      $r('app.string.settings_message_notification_preview_desc'),
       $r('app.string.settings_notification_system_settings'),
       $r('app.string.settings_notification_system_settings_desc')
     ])

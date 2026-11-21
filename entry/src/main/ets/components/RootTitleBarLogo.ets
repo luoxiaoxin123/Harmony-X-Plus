@@ -1,4 +1,3 @@
-import { ColorMetrics } from '@kit.ArkUI';
 import {
   APP_ICON_DEFAULT,
   APP_ICON_X_BLACK,
@@ -24,17 +23,10 @@ export struct RootTitleBarLogo {
       this.iconName === APP_ICON_X_BLACK || this.iconName === APP_ICON_X_WHITE);
   }
 
-  private filter(): ColorFilter {
-    const inkColor: ResourceColor = this.isDarkMode() ? Color.White : Color.Black;
-    const ink: ColorMetrics = ColorMetrics.resourceColor(inkColor);
-    return new ColorFilter([0, 0, 0, ink.red / 255, 0, 0, 0, 0, ink.green / 255, 0,
-      0, 0, 0, ink.blue / 255, 0, 0, 0, 0, 1, 0]);
-  }
-
   build(): void {
     if (this.shouldTintX()) {
-      Image(titleBarLogoForeground(this.iconName)).width(30).height(30).objectFit(ImageFit.Contain)
-        .colorFilter(this.filter());
+      Image(titleBarLogoForeground(this.isDarkMode() ? APP_ICON_X_WHITE : APP_ICON_X_BLACK))
+        .width(30).height(30).objectFit(ImageFit.Contain);
     } else {
       Image(titleBarLogoForeground(this.iconName)).width(30).height(30).objectFit(ImageFit.Contain);
     }

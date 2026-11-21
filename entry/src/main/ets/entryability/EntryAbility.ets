@@ -106,6 +106,7 @@ import {
   notificationSettingsStore,
   STORAGE_KEY_NOTIFICATION_ALERTS,
   STORAGE_KEY_NOTIFICATION_DND_SILENT,
+  STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW,
   STORAGE_KEY_SYSTEM_NOTIFICATIONS
 } from '../services/NotificationSettingsStore';
 import {
@@ -344,6 +345,8 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_SYSTEM_NOTIFICATIONS, systemNotifications);
     const dndSilent: boolean = notificationSettingsStore.loadDndSilentEnabled(this.context);
     AppStorage.setOrCreate<boolean>(STORAGE_KEY_NOTIFICATION_DND_SILENT, dndSilent);
+    AppStorage.setOrCreate<boolean>(STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW,
+      notificationSettingsStore.loadMessagePreview(this.context));
     postDisplaySettingsStore.loadLayoutSettings(this.context);
     timelineSettingsStore.loadPostSwipeSettings(this.context);
     const defaultHomeFeed: number = timelineSettingsStore.loadDefaultHomeFeed(this.context);

@@ -321,6 +321,8 @@ impl Session {
                         Event::ReadReceipt(r) => Some(json!({"type": "read", "conversationId": r.meta.conversation_id,
                             "id": r.meta.id, "sequenceId": r.meta.sequence_id,
                             "senderId": r.meta.sender_id, "seenUntilId": r.seen_until_sequence_id, "verified": r.verified})),
+                        Event::Typing(t) => Some(json!({"type": "typing", "conversationId": t.meta.conversation_id,
+                            "senderId": t.meta.sender_id, "timestampMs": t.meta.created_at_msec})),
                         Event::SettingsChange(s) => Some(json!({"type": "settings", "event": s,
                             "conversationId": s.meta.conversation_id})),
                         _ => None,

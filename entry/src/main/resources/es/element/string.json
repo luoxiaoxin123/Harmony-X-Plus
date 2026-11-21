@@ -474,23 +474,23 @@
     },
     {
       "name": "module_desc",
-      "value": "Módulo principal de Harmony X"
+      "value": "Módulo principal de HarmonyX+"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Pantalla principal de Harmony X"
+      "value": "Pantalla principal de HarmonyX+"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
-      "value": "Abrir enlaces, fotos y vídeos en Harmony X"
+      "value": "Abrir enlaces, fotos y vídeos en HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Te damos la bienvenida a Harmony X"
+      "value": "Te damos la bienvenida a HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · modelo Stage"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · modelo Stage"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Iniciar sesión en Harmony X"
+      "value": "Iniciar sesión en HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Sesión iniciada. Abriendo Harmony X…"
+      "value": "Sesión iniciada. Abriendo HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Ajusta cómo se muestra el contenido en Harmony X."
+      "value": "Ajusta cómo se muestra el contenido en HarmonyX+."
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Elige el idioma de Harmony X. Los cambios se aplican al momento y se conservan al volver a abrir la app."
+      "value": "Elige el idioma de HarmonyX+. Los cambios se aplican al momento y se conservan al volver a abrir la app."
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Usar el idioma del sistema en Harmony X."
+      "value": "Usar el idioma del sistema en HarmonyX+."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "settings_language_zh_cn_desc",
-      "value": "Usar Harmony X en chino simplificado."
+      "value": "Usar HarmonyX+ en chino simplificado."
     },
     {
       "name": "settings_language_en",
@@ -1546,7 +1546,7 @@
     },
     {
       "name": "settings_language_en_desc",
-      "value": "Usar Harmony X en inglés."
+      "value": "Usar HarmonyX+ en inglés."
     },
     {
       "name": "settings_language_it",
@@ -1554,7 +1554,7 @@
     },
     {
       "name": "settings_language_it_desc",
-      "value": "Usa Harmony X in italiano."
+      "value": "Usa HarmonyX+ in italiano."
     },
     {
       "name": "settings_font_size",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Elige un icono para Harmony X. Se usará en la pantalla de inicio, la lista de apps y las apps recientes."
+      "value": "Elige un icono para HarmonyX+. Se usará en la pantalla de inicio, la lista de apps y las apps recientes."
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Permite las notificaciones de Harmony X en los ajustes del sistema"
+      "value": "Permite las notificaciones de HarmonyX+ en los ajustes del sistema"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "Sincroniza la preferencia de medios sensibles de tu cuenta de X y la aplica en Harmony X."
+      "value": "Sincroniza la preferencia de medios sensibles de tu cuenta de X y la aplica en HarmonyX+."
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Te damos la bienvenida a Harmony X"
+      "value": "Te damos la bienvenida a HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Inicia sesión en la página de abajo. Harmony X se abrirá automáticamente al terminar."
+      "value": "Inicia sesión en la página de abajo. HarmonyX+ se abrirá automáticamente al terminar."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Algunas opciones para adaptar Harmony X a tus preferencias."
+      "value": "Algunas opciones para adaptar HarmonyX+ a tus preferencias."
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "Tu cuenta de X está conectada. Ya puedes usar Harmony X."
+      "value": "Tu cuenta de X está conectada. Ya puedes usar HarmonyX+."
     },
     {
       "name": "onboarding_finish",
@@ -4918,7 +4918,7 @@
     },
     {
       "name": "follow_contacts_sdk_unavailable",
-      "value": "Harmony X aún no puede sincronizar los contactos del dispositivo. Sincronízalos en la app oficial de X y vuelve a ver las sugerencias."
+      "value": "HarmonyX+ aún no puede sincronizar los contactos del dispositivo. Sincronízalos en la app oficial de X y vuelve a ver las sugerencias."
     },
     {
       "name": "follow_contacts_open_x",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "Instala MeoW y vincula aquí tu apodo. Un relay HTTPS siempre activo puede reenviar alertas de mensajes de X con Harmony X cerrado."
+      "value": "Instala MeoW y vincula aquí tu apodo. Un relay HTTPS siempre activo puede reenviar alertas de mensajes de X con HarmonyX+ cerrado."
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Tráfico real de Harmony X desde el último arranque, incluidos medios y solicitudes. Los contadores se reinician al arrancar."
+      "value": "Tráfico real de HarmonyX+ desde el último arranque, incluidos medios y solicitudes. Los contadores se reinician al arrancar."
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Estos filtros solo afectan a Harmony X. Gestiona palabras y cuentas silenciadas en todo X en Privacidad y seguridad."
+      "value": "Estos filtros solo afectan a HarmonyX+. Gestiona palabras y cuentas silenciadas en todo X en Privacidad y seguridad."
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "Se sincroniza con tu cuenta actual de X y controla los medios en Harmony X."
+      "value": "Se sincroniza con tu cuenta actual de X y controla los medios en HarmonyX+."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X permite escuchar y reproducir grabaciones. No envía audio del micrófono ni solicitudes para hablar."
+      "value": "HarmonyX+ permite escuchar y reproducir grabaciones. No envía audio del micrófono ni solicitudes para hablar."
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "Cada conexión hace Harmony X más completo."
+      "value": "Cada conexión hace HarmonyX+ más completo."
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Tú formas parte de Harmony X."
+      "value": "Tú formas parte de HarmonyX+."
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Mostrar todas las publicaciones"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Mostrar el texto del mensaje en las notificaciones"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Muestra el texto del mensaje en las notificaciones locales de chat, incluida la pantalla de bloqueo."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "Tienes un mensaje nuevo"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Escribiendo…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Cotización · Los datos pueden tener retraso"
     }
   ]
 }
