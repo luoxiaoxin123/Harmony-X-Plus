@@ -30,7 +30,7 @@
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
         "description": "$string:EntryAbility_desc",
-        "icon": "$media:layered_image",
+        "icon": "$media:app_icon",
         "label": "$string:EntryAbility_label",
         "startWindowIcon": "$media:start_window_empty",
         "startWindowBackground": "$color:start_window_background",
@@ -131,7 +131,7 @@
         "type": "share",
         "description": "$string:ShareReceiverAbility_desc",
         "label": "$string:ShareReceiverAbility_label",
-        "icon": "$media:layered_image",
+        "icon": "$media:app_icon",
         "exported": true,
         "skills": [
           {

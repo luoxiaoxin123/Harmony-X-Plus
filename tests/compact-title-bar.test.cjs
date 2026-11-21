@@ -71,7 +71,7 @@ test('home Space recommendations remain below the compact identity row without a
   assert.equal(layout.bottomHeight(0, false, false, 60, false), 72);
   assert.equal(layout.labelsHeight(0, false, 60, false), 60);
   assert.equal(layout.contentTopInset(0, false, 32, false, 60), 168);
-  assert.equal(layout.bottomHeight(0, true, true, 60, false), 72);
+  assert.equal(layout.bottomHeight(0, true, true, 60, false), 0);
   assert.equal(layout.labelsHeight(0, true, 60, false), 114);
 });
 
@@ -80,7 +80,7 @@ test('feed avoidance follows the visible controls in both settings', () => {
     assert.equal(layout.contentTopInset(tab, false, 32, false, 0), 108);
   }
   assert.equal(layout.contentTopInset(0, true, 32, false, 0), 136);
-  assert.equal(layout.contentTopInset(0, true, 32, true, 0), 108);
+  assert.equal(layout.contentTopInset(0, true, 32, true, 0), 40);
   assert.equal(layout.contentTopInset(2, true, 32, false, 0), 148);
   assert.equal(layout.contentTopInset(3, true, 32, false, 0), 144);
   assert.equal(layout.contentTopInset(1, true, 32, false, 0) -
@@ -96,8 +96,7 @@ test('large-screen content starts below the full page indicator and Space capsul
       assert.ok(layout.contentTopInset(tab, logo, status, false, space, 8) >= edge + 8,
         `Tab ${tab}, logo ${logo}, status ${status}, Space ${space}`);
     }
-    // The translated Home tabs remain compact after scrolling.
-    assert.equal(layout.contentTopInset(0, true, status, true, 0, 8), status + 76);
+    assert.equal(layout.contentTopInset(0, true, status, true, 0, 8), status + 8);
     for (const tab of [0, 2, 3, 4]) {
       assert.equal(layout.contentTopInset(tab, false, status, false, 0, 8), status + 76);
     }

@@ -2362,7 +2362,7 @@ struct Index {
   private titleBarStyle(): TitleBarStyleOptions {
     const style: TitleBarStyleOptions = rootTitleBarStyle(this.displayMode, this.darkSurface,
       this.titleBarStyleMode, this.isDesktopLayout());
-    if (this.currentTab === ME_TAB_INDEX) {
+    if (this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed()) {
       style.scrollEffectOpts = { enableScrollEffect: false };
       style.originalStyle = { backgroundStyle: { backgroundColor: Color.Transparent },
         contentStyle: style.originalStyle?.contentStyle };
@@ -2558,8 +2558,12 @@ struct Index {
   // Same structure as the Yunshang reference: scrolling drives one shared
   // chrome state, and HdsNavigation owns the title-bar inset animation.
   private titleBarShouldHide(): boolean {
-    return this.currentTab === ME_TAB_INDEX ||
+    return this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed() ||
       (this.titleBarHidden && (this.autoHideTitleBar || this.compactWindow) && !this.isDesktopLayout());
+  }
+
+  private homeTitleBarCollapsed(): boolean {
+    return this.currentTab === HOME_TAB_INDEX && this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed;
   }
 
   private titleBarDynamicHideParams(): DynamicHideParams {
@@ -7477,7 +7481,7 @@ struct Index {
       .titleBar(this.rootTitleBarOptions())
       .systemBarStyle(this.rootSystemBarStyle(), this.rootSystemBarStyle())
       .titleMode(HdsNavigationTitleMode.MINI)
-      .hideTitleBar(this.currentTab === ME_TAB_INDEX)
+      .hideTitleBar(this.currentTab === ME_TAB_INDEX || this.homeTitleBarCollapsed())
       .mode(this.mainNavigationMode)
       .enableModeChangeAnimation(!this.isDesktopLayout() || this.currentTab !== MESSAGES_TAB_INDEX)
       .navBarWidth(this.isDesktopLayout() ? 360 : 480)
@@ -8514,7 +8518,7 @@ struct Index {
   }
 
   private titleBarLabelsHeight(): number {
-    if (this.chromeTab === HOME_TAB_INDEX && this.homeHeaderCollapsed) { return this.homeSpaceHeight(); }
+    if (this.homeTitleBarCollapsed()) { return 0; }
     return RootTitleBarLayout.labelsHeight(this.chromeTab, this.useTitleBarLogo(),
       this.homeSpaceHeight(), this.activeExploreQuery.length > 0,
       this.exploreLayoutDimension($r('app.float.explore_search_categories_gap')));
@@ -8542,7 +8546,8 @@ struct Index {
   private TitleBarMaterialLayer(): void {
     // 只有"玻璃材质"这一档才挂我们自制的这块玻璃面板；另外两档完全交给 HDS
     // 自己的标题栏样式，所以这里连背景都不留。
-    if (this.chromeTab !== ME_TAB_INDEX && customTitleBarGlassEnabled(this.titleBarStyleMode)) {
+    if (this.chromeTab !== ME_TAB_INDEX && !this.homeTitleBarCollapsed() &&
+      customTitleBarGlassEnabled(this.titleBarStyleMode)) {
       if (this.supportsImmersiveMaterial()) {
         Column()
           // Size and place the surface by hand: it is oversized on the top, left
@@ -8791,6 +8796,9 @@ struct Index {
     .width('100%')
     .height(this.useTitleBarLogo() ? 36 : $r('app.float.title_bar_compact_row_height'))
     .translate({ y: this.titleBarIdentityOffset() })
+    .opacity(this.homeTitleBarCollapsed() ? 0 : 1)
+    .hitTestBehavior(this.homeTitleBarCollapsed() ? HitTestMode.None : HitTestMode.Default)
+    .accessibilityLevel(this.homeTitleBarCollapsed() ? 'no-hide-descendants' : 'auto')
     .id('harmonyx-root-identity-row')
     .onAreaChange((_oldValue: Area, newValue: Area): void => { this.captureExploreTitleIdentity(newValue); })
   }

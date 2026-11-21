@@ -12,7 +12,7 @@ export class RootTitleBarLayout {
     const extra: number = logo ? 0 : COMPACT_TITLE_BAR_EXTRA_HEIGHT_VP;
     // Match the visible Home tab row so its bottom-aligned indicator remains
     // inside the title-bar surface instead of extending past that boundary.
-    if (tab === 0) { return (logo ? (collapsed ? 12 : 54) : 0) + spaceHeight + extra; }
+    if (tab === 0) { return collapsed ? 0 : (logo ? 54 : 0) + spaceHeight + extra; }
     if (tab === 1) { return (exploreHasQuery ? 0 : (logo ? 96 + exploreCategoryGap : 52)) + extra; }
     if (tab === 2) { return logo ? 52 : extra; }
     if (tab === 3) { return logo ? 56 : extra; }
@@ -36,9 +36,10 @@ export class RootTitleBarLayout {
 
   static contentTopInset(tab: number, logo: boolean, statusHeight: number,
     collapsed: boolean, spaceHeight: number, labelsClearance: number = 0, exploreCategoryGap: number = 4): number {
+    if (tab === 0 && collapsed) { return statusHeight + 8; }
     const extra: number = logo ? 0 : COMPACT_TITLE_BAR_EXTRA_HEIGHT_VP;
     let inset: number = statusHeight + 64 + extra;
-    if (tab === 0) { inset = statusHeight + (logo ? (collapsed ? 76 : 104) : 64) + spaceHeight + extra; }
+    if (tab === 0) { inset = statusHeight + (logo ? 104 : 64) + spaceHeight + extra; }
     else if (tab === 1) { inset = logo ? 174 + exploreCategoryGap : 130 + extra; }
     else if (tab === 2) { inset = statusHeight + (logo ? 116 : 64) + extra; }
     else if (tab === 3) { inset = statusHeight + (logo ? 112 : 64) + extra; }
@@ -46,9 +47,8 @@ export class RootTitleBarLayout {
     if (labelsClearance > 0 && labelsHeight > 0) {
       // Home's expanded labels overflow the native lower slot. Clear the
       // actual label edge, including its underline, rather than that slot.
-      const collapseOffset: number = tab === 0 && logo && collapsed ? 58 : 0;
       const labelsBottom: number = (tab === 1 ? 0 : statusHeight) +
-        RootTitleBarLayout.labelsOffset(tab, logo) + labelsHeight - collapseOffset;
+        RootTitleBarLayout.labelsOffset(tab, logo) + labelsHeight;
       inset = Math.max(inset, labelsBottom + labelsClearance);
     }
     return inset;

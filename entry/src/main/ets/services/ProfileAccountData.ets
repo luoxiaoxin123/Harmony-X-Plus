@@ -6,6 +6,7 @@ export class ProfileActivityPage {
   loaded: boolean = false;
   loading: boolean = false;
   status: string = '';
+  webPosts: boolean = false;
 }
 
 export class AccountAbout {

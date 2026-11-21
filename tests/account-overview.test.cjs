@@ -108,7 +108,7 @@ test('cover pull stretches below the anchored top without changing layout height
   assert.equal(cover.pullScale(), 1);
 });
 
-test('Me title disables blur and material in every saved appearance mode without changing other tabs', () => {
+test('Me and collapsed Home disable blur and material in every saved appearance mode', () => {
   const Root = loadMethod('pages/Index', 'Index', 'titleBarStyle', {
     ME_TAB_INDEX: 4, Color: { Transparent: 'transparent' },
     deviceInfo: { apiAvailable: () => true },
@@ -117,7 +117,9 @@ test('Me title disables blur and material in every saved appearance mode without
       originalStyle: { contentStyle: { test: 'colors' } }, systemMaterialEffect: { materialType: 101 } })
   });
   for (const mode of [0, 1, 2, 3]) {
-    const root = Object.assign(new Root(), { currentTab: 4, titleBarStyleMode: mode, isDesktopLayout: () => false });
+    let collapsed = false;
+    const root = Object.assign(new Root(), { currentTab: 4, titleBarStyleMode: mode,
+      isDesktopLayout: () => false, homeTitleBarCollapsed: () => collapsed });
     const style = root.titleBarStyle();
     assert.equal(style.scrollEffectOpts.enableScrollEffect, false);
     assert.equal(style.systemMaterialEffect.materialType, 0);
@@ -125,5 +127,8 @@ test('Me title disables blur and material in every saved appearance mode without
     assert.equal(style.originalStyle.contentStyle.test, 'colors');
     root.currentTab = 0;
     assert.equal(root.titleBarStyle().scrollEffectOpts.enableScrollEffect, true);
+    collapsed = true;
+    assert.equal(root.titleBarStyle().scrollEffectOpts.enableScrollEffect, false);
+    assert.equal(root.titleBarStyle().systemMaterialEffect.materialType, 0);
   }
 });

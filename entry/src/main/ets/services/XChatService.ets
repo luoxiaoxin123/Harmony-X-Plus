@@ -775,6 +775,8 @@ export class XChatService {
       if (message === undefined ||
         XChatService.compareIds(message.sequenceId ?? '', rows[i].latestSequenceId ?? '') < 0) { continue; }
       rows[i].preview = message.text.length > 0 ? message.text : context.resourceManager.getStringSync(
+        (message.attachments ?? []).some((attachment: DmAttachment): boolean => attachment.type.toLowerCase() === 'post') ?
+          $r('app.string.profile_detail_posts') :
         ChatMovingPhotoProtocol.group(message.attachments ?? []).some((item: ChatMediaItem): boolean => item.video !== undefined) ?
           $r('app.string.chat_moving_photo') : (message.attachments?.[0]?.mediaType ?? 5) === 4 ? $r('app.string.chat_voice_messages') :
           (message.attachments?.[0]?.mediaType ?? 5) === 3 ? $r('app.string.chat_video') :

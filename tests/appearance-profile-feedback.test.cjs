@@ -29,7 +29,7 @@ function profileMethods(){
 test('likes appear only on the viewers own profile and use the paged likes endpoint',async()=>{
   const calls=[];
   const {Harness}=compile('export class Harness {\n'+profileMethods()+'\n}',{
-    xPrivateClient:{userLikes:async(id,cursor,count)=>{calls.push([id,cursor,count]);return {ok:true,body:''};}},
+    xPrivateClient:{sessionGeneration:()=>1,userLikes:async(id,cursor,count)=>{calls.push([id,cursor,count]);return {ok:true,body:''};}},
     XTimelineParser:{parse:()=>({tweets:[{id:'like'}],nextToken:'next'})},authStore:{isSignedIn:()=>false},
     ProfileTweetPage:{merge:(_tab,previous,next,replace)=>replace?next:[...previous,...next]}});
   const profile=Object.assign(new Harness(),{isSelfProfile:true,activityTabOrder:[0,1,3,2,4],privateProfileAvailable:true,
