@@ -18,7 +18,8 @@ const tree = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, tru
 const root = tree.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'Index');
 const names = ['exploreContentTopInset', 'rootTitleBarBottomHeight', 'captureExploreTitleContent', 'captureExploreContentTop',
   'captureTitleBarSurfaceBottom', 'exploreSearchHeight', 'exploreSearchRadius', 'exploreTitleContentHeight', 'exploreCategoriesHeight',
-  'desktopTitleBarHeight', 'desktopHeaderHeight', 'exploreTitleContentOffset', 'captureExploreTitleIdentity', 'useTitleBarLogo'];
+  'desktopTitleBarHeight', 'desktopHeaderHeight', 'exploreTitleContentOffset', 'captureExploreTitleIdentity',
+  'useTitleBarLogo', 'homeTitleBarParked'];
 const methods = names.map(name => root.members.find(node => node.name && node.name.getText(tree) === name).getText(tree));
 const output = ts.transpileModule(`class Root { ${methods.join('\n')} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2020 }

@@ -1705,21 +1705,28 @@ export class XPrivateClient {
     return this.graphql('user_with_profile_tweets_query_v2', variables);
   }
 
-  userOriginalsWeb(userId: string, cursor: string, count: number): Promise<XPrivateResult> {
+  userOriginalsWeb(screenName: string, cursor: string, count: number): Promise<XPrivateResult> {
     const name: string = 'UserOriginalsTimeline';
-    if (!this.session.isUsable() || !/^\d+$/.test(userId)) {
+    if (!this.session.isUsable() || !/^[A-Za-z0-9_]{1,15}$/.test(screenName)) {
       return Promise.resolve(new XPrivateResult(false, 0, '', 'invalid_profile', name));
     }
-    const operation: PostContentOperation = postContentOperation(name);
-    const variables: Record<string, Object> = {
-      'userId': userId, 'count': count, 'includePromotedContent': false,
-      'withQuickPromoteEligibilityTweetFields': false, 'withVoice': true
+    // These Relay-provided variables are part of the current X profile page's
+    // request. The old profile operation took a numeric ID and feature toggles.
+    const variables: Record<string, Object | null> = {
+      'screenName': screenName, 'count': count, 'cursor': cursor.length > 0 ? cursor : null,
+      'sortByMostLiked': null,
+      '__relay_internal__pv__liveeventpostcontextenabledrelayprovider': true,
+      '__relay_internal__pv__postctafetchenabledrelayprovider': true,
+      '__relay_internal__pv__replydownvoteenabledrelayprovider': false,
+      '__relay_internal__pv__timelineuserbioautotranslationrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturesappviewerisloggedinrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestranslationgroktranslatedpostenabledrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestranslationnoteautotranslationenabledrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestweetcomponentsgrokanalyzepostrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestweetsportspostcontextenabledrelayprovider': true
     };
-    if (cursor.length > 0) { variables['cursor'] = cursor; }
-    const query: string = '?variables=' + encodeURIComponent(JSON.stringify(variables)) +
-      '&features=' + encodeURIComponent(JSON.stringify(operation.features)) +
-      '&fieldToggles=' + encodeURIComponent(JSON.stringify(operation.toggles));
-    return this.send('GET', WEB_GRAPHQL_BASE + '/' + operation.id + '/' + name + query,
+    const query: string = '?variables=' + encodeURIComponent(JSON.stringify(variables));
+    return this.send('GET', GRAPHQL_BASE + '/UPo7Ggh7GexyQ79kedHoDw/' + name + query,
       '', GRAPHQL_ACCEPT, name, '', true, '', this.sessionGeneration());
   }
 
@@ -3617,13 +3624,12 @@ export class XPrivateClient {
     }
     const generation: number = this.sessionGeneration();
     const form: string = 'user_id=' + userId;
-    const primary: string = blocking ? REST_BASE : 'https://x.com/i/api';
+    const primary: string = blocking ? REST_BASE : 'https://api.x.com';
     const result: XPrivateResult = await this.send('POST', primary + path, form, 'application/json',
-      path, 'application/x-www-form-urlencoded', false, '', generation);
+      path, 'application/x-www-form-urlencoded;charset=UTF-8', false, '', generation);
     if (result.status !== 404 && result.status !== 405) { return result; }
-    const fallback: string = blocking ? 'https://x.com/i/api' : 'https://api.x.com';
-    return this.send('POST', fallback + path, form, 'application/json', path,
-      'application/x-www-form-urlencoded', false, '', generation);
+    return this.send('POST', 'https://x.com/i/api' + path, form, 'application/json', path,
+      'application/x-www-form-urlencoded;charset=UTF-8', false, '', generation);
   }
 }
 
