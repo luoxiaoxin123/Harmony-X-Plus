@@ -25,6 +25,7 @@ pub struct Session {
     raw_key_events: HashMap<String, HashMap<String, String>>,
     raw_edits: HashMap<String, (String, String)>,
     pending_rotations: HashMap<String, PreparedConversationChange>,
+    pending_direct: HashMap<String, PreparedConversationChange>,
 }
 
 #[derive(Deserialize)]
@@ -185,7 +186,7 @@ impl Session {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2).enable_all().build().map_err(|e| e.to_string())?;
         Ok(Self { chat, runtime, recovery, media_keys: HashMap::new(), raw_key_events: HashMap::new(), raw_edits: HashMap::new(),
-            pending_rotations: HashMap::new() })
+            pending_rotations: HashMap::new(), pending_direct: HashMap::new() })
     }
 
     fn call(&mut self, method: &str, input: &str) -> Result<Value, String> {
@@ -300,6 +301,18 @@ impl Session {
                         }
                     }
                 }
+                let routing: Vec<Value> = result.events.iter().filter_map(|event| {
+                    let meta = match &event.event {
+                        Event::Message(message) if message.verified => &message.meta,
+                        Event::KeyChange(change) if change.verified => &change.meta,
+                        Event::ReadReceipt(read) if read.verified => &read.meta,
+                        _ => return None,
+                    };
+                    let token = ChatCore::inspect_conversation_token(event.original_b64.as_deref()?).ok()??;
+                    if token.is_empty() || token.len() > 8192 { return None; }
+                    Some(json!({"conversationId": meta.conversation_id.as_deref()?,
+                        "sequenceId": meta.sequence_id.as_deref()?, "token": token}))
+                }).collect();
                 // Conversation keys stay inside Chat. No key blobs cross NAPI.
                 let mut messages: Vec<Value> = result.events.iter().filter_map(|m| {
                     match &m.event {
@@ -315,7 +328,8 @@ impl Session {
                         Event::MessageDeleted(d) => Some(json!({"type": "deleted", "event": d,
                             "conversationId": d.meta.conversation_id, "sequenceId": d.meta.sequence_id})),
                         Event::KeyChange(k) => Some(json!({"type": "keyChange", "sequenceId": k.meta.sequence_id,
-                            "conversationId": k.meta.conversation_id, "keyVersion": k.conversation_key_version})),
+                            "conversationId": k.meta.conversation_id, "keyVersion": k.conversation_key_version,
+                            "verified": k.verified})),
                         Event::Failure(f) => Some(json!({"type": "failure", "conversationId": f.meta.conversation_id,
                             "id": f.meta.id, "failure": f.failure})),
                         Event::ReadReceipt(r) => Some(json!({"type": "read", "conversationId": r.meta.conversation_id,
@@ -330,7 +344,7 @@ impl Session {
                 }).collect();
                 messages.extend(legacy_messages);
                 let errors: Vec<String> = result.errors.values().cloned().collect();
-                Ok(json!({"messages": messages, "errors": errors, "encryption": encryption,
+                Ok(json!({"messages": messages, "errors": errors, "encryption": encryption, "routing": routing,
                     "unlocked": self.chat.is_unlocked()}))
             }
             "encrypt" => {
@@ -404,10 +418,26 @@ impl Session {
                     if method == "prepareKeyRotation" { self.chat.prepare_key_rotation(&params, a.for_key_rotation) }
                     else { self.chat.prepare_key_rotation(&params, false) }
                 }.map_err(|e| e.to_string())?;
-                if method == "prepareKeyRotation" {
+                if method == "prepareConversation" {
+                    self.pending_direct.insert(change.conversation_id.replace(':', "-"), change.clone());
+                } else if method == "prepareKeyRotation" {
                     self.pending_rotations.insert(change.conversation_id.replace(':', "-"), change.clone());
                 }
                 Ok(change_value(change))
+            }
+            "commitDirectConversation" => {
+                let args: serde_json::Value = serde_json::from_str(input).map_err(|e| e.to_string())?;
+                let id = args["conversation_id"].as_str().unwrap_or_default().replace(':', "-");
+                let version = args["key_version"].as_str().unwrap_or_default();
+                if !self.chat.is_unlocked() { return Err("locked".into()); }
+                let change = self.pending_direct.get(&id)
+                    .filter(|change| change.conversation_key_version == version)
+                    .ok_or("missing_staged_conversation_key")?;
+                let key = change.conversation_key.as_ref().ok_or("missing_staged_conversation_key")?;
+                self.chat.commit_prepared_direct_key(change).map_err(|e| e.to_string())?;
+                self.media_keys.entry(id.clone()).or_default().insert(version.into(), key.clone());
+                self.pending_direct.remove(&id);
+                Ok(json!({"key_version": version}))
             }
             "prepareGroupMembers" => {
                 let a: GroupMembersArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -626,7 +656,7 @@ impl Session {
                 };
                 Ok(json!({"fingerprint": fingerprint}))
             }
-            "lock" => { self.chat.lock(); self.media_keys.clear(); self.raw_key_events.clear(); self.raw_edits.clear(); self.pending_rotations.clear(); Ok(json!({"unlocked": false})) }
+            "lock" => { self.chat.lock(); self.media_keys.clear(); self.raw_key_events.clear(); self.raw_edits.clear(); self.pending_rotations.clear(); self.pending_direct.clear(); Ok(json!({"unlocked": false})) }
             "diagnostics" => Ok(json!({"network": self.recovery.diagnostics()})),
             _ => Err("unsupported_method".into()),
         }
@@ -1334,6 +1364,14 @@ mod tests {
         assert_eq!(result["participant_keys"].as_array().unwrap().len(), 2);
         assert!(result.get("conversation_key").is_none());
         assert!(result.get("raw_conversation_key").is_none());
+        let conversation = &result["conversation_id"];
+        let draft = json!({"conversation_id": conversation, "text": "hello"}).to_string();
+        assert!(s.call("encrypt", &draft).is_err());
+        assert!(s.call("commitDirectConversation", &json!({"conversation_id": conversation, "key_version": "0"}).to_string()).is_err());
+        let confirmation = json!({"conversation_id": conversation, "key_version": result["conversation_key_version"]}).to_string();
+        s.call("commitDirectConversation", &confirmation).unwrap();
+        assert!(s.call("encrypt", &draft).is_ok());
+        assert!(s.call("commitDirectConversation", &confirmation).is_err());
         let delete = s.call("prepareDelete", &json!({"conversation_id": v["event_conversation_id"], "sequence_ids": ["9007199254740993"],
             "delete_for_all": false}).to_string()).unwrap();
         assert!(!delete["action_signatures"][0]["signature"].as_str().unwrap().is_empty());

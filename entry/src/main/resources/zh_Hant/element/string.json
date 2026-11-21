@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "偵測到新版本 %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "目前裝置缺少此對話的金鑰。請先在 X 用戶端開啟該對話，再試一次。"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X 尚未確認此操作。重試會沿用原訊息。"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X 拒絕了此操作（代碼 %s）。"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "取得或註冊對話金鑰失敗"
     }
   ]
 }

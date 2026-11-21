@@ -143,6 +143,7 @@ test('tap-to-share resumes multiple recipients after PIN and retries only the un
       }
     },
     postShareUrl: () => 'https://x.com/example/status/123',
+    chatFailureMessage: (_context, reason) => reason.replace('_http_', ' HTTP '),
     $r: name => name
   });
   const alice = { conversationId: '100-200', title: 'Alice', participantIds: [], group: false };
@@ -186,6 +187,7 @@ test('a legacy conversation sends a raw link only after that separate action is 
     chatContactService: { async load(_context, id) { assert.equal(id, '200'); return contact; },
       async sendPlaintext(_context, receiver, id, text) { plaintext.push([receiver, id, text]); } },
     postShareUrl: () => 'https://x.com/example/status/123',
+    chatFailureMessage: (_context, reason) => reason,
     $r: name => name
   });
   const subject = Object.assign(new Subject(), {

@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Доступна новая версия %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Ключ этой беседы недоступен. Откройте беседу в приложении X и повторите попытку."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X ещё не подтвердил операцию. При повторной попытке будет использовано то же сообщение."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X отклонил операцию (код %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Не удалось получить или зарегистрировать ключ беседы"
     }
   ]
 }

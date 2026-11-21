@@ -1,8 +1,8 @@
 diff --git a/crates/core/src/chat.rs b/crates/core/src/chat.rs
-index 6fd694ce45c64ddb65e677f614224695e3dfd6a8..f40c5ea842a748bbecd61aeb0fc9318d777dd4c0 100644
+index 6fd694ce45c64ddb65e677f614224695e3dfd6a8..15963f904cf0899bcfbe95d7c169f785c48b2a78 100644
 --- a/crates/core/src/chat.rs
 +++ b/crates/core/src/chat.rs
-@@ -1811,2 +1811,29 @@ mod tests {
+@@ -1811,2 +1811,33 @@ mod tests {
      }
  }
 +
@@ -21,6 +21,10 @@ index 6fd694ce45c64ddb65e677f614224695e3dfd6a8..f40c5ea842a748bbecd61aeb0fc9318d
 +
 +    pub fn prepare_key_rotation(&self, params: &ConversationKeyChangeParams, rotation: bool) -> Result<PreparedConversationChange, SdkError> {
 +        self.inner.prepare_key_rotation(params, rotation)
++    }
++
++    pub fn commit_prepared_direct_key(&self, change: &PreparedConversationChange) -> Result<(), SdkError> {
++        self.inner.commit_prepared_direct_key(change)
 +    }
 +
 +    pub fn finish_group_members_change(&self, params: &GroupMembersChangeParams, pending: PreparedConversationChange,
@@ -103,10 +107,10 @@ index a0da1992fd3e2611896a8c4e8e701b205f79d373..a6ed4a2f0e23322f0ee175756f89eb7b
              .attachments
 diff --git a/crates/core/src/core/harmonyx.rs b/crates/core/src/core/harmonyx.rs
 new file mode 100644
-index 0000000000000000000000000000000000000000..588c3470e422bf709d31dfc4c72540a60002099f
+index 0000000000000000000000000000000000000000..6bc8f4d121adde9e382677d4731f98baf58d775d
 --- /dev/null
 +++ b/crates/core/src/core/harmonyx.rs
-@@ -0,0 +1,219 @@
+@@ -0,0 +1,229 @@
 +use super::ChatCore;
 +use crate::protocol::serialization::base64_encode;
 +use crate::error::SdkError;
@@ -185,6 +189,16 @@ index 0000000000000000000000000000000000000000..588c3470e422bf709d31dfc4c72540a6
 +            _ => return Ok(None),
 +        };
 +        Ok(event.conversation_id.map(|id| (id, encrypted)))
++    }
++
++    pub fn inspect_conversation_token(event_b64: &str) -> Result<Option<String>, SdkError> {
++        Ok(Self::parse_event_b64(event_b64)?.conversation_token)
++    }
++
++    pub fn commit_prepared_direct_key(&self, change: &PreparedConversationChange) -> Result<(), SdkError> {
++        let key = change.conversation_key.as_ref().ok_or_else(|| SdkError::InvalidInput("missing staged key".into()))?;
++        self.record_verified_key(&change.conversation_id, &change.conversation_key_version, key);
++        Ok(())
 +    }
 +
 +    fn private_action(&self, conversation_id: &str, detail: MessageEventDetail) -> Result<ActionSignature, SdkError> {

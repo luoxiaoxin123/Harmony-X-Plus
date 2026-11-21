@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "新しいバージョン %s が利用可能です"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "この会話の鍵を取得できません。X アプリで会話を開いてから、もう一度お試しください。"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X はまだ処理を確認していません。再試行では同じメッセージを使用します。"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X が処理を拒否しました（コード %s）。"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "会話の鍵を取得または登録できませんでした"
     }
   ]
 }

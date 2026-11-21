@@ -12,6 +12,7 @@ import { xChatActions } from './XChatActions';
 import { ChatMediaItem, ChatMovingPhotoProtocol } from '../utils/ChatMovingPhotoProtocol';
 import { xChatGroupAvatar } from './XChatGroupAvatar';
 import { xChatKeyStore } from './XChatKeyStore';
+import { XChatReceipt, XChatWire } from './XChatWire';
 
 interface XChatPublicKey {
   public_key: string;
@@ -68,16 +69,13 @@ interface XChatInboxItem {
 export interface XChatConversationInfo { ttl: string; screenBlocked: boolean; muted: boolean; }
 interface XChatInbox { items?: XChatInboxItem[]; encoded_message_events?: Object; }
 interface XChatConversationPage {
-  encoded_message_events?: string[];
-  missing_conversation_key_change_events?: string[];
+  encoded_message_events?: Object;
+  missing_conversation_key_change_events?: Object;
   has_more?: boolean;
 }
-interface XChatSendResult { encoded_message_event?: string; error_code?: number; }
 interface XChatResponseData {
   user_results_by_rest_ids?: XChatUserResult[];
   get_conversation_page?: XChatConversationPage;
-  xchat_send_create_message_event?: XChatSendResult;
-  xchat_send_message_event?: XChatSendResult;
   get_initial_chat_page?: XChatInbox;
   get_inbox_page?: XChatInbox;
   get_inbox_page_conversation_data?: XChatInbox;
@@ -138,6 +136,7 @@ interface XChatNativeAttachment {
 export interface XChatNativeData {
   messages?: XChatNativeMessage[];
   encryption?: XChatEventEncryption[];
+  routing?: XChatRouting[];
   errors?: string[];
   unlocked?: boolean;
   conversation_id?: string;
@@ -162,6 +161,7 @@ export interface XChatNativeData {
   encrypted_title?: string;
 }
 interface XChatEventEncryption { conversationId: string; encrypted: boolean; }
+interface XChatRouting { conversationId: string; sequenceId: string; token: string; }
 interface XChatLocalArgs { conversation_id: string; text?: string; key_version?: string; ciphertext?: string; }
 interface XChatVerifyArgs { public_key: string; signature: string; payload: string; }
 export interface XChatLocalCipher { key_version: string; ciphertext: string; }
@@ -220,7 +220,8 @@ interface XChatMediaArgs {
   raw_event?: string; media_hash_key?: string;
 }
 export interface XChatMediaCipher { size: number; keyVersion: string; }
-interface XChatPendingSend { text: string; payload: XChatNativeData; }
+interface XChatPendingSend { payload: XChatNativeData; attempted: boolean; }
+interface XChatActiveSend { draft: string; task: Promise<XChatPage>; }
 
 export class XChatPage {
   messages: DmMessage[] = [];
@@ -255,6 +256,10 @@ export class XChatService {
   private groups: Map<string, XChatGroupMetadata> = new Map<string, XChatGroupMetadata>();
   private nativeQueue: Promise<void> = Promise.resolve();
   private pendingSends: Map<string, XChatPendingSend> = new Map<string, XChatPendingSend>();
+  private activeSends: Map<string, XChatActiveSend> = new Map<string, XChatActiveSend>();
+  private pendingDirectKeys: Map<string, XChatNativeData> = new Map<string, XChatNativeData>();
+  private directKeyTasks: Map<string, Promise<void>> = new Map<string, Promise<void>>();
+  private routing: Map<string, XChatRouting> = new Map<string, XChatRouting>();
   private keyUsers: string[] = [];
   private keysFetchedAt: number = 0;
   private info: Map<string, XChatConversationInfo> = new Map<string, XChatConversationInfo>();
@@ -283,6 +288,10 @@ export class XChatService {
     this.legacyCheckedAt.clear();
     this.transports.clear();
     this.pendingSends.clear();
+    this.activeSends.clear();
+    this.pendingDirectKeys.clear();
+    this.directKeyTasks.clear();
+    this.routing.clear();
     this.keyUsers = [];
     this.keysFetchedAt = 0;
     this.callNative('reset', '{}').catch((): void => {});
@@ -473,18 +482,12 @@ export class XChatService {
     const payload: XChatNativeData = native.data;
     const result: XPrivateResult = payload.encoded_message_event !== undefined ?
       await xPrivateClient.graphql('SendMessageEventMutation', { 'encoded_message_event': payload.encoded_message_event }) :
-      await xPrivateClient.graphql('SendMessageCreateMutation', {
-      'conversation_id': payload.conversation_id ?? conversationId, 'message_id': payload.message_id ?? '',
-      'encoded_message_create_event': payload.encoded_message_create_event ?? '',
-      'encoded_message_event_signature': payload.encoded_message_event_signature ?? ''
-    });
+      await xPrivateClient.graphql('SendMessageCreateMutation', this.messageWire(conversationId, payload));
     if (generation !== this.generation || account !== xPrivateStore.load(context).cacheIdentity()) { throw new Error('account_changed'); }
-    if (!result.ok) { throw new Error('read_http_' + result.status); }
-    const data: XChatResponseData | undefined = (JSON.parse(result.body) as XChatEnvelope).data;
-    const event: string = (payload.encoded_message_event !== undefined ? data?.xchat_send_message_event :
-      data?.xchat_send_create_message_event)?.encoded_message_event ?? '';
-    if (event.length === 0) { throw new Error('read_unconfirmed'); }
-    const page: XChatPage = await this.decode([event], conversationId);
+    const receipt: XChatReceipt = XChatWire.receipt(result, payload.encoded_message_event !== undefined ?
+      'xchat_send_message_event' : 'xchat_send_create_message_event');
+    if (!receipt.acknowledged) { throw new Error(XChatWire.issue('read', result, receipt)); }
+    const page: XChatPage = await this.decode([receipt.event], conversationId);
     if (!page.events.some((e: XChatNativeMessage): boolean => e.verified === true && e.id === payload.message_id &&
       e.senderId === xPrivateClient.viewerId() && (e.content?.content_type === 'MarkRead' ||
         (e.type === 'read' && e.seenUntilId === sequenceId)))) { throw new Error('read_unconfirmed'); }
@@ -506,7 +509,11 @@ export class XChatService {
     this.messageCache.delete(key);
     this.transports.delete(key);
     this.legacyCheckedAt.delete(key);
-    this.pendingSends.delete(conversationId);
+    this.pendingSends.forEach((_pending: XChatPendingSend, draft: string): void => {
+      if (draft.startsWith(key + '|')) { this.pendingSends.delete(draft); }
+    });
+    this.pendingDirectKeys.delete(key);
+    this.routing.delete(key);
     this.effectCache.forEach((event: XChatNativeMessage, id: string): void => {
       if ((event.conversationId ?? '').replace(':', '-') === key) { this.effectCache.delete(id); }
     });
@@ -596,28 +603,91 @@ export class XChatService {
   }
 
   private async initializeDirect(conversationId: string): Promise<void> {
-    const ids: string[] = conversationId.replace(':', '-').split('-');
-    if (ids.length !== 2 || ids.indexOf(xPrivateClient.viewerId()) < 0) { throw new Error('missing_conversation_key'); }
+    const id: string = XChatService.pathId(conversationId);
+    const running: Promise<void> | undefined = this.directKeyTasks.get(id);
+    if (running !== undefined) { return running; }
+    const task: Promise<void> = this.registerDirectKey(id);
+    this.directKeyTasks.set(id, task);
+    try { await task; } finally {
+      if (this.directKeyTasks.get(id) === task) { this.directKeyTasks.delete(id); }
+    }
+  }
+
+  private async registerDirectKey(id: string): Promise<void> {
     const generation: number = this.generation;
-    const participantIds: string[] = ids[0] === ids[1] ? [ids[0]] : ids;
-    const keys: XChatPublicKeyInput[] = this.groupPublicKeys(participantIds);
-    if (keys.length !== participantIds.length) { throw new Error('recipient_key_unavailable'); }
-    const args: XChatCreateArgs = { public_keys: keys, conversation_id: conversationId.replace(':', '-'),
-      members: [], admins: [], title: '' };
-    const native: XChatNativeResult = await this.callNative('prepareConversation', JSON.stringify(args));
-    if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!native.ok || native.data === undefined) { throw new Error(native.error ?? 'conversation_sign_failed'); }
-    const payload: XChatNativeData = native.data;
+    let payload: XChatNativeData | undefined = this.pendingDirectKeys.get(id);
+    if (payload !== undefined && this.conversationTransport(id) === 'encrypted') {
+      if (await this.confirmDirectKey(id, payload.conversation_key_version ?? '', generation)) { return; }
+      throw new Error('existing_conversation_key_unavailable');
+    }
+    if (payload === undefined) {
+      const ids: string[] = id.split('-');
+      if (!/^\d+-\d+$/.test(id) || !ids.includes(xPrivateClient.viewerId()) ||
+        this.conversationTransport(id) === 'encrypted') { throw new Error('existing_conversation_key_unavailable'); }
+      const participantIds: string[] = ids[0] === ids[1] ? [ids[0]] : ids;
+      const keys: XChatPublicKeyInput[] = this.groupPublicKeys(participantIds);
+      if (keys.length !== participantIds.length) { throw new Error('recipient_key_unavailable'); }
+      const args: XChatCreateArgs = { public_keys: keys, conversation_id: id, members: [], admins: [], title: '' };
+      const native: XChatNativeResult = await this.callNative('prepareConversation', JSON.stringify(args));
+      this.requireGeneration(generation);
+      if (!native.ok || native.data === undefined) { throw new Error(native.error ?? 'conversation_sign_failed'); }
+      payload = native.data;
+      this.pendingDirectKeys.set(id, payload);
+    }
+    const version: string = payload.conversation_key_version ?? '';
     const participants: Record<string, Object>[] = (payload.participant_keys ?? [])
       .map((key: XChatParticipantKey): Record<string, Object> => ({ 'user_id': key.user_id,
         'encrypted_conversation_key': key.encrypted_key, 'public_key_version': key.public_key_version }));
-    await xChatActions.action('AddEncryptedConversationKeysMutation', {
-      'conversation_id': payload.conversation_id ?? conversationId,
-      'conversation_key_version': payload.conversation_key_version ?? '', 'conversation_participant_keys': participants,
-      'action_signatures': XChatService.actionInputs(payload.action_signatures ?? [])
-    }, 'xchat_add_encrypted_conversation_key');
-    if (generation !== this.generation) { throw new Error('account_changed'); }
-    await this.conversation(conversationId);
+    const signatures: XChatActionInput[] = XChatService.actionInputs(payload.action_signatures ?? []);
+    if (!/^\d+$/.test(version) || participants.length === 0 || signatures.length === 0) {
+      this.pendingDirectKeys.delete(id);
+      throw new Error('conversation_sign_failed');
+    }
+    const wire: Record<string, Object> = { 'conversation_id': id, 'conversation_key_version': version,
+      'conversation_participant_keys': participants, 'action_signatures': signatures };
+    let result: XPrivateResult = await xPrivateClient.graphql('AddEncryptedConversationKeysMutation', wire);
+    this.requireGeneration(generation);
+    let receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_add_encrypted_conversation_key');
+    if (receipt.acknowledged && /^\d+$/.test(receipt.keySequence)) {
+      await this.commitDirectKey(id, version, generation);
+      return;
+    }
+    if (receipt.acknowledged || XChatWire.transient(result.status)) {
+      if (await this.confirmDirectKey(id, version, generation)) { return; }
+    }
+    if (XChatWire.alternate(result, receipt)) {
+      const fallback: XPrivateResult = await xPrivateClient.xChatWebWrite(true, wire);
+      this.requireGeneration(generation);
+      const recovered: XChatReceipt = XChatWire.receipt(fallback, 'xchat_add_encrypted_conversation_key');
+      if (recovered.acknowledged && /^\d+$/.test(recovered.keySequence)) {
+        await this.commitDirectKey(id, version, generation);
+        return;
+      }
+      if (recovered.acknowledged && await this.confirmDirectKey(id, version, generation)) { return; }
+      if (receipt.acknowledged || recovered.acknowledged || !XChatWire.transient(result.status)) {
+        result = fallback; receipt = recovered;
+      }
+    }
+    throw new Error(XChatWire.issue('keys', result, receipt));
+  }
+
+  private async commitDirectKey(id: string, version: string, generation: number): Promise<void> {
+    const native: XChatNativeResult = await this.callNative('commitDirectConversation',
+      JSON.stringify({ conversation_id: id, key_version: version }));
+    this.requireGeneration(generation);
+    if (!native.ok) { throw new Error('keys_unconfirmed'); }
+    this.pendingDirectKeys.delete(id);
+    this.rememberTransport(id, 'encrypted');
+  }
+
+  private async confirmDirectKey(id: string, version: string, generation: number): Promise<boolean> {
+    const page: XChatPage | null = await this.refreshDeliveryHistory(id, generation);
+    if (!page?.events.some((event: XChatNativeMessage): boolean => event.type === 'keyChange' &&
+      event.verified === true && event.keyVersion === version && XChatService.pathId(event.conversationId ?? '') === id)) {
+      return false;
+    }
+    await this.commitDirectKey(id, version, generation);
+    return true;
   }
 
   async processMedia(conversationId: string, inputPath: string, outputPath: string,
@@ -627,10 +697,10 @@ export class XChatService {
       output_path: outputPath, key_version: keyVersion, raw_event: rawEvent, media_hash_key: mediaHash };
     const decrypt: boolean = keyVersion.length > 0 || rawEvent.length > 0;
     let result: XChatNativeResult = await this.callNative(decrypt ? 'decryptMedia' : 'encryptMedia', JSON.stringify(args));
-    if (!decrypt && !result.ok && (result.error ?? '').indexOf('missing_conversation_key') >= 0) {
-      await this.conversation(conversationId);
+    if (!decrypt && !result.ok && XChatService.missingKey(result)) {
+      await this.loadKeysForSend(conversationId, generation);
       result = await this.callNative('encryptMedia', JSON.stringify(args));
-      if (!result.ok && (result.error ?? '').indexOf('missing_conversation_key') >= 0) {
+      if (!result.ok && XChatService.missingKey(result)) {
         await this.initializeDirect(conversationId);
         result = await this.callNative('encryptMedia', JSON.stringify(args));
       }
@@ -896,7 +966,8 @@ export class XChatService {
       'ids': ids, 'include_juicebox_tokens': true
     });
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!result.ok) { throw new Error('public_keys_http_' + result.status.toString()); }
+    if (!result.ok) { throw new Error(XChatWire.issue('public_keys', result,
+      XChatWire.receipt(result, 'user_results_by_rest_ids'))); }
     const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;
     const users: XChatUserResult[] = envelope.data?.user_results_by_rest_ids ?? [];
     if (users.length === 0) { throw new Error('public_keys_unavailable'); }
@@ -926,7 +997,9 @@ export class XChatService {
         }
       }
     }
-    this.signingKeys = keys;
+    // The inbox and the share panel fetch different participants concurrently.
+    // Keep the other users' verification keys for messages already in flight.
+    this.signingKeys = this.signingKeys.filter((key: XChatSigningKey): boolean => !ids.includes(key.user_id)).concat(keys);
     this.keyUsers = ids;
     this.keysFetchedAt = Date.now();
     hilog.info(0xFF00, 'HarmonyX-Chat', 'keys users=%{public}d versions=%{public}d recovery=%{public}s',
@@ -1008,6 +1081,7 @@ export class XChatService {
   }
 
   async conversation(conversationId: string, sequenceId: string = '', keyVersion: string = ''): Promise<XChatPage> {
+    conversationId = XChatService.pathId(conversationId);
     const generation: number = this.generation;
     const querySettings: Record<string, Object> = { 'conversation_event_limit': 50 };
     const result: XPrivateResult = await xPrivateClient.graphql('GetConversationPageQuery', {
@@ -1019,7 +1093,8 @@ export class XChatService {
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!result.ok) {
       const legacy: DmMessage[] = await this.legacyConversation(conversationId);
-      if (legacy.length === 0) { throw new Error('conversation_http_' + result.status.toString()); }
+      if (legacy.length === 0) { throw new Error(XChatWire.issue('conversation', result,
+        XChatWire.receipt(result, 'get_conversation_page'))); }
       const fallback: XChatPage = new XChatPage(); fallback.messages = legacy;
       fallback.transport = this.conversationTransport(conversationId); return fallback;
     }
@@ -1031,8 +1106,8 @@ export class XChatService {
       if (fallback.messages.length === 0 && fallback.transport !== 'empty') { throw new Error('conversation_unavailable'); }
       return fallback;
     }
-    const events: string[] = page.missing_conversation_key_change_events ?? [];
-    const messages: string[] = page.encoded_message_events ?? [];
+    const events: string[] = XChatService.encodedEvents(page.missing_conversation_key_change_events);
+    const messages: string[] = XChatService.encodedEvents(page.encoded_message_events);
     const all: string[] = events.concat(messages);
     const decoded: XChatPage = await this.decode(all, conversationId);
     hilog.info(0xFF00, 'HarmonyX-Chat', 'events=%{public}d messages=%{public}d locked=%{public}s',
@@ -1074,6 +1149,15 @@ export class XChatService {
     const result: XChatNativeResult = await this.callNative('decrypt', JSON.stringify(args));
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!result.ok) { throw new Error(result.error ?? 'decode_failed'); }
+    for (const record of result.data?.routing ?? []) {
+      const id: string = XChatService.pathId(record.conversationId);
+      if (!/^\d+$/.test(record.sequenceId) || !record.token ||
+        (conversationId.length > 0 && id !== XChatService.pathId(conversationId))) { continue; }
+      const previous: XChatRouting | undefined = this.routing.get(id);
+      if (!previous || XChatService.compareIds(record.sequenceId, previous.sequenceId) >= 0) {
+        this.routing.set(id, record);
+      }
+    }
     const page: XChatPage = new XChatPage();
     page.events = result.data?.messages ?? [];
     const encryption: XChatEventEncryption[] = result.data?.encryption ?? [];
@@ -1093,7 +1177,7 @@ export class XChatService {
       const event: XChatNativeMessage = page.events[i];
       const eventConversation: string = event.conversationId ?? '';
       if (conversationId.length > 0 &&
-        eventConversation.replace(':', '-') !== conversationId.replace(':', '-')) { continue; }
+        XChatService.pathId(eventConversation) !== XChatService.pathId(conversationId)) { continue; }
       if (event.type === 'typing') {
         const timestamp: number = event.timestampMs ?? 0;
         const sender: string = event.senderId ?? '';
@@ -1156,63 +1240,176 @@ export class XChatService {
     await this.send(conversationId, note, [attachment]);
   }
 
-  async send(conversationId: string, text: string, attachments: XChatSendAttachment[] = [], mediaKeyVersion: string = '', messageId: string = '', reply?: XChatReplyTarget): Promise<XChatPage> {
+  async send(conversationId: string, text: string, attachments: XChatSendAttachment[] = [],
+    mediaKeyVersion: string = '', messageId: string = '', reply?: XChatReplyTarget): Promise<XChatPage> {
+    const id: string = XChatService.pathId(conversationId);
+    if (id.length === 0) { throw new Error('invalid_conversation'); }
+    const draft: string = id + '|' + JSON.stringify([messageId, text, attachments, mediaKeyVersion, reply]);
     const generation: number = this.generation;
-    const ttl: number = Number(this.conversationInfo(conversationId).ttl);
-    const args: XChatEncryptArgs = { conversation_id: conversationId, text: text, attachments: attachments,
+    const active: XChatActiveSend | undefined = this.activeSends.get(id);
+    if (active !== undefined) {
+      if (active.draft === draft) { return active.task; }
+      try { await active.task; } catch (_error) { }
+      this.requireGeneration(generation);
+      return this.send(id, text, attachments, mediaKeyVersion, messageId, reply);
+    }
+    const ttl: number = Number(this.conversationInfo(id).ttl);
+    const args: XChatEncryptArgs = { conversation_id: id, text: text, attachments: attachments,
       media_key_version: mediaKeyVersion, ttl_msec: Number.isFinite(ttl) && ttl > 0 ? ttl : undefined,
       message_id: messageId.length > 0 ? messageId : undefined, reply: reply };
-    const pendingKey: string = JSON.stringify([messageId, text, attachments, reply]);
-    let pending: XChatPendingSend | undefined = this.pendingSends.get(conversationId);
-    if (pending === undefined || pending.text !== pendingKey) {
-      let encrypted: XChatNativeResult = await this.callNative('encrypt', JSON.stringify(args));
-      if (!encrypted.ok && (encrypted.error ?? '').indexOf('no cached conversation key') >= 0) {
-        try { await this.conversation(conversationId); }
-        catch (error) {
-          const reason: string = (error as Error).message;
-          if (reason !== 'conversation_unavailable' && reason !== 'conversation_http_404') { throw error as Error; }
-        }
-        encrypted = await this.callNative('encrypt', JSON.stringify(args));
-        if (!encrypted.ok && (encrypted.error ?? '').indexOf('no cached conversation key') >= 0) {
-          await this.initializeDirect(conversationId);
-          encrypted = await this.callNative('encrypt', JSON.stringify(args));
-        }
-      }
-      if (generation !== this.generation) { throw new Error('account_changed'); }
-      if (!encrypted.ok || encrypted.data === undefined) { throw new Error(encrypted.error ?? 'encrypt_failed'); }
-      if (messageId.length > 0 && encrypted.data.message_id !== messageId) { throw new Error('media_message_id_mismatch'); }
-      pending = { text: pendingKey, payload: encrypted.data };
-      this.pendingSends.set(conversationId, pending);
+    const task: Promise<XChatPage> = this.deliver(id, draft, args, generation);
+    this.activeSends.set(id, { draft: draft, task: task });
+    try { return await task; } finally {
+      if (this.activeSends.get(id)?.task === task) { this.activeSends.delete(id); }
     }
-    const payload: XChatNativeData = pending.payload;
-    const wire: Record<string, Object> = {
-      'conversation_id': payload.conversation_id ?? conversationId,
-      'message_id': payload.message_id ?? '',
-      'encoded_message_create_event': payload.encoded_message_create_event ?? '',
-      'encoded_message_event_signature': payload.encoded_message_event_signature ?? ''
-    };
-    let result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
-    if (!result.ok && result.status === 503 && generation === this.generation) {
-      // Resubmit the exact signed event so a lost acknowledgement cannot duplicate the message.
-      result = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
-    }
+  }
+
+  private requireGeneration(generation: number): void {
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!result.ok) { throw new Error('send_http_' + result.status.toString()); }
-    const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;
-    const event: string = envelope.data?.xchat_send_create_message_event?.encoded_message_event ?? '';
-    if (event.length === 0) { throw new Error('send_unconfirmed'); }
-    const decoded: XChatPage = await this.decode([event], conversationId);
-    if (decoded.events.some((e: XChatNativeMessage): boolean => e.type === 'failure')) {
-      this.pendingSends.delete(conversationId);
+  }
+
+  private static pathId(value: string): string {
+    const id: string = value.replace(':', '-');
+    if (!/^\d+-\d+$/.test(id)) { return id; }
+    const pair: string[] = id.split('-');
+    return XChatService.compareIds(pair[0], pair[1]) <= 0 ? id : pair[1] + '-' + pair[0];
+  }
+
+  private static missingKey(result: XChatNativeResult): boolean {
+    const error: string = result.error ?? '';
+    return error.includes('no cached conversation key') || error.includes('missing_conversation_key') ||
+      error.includes('no usable cached conversation key');
+  }
+
+  private async loadKeysForSend(id: string, generation: number): Promise<void> {
+    try { await this.conversation(id); } catch (error) {
+      this.requireGeneration(generation);
+      const reason: string = (error as Error).message;
+      if (reason !== 'conversation_unavailable' && reason !== 'conversation_http_404') { throw error as Error; }
+    }
+    this.requireGeneration(generation);
+  }
+
+  private async prepareDelivery(id: string, args: XChatEncryptArgs, generation: number): Promise<XChatPendingSend> {
+    const input: string = JSON.stringify(args);
+    let result: XChatNativeResult = await this.callNative('encrypt', input);
+    this.requireGeneration(generation);
+    if (!result.ok && XChatService.missingKey(result)) {
+      await this.loadKeysForSend(id, generation);
+      result = await this.callNative('encrypt', input);
+      this.requireGeneration(generation);
+      if (!result.ok && XChatService.missingKey(result) && !args.media_key_version) {
+        await this.initializeDirect(id);
+        this.requireGeneration(generation);
+        result = await this.callNative('encrypt', input);
+      }
+    }
+    this.requireGeneration(generation);
+    const payload: XChatNativeData | undefined = result.data;
+    if (!result.ok || !payload?.message_id || !payload.encoded_message_create_event ||
+      !payload.encoded_message_event_signature) { throw new Error(result.error ?? 'encrypt_failed'); }
+    if (args.message_id && payload.message_id !== args.message_id) { throw new Error('media_message_id_mismatch'); }
+    return { payload: payload, attempted: false };
+  }
+
+  private messageWire(conversationId: string, payload: XChatNativeData): Record<string, Object> {
+    const id: string = XChatService.pathId(conversationId);
+    const wire: Record<string, Object> = { 'conversation_id': id, 'message_id': payload.message_id ?? '',
+      'encoded_message_create_event': payload.encoded_message_create_event ?? '',
+      'encoded_message_event_signature': payload.encoded_message_event_signature ?? '' };
+    const token: string = this.routing.get(id)?.token ?? '';
+    if (token.length > 0) { wire['conversation_token'] = token; }
+    return wire;
+  }
+
+  private async refreshDeliveryHistory(id: string, generation: number): Promise<XChatPage | null> {
+    try {
+      const page: XChatPage = await this.conversation(id);
+      this.requireGeneration(generation);
+      return page;
+    } catch (_error) {
+      this.requireGeneration(generation);
+      return null;
+    }
+  }
+
+  private verifyDelivery(page: XChatPage | null, id: string, messageId: string): XChatPage | null {
+    if (page === null) { return null; }
+    const event: XChatNativeMessage | undefined = page.events.find((entry: XChatNativeMessage): boolean =>
+      entry.id === messageId && XChatService.pathId(entry.conversationId ?? '') === id &&
+      (entry.type === 'failure' || (entry.verified === true && entry.senderId === xPrivateClient.viewerId())));
+    if (event?.type === 'failure') {
+      const code: string = event.failure ?? '';
+      if (/^[a-z\d_-]{1,64}$/i.test(code)) { throw new Error('send_rejected_' + code.toUpperCase()); }
       throw new Error('send_rejected');
     }
-    if (!decoded.messages.some((m: DmMessage): boolean => m.id === payload.message_id)) {
-      throw new Error('send_unconfirmed');
+    if (!event) { return null; }
+    const message: DmMessage | undefined = page.messages.find((row: DmMessage): boolean => row.id === messageId);
+    if (!message) { return null; }
+    page.messages = [message];
+    return page;
+  }
+
+  private async readDelivery(receipt: XChatReceipt, id: string, messageId: string): Promise<XChatPage | null> {
+    return receipt.event.length > 0 ? this.verifyDelivery(await this.decode([receipt.event], id), id, messageId) : null;
+  }
+
+  private async deliver(id: string, draft: string, args: XChatEncryptArgs, generation: number): Promise<XChatPage> {
+    let pending: XChatPendingSend | undefined = this.pendingSends.get(draft);
+    if (pending === undefined) {
+      pending = await this.prepareDelivery(id, args, generation);
+      this.pendingSends.set(draft, pending);
     }
-    this.pendingSends.delete(conversationId);
-    this.messageCache.set(conversationId.replace(':', '-'), this.mergeConversation(this.cachedMessages(conversationId), decoded, conversationId));
+    const messageId: string = pending.payload.message_id ?? '';
+    try {
+      if (pending.attempted) {
+        const previous: XChatPage | null = this.verifyDelivery(await this.refreshDeliveryHistory(id, generation), id, messageId);
+        if (previous !== null) { return this.finishDelivery(previous, id, draft); }
+      }
+      this.requireGeneration(generation);
+      pending.attempted = true;
+      const wire: Record<string, Object> = this.messageWire(id, pending.payload);
+      let result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
+      this.requireGeneration(generation);
+      let receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_send_create_message_event');
+      let confirmed: XChatPage | null = await this.readDelivery(receipt, id, messageId);
+      if (confirmed === null && (XChatWire.transient(result.status) || (result.ok && receipt.code.length === 0))) {
+        confirmed = this.verifyDelivery(await this.refreshDeliveryHistory(id, generation), id, messageId);
+      }
+      this.requireGeneration(generation);
+      if (confirmed === null && XChatWire.alternate(result, receipt)) {
+        const updatedWire: Record<string, Object> = this.messageWire(id, pending.payload);
+        const fallback: XPrivateResult = updatedWire['conversation_token'] !== wire['conversation_token'] ?
+          await xPrivateClient.graphql('SendMessageCreateMutation', updatedWire) :
+          await xPrivateClient.xChatWebWrite(false, updatedWire);
+        this.requireGeneration(generation);
+        const alternate: XChatReceipt = XChatWire.receipt(fallback, 'xchat_send_create_message_event');
+        confirmed = await this.readDelivery(alternate, id, messageId);
+        if (fallback.ok && alternate.code.length === 0 && confirmed === null) {
+          confirmed = this.verifyDelivery(await this.refreshDeliveryHistory(id, generation), id, messageId);
+        }
+        if (fallback.ok || !XChatWire.transient(result.status)) { result = fallback; receipt = alternate; }
+      }
+      this.requireGeneration(generation);
+      if (confirmed === null) {
+        throw new Error(XChatWire.issue('send', result, receipt));
+      }
+      return this.finishDelivery(confirmed, id, draft);
+    } catch (error) {
+      const reason: string = (error as Error).message;
+      if (reason.startsWith('send_rejected') && generation === this.generation) {
+        this.pendingSends.delete(draft);
+        if (reason === 'send_rejected_NONLATESTKEYVERSION') { await this.refreshDeliveryHistory(id, generation); }
+      }
+      throw error as Error;
+    }
+  }
+
+  private finishDelivery(page: XChatPage, id: string, draft: string): XChatPage {
+    this.pendingSends.delete(draft);
+    this.messageCache.set(id, this.mergeConversation(this.cachedMessages(id), page, id));
     this.notifyChanged();
-    return decoded;
+    return page;
   }
 
   async react(conversationId: string, sequenceId: string, emoji: string, remove: boolean): Promise<XChatPage> {
@@ -1223,17 +1420,11 @@ export class XChatService {
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!encrypted.ok || encrypted.data === undefined) { throw new Error(encrypted.error ?? 'reaction_encrypt_failed'); }
     const payload: XChatNativeData = encrypted.data;
-    const result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', {
-      'conversation_id': payload.conversation_id ?? conversationId, 'message_id': payload.message_id ?? '',
-      'encoded_message_create_event': payload.encoded_message_create_event ?? '',
-      'encoded_message_event_signature': payload.encoded_message_event_signature ?? ''
-    });
+    const result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', this.messageWire(conversationId, payload));
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!result.ok) { throw new Error('reaction_http_' + result.status.toString()); }
-    const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;
-    const event: string = envelope.data?.xchat_send_create_message_event?.encoded_message_event ?? '';
-    if (event.length === 0) { throw new Error('reaction_unconfirmed'); }
-    const page: XChatPage = await this.decode([event], conversationId);
+    const receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_send_create_message_event');
+    if (!receipt.acknowledged) { throw new Error(XChatWire.issue('reaction', result, receipt)); }
+    const page: XChatPage = await this.decode([receipt.event], conversationId);
     if (!page.events.some((e: XChatNativeMessage): boolean => e.verified === true && e.id === payload.message_id &&
       e.content?.content_type === (remove ? 'ReactionRemoved' : 'Reaction') &&
       e.content?.emoji === emoji && e.content?.target_message_id === sequenceId)) { throw new Error('reaction_unconfirmed'); }

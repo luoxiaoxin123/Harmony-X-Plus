@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Neue Version %s verfügbar"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Der Schlüssel für diese Unterhaltung ist nicht verfügbar. Öffne die Unterhaltung in X und versuche es erneut."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X hat den Vorgang noch nicht bestätigt. Beim erneuten Versuch wird dieselbe Nachricht verwendet."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X hat den Vorgang abgelehnt (Code %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Der Unterhaltungsschlüssel konnte nicht abgerufen oder registriert werden"
     }
   ]
 }

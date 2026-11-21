@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Yeni sürüm %s kullanılabilir"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Bu konuşmanın anahtarı kullanılamıyor. Konuşmayı X uygulamasında açıp tekrar deneyin."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X işlemi henüz onaylamadı. Yeniden denemede aynı mesaj kullanılacak."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X işlemi reddetti (kod %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Konuşma anahtarı alınamadı veya kaydedilemedi"
     }
   ]
 }

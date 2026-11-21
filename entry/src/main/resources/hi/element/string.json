@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "नया संस्करण %s उपलब्ध है"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "इस बातचीत की कुंजी उपलब्ध नहीं है। बातचीत को X ऐप में खोलें और फिर कोशिश करें।"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X ने अभी कार्रवाई की पुष्टि नहीं की है। दोबारा कोशिश करने पर वही संदेश इस्तेमाल होगा।"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X ने कार्रवाई अस्वीकार कर दी (कोड %s)।"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "बातचीत की कुंजी पाना या पंजीकृत करना संभव नहीं हुआ"
     }
   ]
 }

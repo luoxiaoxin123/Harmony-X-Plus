@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "نسخهٔ جدید %s در دسترس است"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "کلید این گفتگو در دسترس نیست. گفتگو را در برنامهٔ X باز کنید و دوباره تلاش کنید."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X هنوز این عملیات را تأیید نکرده است. تلاش دوباره از همان پیام استفاده می‌کند."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X عملیات را رد کرد (کد %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "دریافت یا ثبت کلید گفتگو ناموفق بود"
     }
   ]
 }
