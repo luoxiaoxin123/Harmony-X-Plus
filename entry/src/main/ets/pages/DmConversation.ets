@@ -485,27 +485,35 @@ export struct DmConversationPage {
     this.fetching = true;
     try {
       await xChatService.prepare(context, this.participantIds);
-      this.backupAvailable = xChatService.hasBackup();
+      if (!this.active || generation !== this.requestGeneration) { return; }
+      const backupAvailable: boolean = xChatService.hasBackup();
+      if (this.backupAvailable !== backupAvailable) { this.backupAvailable = backupAvailable; }
       const page: XChatPage = await xChatService.conversation(this.conversationId,
         history ? this.maxEntryId : '', history ? this.minKeyVersion : '');
       if (!this.active || generation !== this.requestGeneration) { return; }
-      this.conversationTransport = page.transport;
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
-      this.syncOutbox();
+      if (this.conversationTransport !== page.transport) { this.conversationTransport = page.transport; }
+      this.mergeMessages(page);
+      this.syncOutbox(false);
       if (this.group && !page.needsUnlock) {
         const display: XChatGroupDisplay = await xChatService.groupDisplay(this.conversationId, context);
         const nickname: string = await xChatService.nickname(context, this.conversationId);
         if (!this.active || generation !== this.requestGeneration) { return; }
-        if (display.name.length > 0) { this.originalTitle = display.name; this.title = nickname.length > 0 ? nickname : display.name; }
-        if (display.avatarUrl.length > 0) { this.avatarUrl = display.avatarUrl; }
+        if (display.name.length > 0) {
+          this.originalTitle = display.name;
+          const title: string = nickname.length > 0 ? nickname : display.name;
+          if (this.title !== title) { this.title = title; }
+        }
+        if (display.avatarUrl.length > 0 && this.avatarUrl !== display.avatarUrl) { this.avatarUrl = display.avatarUrl; }
       }
-      this.needsUnlock = page.needsUnlock;
+      if (this.needsUnlock !== page.needsUnlock) { this.needsUnlock = page.needsUnlock; }
       if (history || reset) {
         this.maxEntryId = page.minSequenceId;
         this.minKeyVersion = page.minKeyVersion;
         this.hasMore = page.hasMore && page.minSequenceId.length > 0;
       }
-      this.status = page.error.length > 0 ? this.text($r('app.string.dm_some_unavailable')) : '';
+      if (reset || history || page.error.length === 0 && this.status.length > 0) {
+        this.status = page.error.length > 0 ? this.text($r('app.string.dm_some_unavailable')) : '';
+      }
       if (reset) {
         setTimeout((): void => { if (this.active) { this.scroller.scrollEdge(Edge.Bottom); } }, 60);
       }
@@ -518,7 +526,7 @@ export struct DmConversationPage {
       }
     } catch (error) {
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'load failed: %{public}s', (error as Error).message);
-      if (this.active && generation === this.requestGeneration) {
+      if (this.active && generation === this.requestGeneration && (reset || history || this.messages.length === 0)) {
         this.status = !this.group && this.messages.length === 0 && (error as Error).message === 'conversation_unavailable' ?
           '' : this.text($r('app.string.dm_load_failed'));
       }
@@ -649,13 +657,21 @@ export struct DmConversationPage {
 
   private mediaFailed(id: string): boolean { return this.mediaSend(id)?.state === 'failed'; }
 
-  private syncOutbox(): void {
-    this.mediaSends = chatMediaOutbox.pending(getContext(this) as common.UIAbilityContext, this.conversationId);
+  private mergeMessages(page: XChatPage): void {
+    const previous: DmMessage[] = this.messages;
+    const merged: DmMessage[] = xChatService.mergeConversation(previous, page, this.conversationId);
+    if (merged !== previous) { this.messages = merged; }
+  }
+
+  private syncOutbox(refreshMedia: boolean = true): void {
+    if (refreshMedia) {
+      this.mediaSends = chatMediaOutbox.pending(getContext(this) as common.UIAbilityContext, this.conversationId);
+    }
     const confirmed: DmMessage[] = xChatService.cachedMessages(this.conversationId)
       .filter((message: DmMessage): boolean => !this.messages.some((row: DmMessage): boolean => row.id === message.id));
     if (confirmed.length > 0) {
       const page: XChatPage = new XChatPage(); page.messages = confirmed;
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
+      this.mergeMessages(page);
     }
   }
 

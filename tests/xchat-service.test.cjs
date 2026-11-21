@@ -323,6 +323,46 @@ test('hidden conversations remain hidden while messages are locked',async()=>{
   dependencies['./XChatActions'].xChatActions.localBoolean=()=>false;
 });
 
+test('locked inbox identifies new incoming sequences and honours only the viewer latest read receipt', async () => {
+  reset();
+  const service = new XChatService();
+  nativeByMethod.inspectInbox = { ok: true, data: { messages: [
+    { type: 'message', conversationId: '100:200', senderId: '200', sequenceId: '9007199254740993', timestampMs: 123 },
+    { type: 'read', conversationId: '100:200', senderId: '100', seenUntilId: '9007199254740992' },
+    { type: 'read', conversationId: '100:200', senderId: '200', seenUntilId: '9007199254740993' },
+    { type: 'message', conversationId: '100:300', senderId: '100', sequenceId: '3' },
+    { type: 'message', conversationId: '100:400', senderId: '400', sequenceId: '9' },
+    { type: 'read', conversationId: '100:400', senderId: '100', seenUntilId: '9' },
+    { type: 'read', conversationId: '100:400', senderId: '100', seenUntilId: '8' }
+  ] } };
+  const body = JSON.stringify({ data: { get_initial_chat_page: { items: [
+    { latest_notifiable_message_create_event: { encoded_message_event: 'incoming' },
+      latest_non_notifiable_message_create_event: 'reaction',
+      latest_read_events_per_participant: [{ latest_mark_conversation_read_event: 'own-read' }] }
+  ] } } });
+  const rows = ['200', '300', '400'].map(id => ({ conversationId: '100-' + id, unread: 0, preview: '' }));
+  await service.applyInboxMetadata(body, rows, '100');
+  assert.deepEqual(rows.map(row => row.unread), [1, 0, 0]);
+  assert.equal(rows[0].latestSequenceId, '9007199254740993');
+  assert.equal(rows[0].timestampMs, 123);
+  assert.equal(rows[0].preview, '');
+  assert.equal(service.isUnlocked(), false);
+  assert.deepEqual(nativeCalls.at(-1), { method: 'inspectInbox', input: ['incoming', 'own-read'] });
+});
+
+test('replaying a conversation updates changed rows without mutating the previously rendered messages', () => {
+  reset();
+  const original = { ...message('id', '1'), outgoing: true, time: 'just now' };
+  const previous = [original];
+  const page = new XChatPage();
+  page.messages = [{ ...original, time: 'one minute ago' }];
+  assert.equal(XChatService.merge(previous, page), previous);
+  const receipts = new XChatPage();
+  receipts.events = [{ type: 'read', senderId: '200', conversationId: '100:200', seenUntilId: '1' }];
+  assert.equal(XChatService.merge([original], receipts)[0].read, true);
+  assert.equal(original.read, undefined);
+});
+
 test('public key fingerprint for a peer uses its authenticated identity binding',async()=>{
   reset(); const s=new XChatService();
   queue.push(ok({data:{user_results_by_rest_ids:[user('100'),user('200')]}}));await s.prepare({},['200']);

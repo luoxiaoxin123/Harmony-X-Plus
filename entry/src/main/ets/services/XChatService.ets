@@ -663,6 +663,55 @@ export class XChatService {
     }
   }
 
+  async applyInboxMetadata(body: string, rows: DirectMessage[], viewerId: string): Promise<void> {
+    if (viewerId.length === 0 || rows.length === 0) { return; }
+    const data: XChatResponseData | undefined = (JSON.parse(body) as XChatEnvelope).data;
+    const items: XChatInboxItem[] = (data?.get_initial_chat_page ?? data?.get_inbox_page)?.items ?? [];
+    const events: string[] = [];
+    for (const item of items) {
+      events.push(...XChatService.encodedEvents(item.latest_notifiable_message_create_event));
+      for (const read of item.latest_read_events_per_participant ?? []) {
+        events.push(...XChatService.encodedEvents(read.latest_mark_conversation_read_event));
+      }
+    }
+    if (events.length === 0) { return; }
+    // This metadata comes from the signed-in inbox response. It informs unread
+    // state only. Message content still requires verified XDK decryption.
+    const result: XChatNativeResult = await this.callNative('inspectInbox', JSON.stringify(events));
+    if (!result.ok) { return; }
+    const latest: Map<string, XChatNativeMessage> = new Map<string, XChatNativeMessage>();
+    const reads: Map<string, string> = new Map<string, string>();
+    for (const event of result.data?.messages ?? []) {
+      const id: string = (event.conversationId ?? '').replace(':', '-');
+      if (id.length === 0) { continue; }
+      if (event.type === 'message' && XChatService.compareIds(event.sequenceId ?? '', latest.get(id)?.sequenceId ?? '') > 0) {
+        latest.set(id, event);
+      }
+      if (event.type === 'read' && event.senderId === viewerId &&
+        XChatService.compareIds(event.seenUntilId ?? '', reads.get(id) ?? '') > 0) {
+        reads.set(id, event.seenUntilId ?? '');
+      }
+    }
+    for (const row of rows) {
+      const id: string = (row.conversationId ?? '').replace(':', '-');
+      const message: XChatNativeMessage | undefined = latest.get(id);
+      const sequence: string = message?.sequenceId ?? '';
+      const seen: string = reads.get(id) ?? '';
+      if (sequence.length > 0 && XChatService.compareIds(sequence, row.latestSequenceId ?? '') >= 0) {
+        row.latestSequenceId = sequence;
+        if ((message?.timestampMs ?? 0) > 0) {
+          row.timestampMs = message?.timestampMs;
+          row.time = XNotificationParser.relativeTime(row.timestampMs ?? 0);
+        }
+        if (message?.senderId) {
+          row.unread = message.senderId !== viewerId && XChatService.compareIds(sequence, seen) > 0 ? 1 : 0;
+        }
+      } else if (seen.length > 0 && XChatService.compareIds(seen, row.latestSequenceId ?? '') >= 0) {
+        row.unread = 0;
+      }
+    }
+  }
+
   async decryptInbox(context: common.UIAbilityContext, body: string,
     rows: DirectMessage[]): Promise<DirectMessage[]> {
     for (let i: number = 0; i < rows.length; i++) {
@@ -721,13 +770,9 @@ export class XChatService {
           if (generation !== this.generation) { throw new Error('account_changed'); }
         }
       }
-      let message: DmMessage | undefined = latest.get(id.replace(':', '-'));
-      if (message === undefined && id.length > 0 && (rows[i].latestSequenceId ?? '').length > 0) {
-        const legacy: DmMessage[] = await this.legacyConversation(id);
-        if (generation !== this.generation) { throw new Error('account_changed'); }
-        message = legacy.length > 0 ? legacy[legacy.length - 1] : undefined;
-      }
-      if (message === undefined) { continue; }
+      const message: DmMessage | undefined = latest.get(id.replace(':', '-'));
+      if (message === undefined ||
+        XChatService.compareIds(message.sequenceId ?? '', rows[i].latestSequenceId ?? '') < 0) { continue; }
       rows[i].preview = message.text.length > 0 ? message.text : context.resourceManager.getStringSync(
         ChatMovingPhotoProtocol.group(message.attachments ?? []).some((item: ChatMediaItem): boolean => item.video !== undefined) ?
           $r('app.string.chat_moving_photo') : (message.attachments?.[0]?.mediaType ?? 5) === 4 ? $r('app.string.chat_voice_messages') :
@@ -736,11 +781,13 @@ export class XChatService {
       rows[i].time = message.time;
       rows[i].timestampMs = message.timestampMs;
       rows[i].latestSequenceId = message.sequenceId ?? rows[i].latestSequenceId;
-      const read: XChatNativeMessage | undefined = decoded.events.filter((event: XChatNativeMessage): boolean =>
-        event.type === 'read' && event.senderId === xPrivateClient.viewerId() &&
-        (event.conversationId ?? '').replace(':', '-') === (rows[i].conversationId ?? '').replace(':', '-')).pop();
+      const read: XChatNativeMessage | undefined = this.effectCache.get(id.replace(':', '-') + ':read:' + viewerId);
       if (message.outgoing) { rows[i].unread = 0; }
-      else if (read !== undefined) { rows[i].unread = XChatService.compareIds(message.sequenceId ?? '', read.seenUntilId ?? '') > 0 ? 1 : 0; }
+      else if (read !== undefined) {
+        rows[i].unread = XChatService.compareIds(message.sequenceId ?? '', read.seenUntilId ?? '') > 0 ? 1 : 0;
+      } else {
+        rows[i].unread = Math.max(1, rows[i].unread);
+      }
       rows[i].hidden = xChatActions.localBoolean(context, 'hidden:' + (rows[i].conversationId ?? ''), false);
       const nickname: string = await this.nickname(context, rows[i].conversationId ?? '');
       if (generation !== this.generation) { throw new Error('account_changed'); }
@@ -1178,13 +1225,28 @@ export class XChatService {
     return left === right ? 0 : (left > right ? 1 : -1);
   }
 
+  private static copyMessage(message: DmMessage): DmMessage {
+    return {
+      id: message.id, sequenceId: message.sequenceId, conversationId: message.conversationId,
+      senderId: message.senderId, senderName: message.senderName, senderUsername: message.senderUsername,
+      senderAvatarUrl: message.senderAvatarUrl, senderVerifiedType: message.senderVerifiedType,
+      senderAvatarShape: message.senderAvatarShape, text: message.text, time: message.time, timestampMs: message.timestampMs,
+      outgoing: message.outgoing, encrypted: message.encrypted, read: message.read, attachments: message.attachments,
+      keyVersion: message.keyVersion, rawEvent: message.rawEvent, reply: message.reply, reactions: message.reactions
+    };
+  }
+
   static merge(existing: DmMessage[], page: XChatPage): DmMessage[] {
     const merged: Map<string, DmMessage> = new Map<string, DmMessage>();
     existing.forEach((m: DmMessage): void => { merged.set(m.id, m); });
     page.messages.forEach((m: DmMessage): void => {
       const prior: DmMessage | undefined = merged.get(m.id);
-      if (prior !== undefined) { m.reactions = prior.reactions; m.read = prior.read; }
-      merged.set(m.id, m);
+      if (prior === undefined) { merged.set(m.id, m); return; }
+      const row: DmMessage = XChatService.copyMessage(m);
+      row.reactions = prior.reactions;
+      row.read = prior.read;
+      row.time = prior.time;
+      merged.set(m.id, row);
     });
     page.events.concat(page.effects).forEach((e: XChatNativeMessage): void => {
       if (e.type === 'deleted') {
@@ -1195,7 +1257,7 @@ export class XChatService {
             (ids.indexOf(m.id) >= 0 || ids.indexOf(m.sequenceId ?? '') >= 0)) { merged.delete(id); }
         });
       } else if (e.content?.content_type === 'Reaction' || e.content?.content_type === 'ReactionRemoved') {
-        merged.forEach((m: DmMessage): void => {
+        merged.forEach((m: DmMessage, id: string): void => {
           if (m.sequenceId !== e.content?.target_message_id ||
             m.conversationId.replace(':', '-') !== (e.conversationId ?? '').replace(':', '-')) { return; }
           const entries: DmReaction[] = (m.reactions ?? []).slice();
@@ -1203,21 +1265,38 @@ export class XChatService {
           if (previous !== undefined && XChatService.compareIds(previous.sequenceId, e.sequenceId ?? '') >= 0) { return; }
           const update: DmReaction = { emoji: e.content?.emoji ?? '', senderId: e.senderId ?? '',
             sequenceId: e.sequenceId ?? '', active: e.content?.content_type === 'Reaction' };
-          m.reactions = entries.filter((r: DmReaction): boolean => r.emoji !== update.emoji || r.senderId !== update.senderId).concat([update]);
+          const row: DmMessage = XChatService.copyMessage(m);
+          row.reactions = entries.filter((r: DmReaction): boolean =>
+            r.emoji !== update.emoji || r.senderId !== update.senderId).concat([update]);
+          merged.set(id, row);
         });
       } else if (e.content?.content_type === 'Edit') {
-        merged.forEach((m: DmMessage): void => {
-          if (m.sequenceId === e.content?.target_message_id && (e.senderId === undefined || e.senderId === m.senderId)) { m.text = e.content?.new_text ?? m.text; }
+        merged.forEach((m: DmMessage, id: string): void => {
+          if (m.sequenceId === e.content?.target_message_id && (e.senderId === undefined || e.senderId === m.senderId) &&
+            e.content?.new_text !== undefined && m.text !== e.content.new_text) {
+            const row: DmMessage = XChatService.copyMessage(m);
+            row.text = e.content.new_text;
+            merged.set(id, row);
+          }
         });
       } else if (e.type === 'read' && e.senderId !== xPrivateClient.viewerId()) {
-        merged.forEach((m: DmMessage): void => {
-          if (m.outgoing && m.conversationId.replace(':', '-') === (e.conversationId ?? '').replace(':', '-') &&
-            XChatService.compareIds(m.sequenceId ?? '', e.seenUntilId ?? '') <= 0) { m.read = true; }
+        merged.forEach((m: DmMessage, id: string): void => {
+          if (m.outgoing && !m.read && m.conversationId.replace(':', '-') === (e.conversationId ?? '').replace(':', '-') &&
+            XChatService.compareIds(m.sequenceId ?? '', e.seenUntilId ?? '') <= 0) {
+            const row: DmMessage = XChatService.copyMessage(m);
+            row.read = true;
+            merged.set(id, row);
+          }
         });
       }
     });
     const rows: DmMessage[] = Array.from(merged.values());
     rows.sort((a: DmMessage, b: DmMessage): number => XChatService.compareIds(a.sequenceId ?? '', b.sequenceId ?? ''));
+    if (rows.length === existing.length && rows.every((row: DmMessage, index: number): boolean =>
+      row === existing[index] || JSON.stringify(XChatService.copyMessage(row)) ===
+      JSON.stringify(XChatService.copyMessage(existing[index])))) {
+      return existing;
+    }
     return rows;
   }
 }

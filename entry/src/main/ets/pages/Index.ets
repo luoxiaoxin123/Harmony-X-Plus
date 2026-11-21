@@ -414,6 +414,8 @@ const NOTIFICATIONS_FRESH_MS = 30000;
 const ONBOARDING_STORE_NAME: string = 'harmonyx_onboarding';
 const ONBOARDING_COMPLETED_KEY: string = 'completed_v1';
 const NOTIFICATIONS_BACKGROUND_POLL_MS = 120000;
+const CHAT_INBOX_POLL_MS = 30000;
+const CHAT_REFRESH_INDICATOR_MS = 20000;
 // Tab order is Home, Explore, Notifications, Messages, Me.
 const HOME_TAB_INDEX: number = BOTTOM_BAR_HOME_PAGE;
 const EXPLORE_TAB_INDEX: number = BOTTOM_BAR_EXPLORE_PAGE;
@@ -1009,6 +1011,11 @@ struct Index {
   private midAutumnGreetingTimer: number = -1;
   private chromeTabTimer: number = -1;
   private messagesFetchedAt: number = 0;
+  private messagesRequest: Promise<void> | undefined;
+  private inboxPreviewRequest: Promise<void> | undefined;
+  private inboxSnapshot: number = 0;
+  private messagesRefreshPending: boolean = false;
+  private chatInboxPollTimer: number = -1;
   private afterChatMenuDismiss: (() => void) | null = null;
   @State private showChatUnlock: boolean = false;
   @State private chatUnlocking: boolean = false;
@@ -3763,58 +3770,112 @@ struct Index {
 
   // Private cookie session supplies the inbox. Conversations use the native
   // Chat XDK to recover keys and decrypt signed XChat events on the device.
-  private async loadMessages(): Promise<void> {
-    if (this.messagesLoading) { return; }
+  private loadMessages(): Promise<void> {
+    if (this.messagesRequest !== undefined) { return this.messagesRequest; }
     this.messagesLoading = true;
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     const accountId: string = accountStore.activeId(context);
-    try {
-      this.xPrivate.load(context);
-      if (this.xPrivate.isSignedIn()) {
-        const dmViewerId: string = this.xPrivate.viewerId();
-        const dmGeneration: number = this.xPrivate.sessionGeneration();
-        const privateResult: XPrivateResult = await this.xPrivate.dmInbox('');
-        if (dmGeneration !== this.xPrivate.sessionGeneration() || accountStore.activeId(context) !== accountId) { return; }
-        const privatePage: DmInboxPage | null = privateResult.ok ?
-          XDmParser.parseInbox(privateResult.body, this.xPrivate.viewerId()) : null;
-        if (privatePage !== null) {
-          xChatService.cacheInboxProfiles(context, privateResult.body, dmViewerId);
-          const decrypted: DirectMessage[] = await xChatService.decryptInbox(context, privateResult.body, privatePage.messages);
-          if (dmGeneration !== this.xPrivate.sessionGeneration() || accountStore.activeId(context) !== accountId) { return; }
-          this.messages = decrypted;
-          xChatActions.applyInboxState(context, this.messages);
-          this.messagesFetchedAt = Date.now();
-          this.syncMessagesUnread(this.messages);
-          this.messagesStatus = '';
-          return;
-        }
-        if (!authStore.isSignedIn() || privateResult.status === 429) {
-          this.messagesStatus = privateResult.status === 429 ?
-            this.text($r('app.string.dm_rate_limited')) : privateResult.status === 401 || privateResult.status === 403 ?
-            this.text($r('app.string.private_session_expired')) :
-            this.text($r('app.string.dm_private_unavailable')) + ' HTTP ' + privateResult.status +
-            XPrivateClient.explain(privateResult).substring(0, 160);
-          return;
-        }
+    this.messagesRequest = this.fetchMessages(context, accountId).catch((error: Error): void => {
+      if (accountStore.activeId(context) === accountId) {
+        this.messagesStatus = this.text($r('app.string.dm_load_failed'));
+        hilog.warn(0xFF00, 'HarmonyX-Chat', 'inbox refresh failed: %{public}s', error.message);
       }
-
-      if (authStore.isSignedIn()) {
-        const liveMessages: DirectMessage[] | null = await this.api.directMessages();
-        if (accountStore.activeId(context) !== accountId) { return; }
-        this.messages = liveMessages === null ? [] : liveMessages;
-        this.messagesFetchedAt = Date.now();
-        this.syncMessagesUnread(this.messages);
-        this.messagesStatus = liveMessages === null ?
-          this.text($r('app.string.status_dm_scope_required')) :
-          this.text($r('app.string.status_live_messages'));
-      } else {
-        this.messages = [];
-        this.syncMessagesUnread(this.messages);
-        this.messagesStatus = this.text($r('app.string.status_dm_unsupported'));
-      }
-    } finally {
+    }).finally((): void => {
+      this.messagesRequest = undefined;
       this.messagesLoading = false;
-      if (accountStore.activeId(context) !== accountId) { this.loadMessages().catch((): void => {}); }
+      if (accountStore.activeId(context) !== accountId) { void this.loadMessages(); }
+    });
+    return this.messagesRequest;
+  }
+
+  private async fetchMessages(context: common.UIAbilityContext, accountId: string): Promise<void> {
+    this.xPrivate.load(context);
+    if (this.xPrivate.isSignedIn()) {
+      const dmViewerId: string = this.xPrivate.viewerId();
+      const dmGeneration: number = this.xPrivate.sessionGeneration();
+      const privateResult: XPrivateResult = await this.xPrivate.dmInbox('');
+      if (dmGeneration !== this.xPrivate.sessionGeneration() || accountStore.activeId(context) !== accountId) { return; }
+      const privatePage: DmInboxPage | null = privateResult.ok ?
+        XDmParser.parseInbox(privateResult.body, this.xPrivate.viewerId()) : null;
+      if (privatePage !== null) {
+        try {
+          await xChatService.applyInboxMetadata(privateResult.body, privatePage.messages, dmViewerId);
+        } catch (error) {
+          hilog.warn(0xFF00, 'HarmonyX-Chat', 'inbox metadata unavailable');
+        }
+        if (dmGeneration !== this.xPrivate.sessionGeneration() || accountStore.activeId(context) !== accountId) { return; }
+        xChatService.cacheInboxProfiles(context, privateResult.body, dmViewerId);
+        const current: Map<string, DirectMessage> = new Map<string, DirectMessage>();
+        this.messages.forEach((row: DirectMessage): void => { current.set(row.id, row); });
+        const previews: DirectMessage[] = privatePage.messages;
+        previews.forEach((row: DirectMessage): void => {
+          const previous: DirectMessage | undefined = current.get(row.id);
+          if (xChatService.isUnlocked() && previous !== undefined && previous.latestSequenceId === row.latestSequenceId) {
+            row.preview = row.preview || previous.preview;
+            row.from = previous.from;
+            row.avatarUrl = previous.avatarUrl || row.avatarUrl;
+            row.timestampMs = row.timestampMs || previous.timestampMs;
+            row.time = row.time || previous.time;
+          }
+        });
+        this.publishInbox(context, previews);
+        this.messagesFetchedAt = Date.now();
+        this.messagesStatus = '';
+        const snapshot: number = ++this.inboxSnapshot;
+        if (this.inboxPreviewRequest === undefined) {
+          const previewRows: DirectMessage[] = JSON.parse(JSON.stringify(previews)) as DirectMessage[];
+          const request: Promise<void> = this.updateInboxPreviews(context, accountId, snapshot, dmGeneration,
+            privateResult.body, previewRows);
+          this.inboxPreviewRequest = request;
+          request.finally((): void => {
+            if (this.inboxPreviewRequest === request) { this.inboxPreviewRequest = undefined; }
+          });
+        }
+        return;
+      }
+      if (!authStore.isSignedIn() || privateResult.status === 429) {
+        this.messagesStatus = privateResult.status === 429 ?
+          this.text($r('app.string.dm_rate_limited')) : privateResult.status === 401 || privateResult.status === 403 ?
+          this.text($r('app.string.private_session_expired')) :
+          this.text($r('app.string.dm_private_unavailable')) + ' HTTP ' + privateResult.status +
+          XPrivateClient.explain(privateResult).substring(0, 160);
+        return;
+      }
+    }
+
+    if (authStore.isSignedIn()) {
+      const liveMessages: DirectMessage[] | null = await this.api.directMessages();
+      if (accountStore.activeId(context) !== accountId) { return; }
+      this.messages = liveMessages === null ? [] : liveMessages;
+      this.messagesFetchedAt = Date.now();
+      this.syncMessagesUnread(this.messages);
+      this.messagesStatus = liveMessages === null ?
+        this.text($r('app.string.status_dm_scope_required')) :
+        this.text($r('app.string.status_live_messages'));
+    } else {
+      this.messages = [];
+      this.syncMessagesUnread(this.messages);
+      this.messagesStatus = this.text($r('app.string.status_dm_unsupported'));
+    }
+  }
+
+  private publishInbox(context: common.UIAbilityContext, rows: DirectMessage[]): void {
+    xChatActions.applyInboxState(context, rows);
+    rows.sort((first: DirectMessage, second: DirectMessage): number => (second.timestampMs ?? 0) - (first.timestampMs ?? 0));
+    if (JSON.stringify(this.messages) !== JSON.stringify(rows)) { this.messages = rows; }
+    this.syncMessagesUnread(rows);
+  }
+
+  private async updateInboxPreviews(context: common.UIAbilityContext, accountId: string, snapshot: number,
+    generation: number, body: string, rows: DirectMessage[]): Promise<void> {
+    try {
+      const decrypted: DirectMessage[] = await xChatService.decryptInbox(context, body, rows);
+      if (generation === this.xPrivate.sessionGeneration() && accountStore.activeId(context) === accountId &&
+        snapshot === this.inboxSnapshot) {
+        this.publishInbox(context, decrypted);
+      }
+    } catch (error) {
+      hilog.warn(0xFF00, 'HarmonyX-Chat', 'inbox previews unavailable');
     }
   }
 
@@ -4144,7 +4205,9 @@ struct Index {
     }
     this.refreshNotificationsIfStale();
     this.refreshHomeSpaces();
-    this.refreshMessagesIfStale();
+    if (this.hasAnySession() && (this.currentTab === MESSAGES_TAB_INDEX || this.chatAlertsEnabled())) {
+      void this.loadMessages();
+    }
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     meowPushService.checkin(context, accountStore.activeId(context)).catch((): void => {});
     if (this.refreshOnForeground && this.currentTab === HOME_TAB_INDEX && this.navPathStack.size() === 0) {
@@ -4182,6 +4245,11 @@ struct Index {
     this.notificationPollTimer = setInterval((): void => {
       this.refreshNotificationsInBackground();
     }, NOTIFICATIONS_BACKGROUND_POLL_MS);
+    this.chatInboxPollTimer = setInterval((): void => {
+      if (this.hasAnySession() && (this.currentTab === MESSAGES_TAB_INDEX || this.chatAlertsEnabled())) {
+        void this.loadMessages();
+      }
+    }, CHAT_INBOX_POLL_MS);
   }
 
   private stopNotificationPolling(): void {
@@ -4190,17 +4258,16 @@ struct Index {
     }
     clearInterval(this.notificationPollTimer);
     this.notificationPollTimer = -1;
+    clearInterval(this.chatInboxPollTimer);
+    this.chatInboxPollTimer = -1;
   }
 
   private refreshNotificationsInBackground(): void {
-    if (!this.chatAlertsEnabled() || !this.hasAnySession()) {
+    if (!this.hasAnySession()) {
       return;
     }
     if (this.notificationAlertsEnabled && this.currentTab !== NOTIFICATIONS_TAB_INDEX && !this.notificationsLoading) {
       this.loadNotifications(true).then((): void => {});
-    }
-    if (this.currentTab !== MESSAGES_TAB_INDEX && !this.messagesLoading) {
-      this.loadMessages().then((): void => {});
     }
   }
 
@@ -4236,12 +4303,6 @@ struct Index {
   private syncSystemMessages(rows: DirectMessage[], unread: number): void {
     if (!this.chatAlertsEnabled()) {
       this.unreadMessages = 0;
-      this.syncUnreadBadge();
-      return;
-    }
-    if (this.currentTab === MESSAGES_TAB_INDEX) {
-      const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
-      notificationDeliveryService.markUnreadMessagesSeen(context, rows);
       this.syncUnreadBadge();
       return;
     }
@@ -6480,30 +6541,35 @@ struct Index {
       .attributeModifier(materialModifier(this.chatFilterMaterialCache.material(this.accentColor))).bindMenu(this.ChatFilterMenu())
   }
 
-  private refreshMessages(): void {
-    if (this.messagesRefreshing) {
+  private async refreshMessages(): Promise<void> {
+    if (this.messagesRefreshPending) {
       return;
     }
+    this.messagesRefreshPending = true;
     this.messagesRefreshing = true;
-    this.loadMessages().then((): void => {
+    let deadline: number = -1;
+    try {
+      const indicator: Promise<void> = new Promise<void>((resolve: () => void): void => {
+        deadline = setTimeout(resolve, CHAT_REFRESH_INDICATOR_MS);
+      });
+      await Promise.race<void>([this.loadMessages(), indicator]);
+    } finally {
+      clearTimeout(deadline);
+      this.messagesRefreshPending = false;
       this.messagesRefreshing = false;
-    }).catch((): void => {
-      this.messagesRefreshing = false;
-    });
+      this.messagesRefreshPullOffset = 0;
+    }
   }
 
   private onChatChanged(): void {
     this.messagesFetchedAt = 0;
-    if (this.xPrivate.isSignedIn() && !this.messagesLoading && !this.markingChats) { this.refreshMessages(); }
+    if (this.xPrivate.isSignedIn() && !this.messagesLoading && !this.markingChats) { void this.loadMessages(); }
   }
 
   private refreshMessagesIfStale(): void {
-    if (this.messagesRefreshing) {
-      return;
-    }
     if (this.messages.length === 0 ||
       Date.now() - this.messagesFetchedAt > MESSAGES_FRESH_MS) {
-      this.refreshMessages();
+      void this.loadMessages();
     }
   }
 
@@ -6733,6 +6799,8 @@ struct Index {
     this.unreadNotifications = 0;
     this.messages = [];
     this.messagesUnread = 0;
+    this.inboxSnapshot++;
+    this.inboxPreviewRequest = undefined;
     this.messagesFetchedAt = 0;
     this.unreadMessages = 0;
     this.syncUnreadBadge();
@@ -11084,7 +11152,7 @@ struct Index {
               Text(this.messagesStatus).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
                 .textAlign(TextAlign.Center)
               Button($r('app.string.common_retry')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
-                .onClick((): void => this.refreshMessages())
+                .onClick((): void => { void this.refreshMessages(); })
             }.width('100%').padding(24)
           }
         } else if (this.visibleChats().length === 0 && !this.messagesLoading) {
@@ -11118,7 +11186,7 @@ struct Index {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).scrollBar(BarState.Off)
         .onDidScroll((scrollOffset: number): void => { this.onChromeScroll(scrollOffset); })
         .onScrollStop((): void => { scrollStopped(this.messagesScroller); this.onChromeScrollStop(); })
-    }.clip(!this.isDesktopLayout()).onRefreshing((): void => this.refreshMessages())
+    }.clip(!this.isDesktopLayout()).onRefreshing((): void => { void this.refreshMessages(); })
       .onOffsetChange((offset: number): void => { this.messagesRefreshPullOffset = offset; })
     RootRefreshIndicator({ topInset: this.messagesContentTopInset(), pullOffset: this.messagesRefreshPullOffset,
       refreshing: this.messagesRefreshing, phoneLayout: !this.isDesktopLayout() })

@@ -91,6 +91,88 @@ test('messages read while queued are skipped before the system publish', async (
   assert.equal(f.published.length, 0);
 });
 
+test('the next incoming message in an existing thread gets its own notification', async () => {
+  const f = delivery();
+  const first = { ...message('100-200'), conversationId: '100:200', latestSequenceId: '42' };
+  const second = { ...first, conversationId: '100-200', latestSequenceId: '43' };
+  assert.equal(await f.service.publishUnreadMessages({}, [first], 1, 1, false), 1);
+  assert.equal(await f.service.publishUnreadMessages({}, [first], 1, 1, false), 0);
+  assert.equal(await f.service.publishUnreadMessages({}, [second], 1, 1, false), 1);
+  assert.equal(await f.service.publishUnreadMessages({}, [{ ...second, latestSequenceId: '44', muted: true }], 1, 1, false), 0);
+  assert.deepEqual(f.published.map(row => row.request.appMessageId),
+    ['account-a:dm:100-200:42', 'account-a:dm:100-200:43']);
+});
+
+test('tap-to-share resumes the selected recipient after PIN and closes after actual send', async () => {
+  const calls = [];
+  let unlocked = false;
+  let rejectPin = true;
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer' },
+    xChatService: {
+      async prepare() { calls.push('prepare'); },
+      isUnlocked: () => unlocked,
+      async unlock(pin) {
+        assert.equal(pin, '1234');
+        calls.push('unlock');
+        if (rejectPin) { throw new Error('InvalidPin'); }
+        unlocked = true;
+      },
+      async sharePost(...args) { calls.push(args); }
+    },
+    postShareUrl: () => 'https://x.com/example/status/123',
+    $r: name => name
+  });
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: { conversationId: '100-200', participantIds: ['200'] },
+    note: ' note ', open: true,
+    context: () => ({ resourceManager: { getStringSync: name => name } }),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast: () => calls.push('sent') }) })
+  });
+  await subject.sendSelected();
+  assert.equal(subject.askingPin, true);
+  assert.equal(subject.sending, false);
+  await subject.sendSelected('1234');
+  assert.equal(subject.sendError, 'app.string.dm_pin_incorrect');
+  assert.equal(subject.open, true);
+  rejectPin = false;
+  await subject.sendSelected('1234');
+  assert.equal(subject.open, false);
+  assert.equal(subject.sending, false);
+  assert.deepEqual(calls, ['prepare', 'unlock', 'unlock', ['100-200', '123', 'https://x.com/example/status/123', 'note'], 'sent']);
+});
+
+test('native pull state still starts refresh and times out cleanly without a second inbox request', async () => {
+  let resolveFetch;
+  let fetches = 0;
+  let indicatorTimeout;
+  const { Subject } = load(methods('entry/src/main/ets/pages/Index.ets', 'Index', ['refreshMessages', 'loadMessages']), {}, {
+    getContext() { return {}; },
+    accountStore: { activeId: () => 'viewer' },
+    CHAT_REFRESH_INDICATOR_MS: 20000,
+    setTimeout(callback) { indicatorTimeout = callback; return 1; },
+    clearTimeout() {}
+  });
+  const subject = Object.assign(new Subject(), {
+    messagesRefreshing: true, messagesRefreshPullOffset: 34,
+    fetchMessages() { fetches++; return new Promise(resolve => { resolveFetch = resolve; }); }
+  });
+  const refresh = subject.refreshMessages();
+  assert.equal(fetches, 1);
+  indicatorTimeout();
+  await refresh;
+  assert.equal(subject.messagesRefreshing, false);
+  assert.equal(subject.messagesRefreshPullOffset, 0);
+  assert.equal(subject.messagesLoading, true);
+  const retry = subject.refreshMessages();
+  assert.equal(fetches, 1);
+  resolveFetch();
+  await retry;
+  assert.equal(subject.messagesLoading, false);
+  assert.equal(subject.messagesRefreshing, false);
+});
+
 function share(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'harmonyx-share-test-')).replace(/\\/g, '/');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
