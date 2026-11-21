@@ -54,6 +54,7 @@ import { CommentPhotoViewer } from '../components/CommentPhotoViewer';
 import { PhotoRequest } from '../utils/PhotoViewerRequest';
 import { browsingHistoryStore } from '../services/BrowsingHistoryStore';
 import { QuotedPostCard } from '../components/QuotedPostCard';
+import { StockQuoteCard, stockTicker } from '../components/StockQuoteCard';
 import { PostInteractiveContent } from '../components/PostInteractiveContent';
 import { canPostAction } from '../utils/PostContentVisibility';
 import { FloatingComposeButton } from '../components/FloatingComposeButton';
@@ -2737,6 +2738,9 @@ export struct PostDetail {
             pipEnabled: true,
             naturalVideoSize: true
           })
+        }
+        if (this.tweet.presentation?.visibility?.hidden !== true && stockTicker(this.tweet.text).length > 0) {
+          StockQuoteCard({ symbol: stockTicker(this.tweet.text), initialExpanded: true })
         }
         if (this.tweet.poll !== undefined || this.tweet.card !== undefined || this.tweet.article !== undefined || this.tweet.presentation !== undefined) {
           PostInteractiveContent({ postId: this.tweet.id, poll: this.tweet.poll, card: this.tweet.card,

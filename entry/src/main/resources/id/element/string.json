@@ -474,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Modul utama Harmony X"
+      "value": "Modul utama HarmonyX+"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Ability utama Harmony X"
+      "value": "Ability utama HarmonyX+"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -490,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Selamat datang di Harmony X"
+      "value": "Selamat datang di HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · model Stage"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · model Stage"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Masuk ke Harmony X"
+      "value": "Masuk ke HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Berhasil masuk. Membuka Harmony X…"
+      "value": "Berhasil masuk. Membuka HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Atur tampilan konten Harmony X."
+      "value": "Atur tampilan konten HarmonyX+."
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Pilih bahasa untuk seluruh Harmony X. Perubahan langsung berlaku dan tersimpan saat aplikasi dibuka lagi."
+      "value": "Pilih bahasa untuk seluruh HarmonyX+. Perubahan langsung berlaku dan tersimpan saat aplikasi dibuka lagi."
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Gunakan bahasa sistem di seluruh Harmony X."
+      "value": "Gunakan bahasa sistem di seluruh HarmonyX+."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "settings_language_zh_cn_desc",
-      "value": "Gunakan Harmony X dalam bahasa Mandarin Sederhana."
+      "value": "Gunakan HarmonyX+ dalam bahasa Mandarin Sederhana."
     },
     {
       "name": "settings_language_en",
@@ -1546,7 +1546,7 @@
     },
     {
       "name": "settings_language_en_desc",
-      "value": "Gunakan Harmony X dalam bahasa Inggris."
+      "value": "Gunakan HarmonyX+ dalam bahasa Inggris."
     },
     {
       "name": "settings_language_it",
@@ -1554,7 +1554,7 @@
     },
     {
       "name": "settings_language_it_desc",
-      "value": "Gunakan Harmony X dalam bahasa Italia."
+      "value": "Gunakan HarmonyX+ dalam bahasa Italia."
     },
     {
       "name": "settings_font_size",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Pilih ikon Harmony X. Layar utama, daftar aplikasi, dan aplikasi terbaru akan memakai ikon yang sama."
+      "value": "Pilih ikon HarmonyX+. Layar utama, daftar aplikasi, dan aplikasi terbaru akan memakai ikon yang sama."
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Izinkan notifikasi Harmony X di pengaturan sistem"
+      "value": "Izinkan notifikasi HarmonyX+ di pengaturan sistem"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "Sinkronkan preferensi media sensitif akun X dan terapkan di Harmony X."
+      "value": "Sinkronkan preferensi media sensitif akun X dan terapkan di HarmonyX+."
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Selamat datang di Harmony X"
+      "value": "Selamat datang di HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Masuk di halaman web di bawah. Harmony X terbuka otomatis setelah selesai."
+      "value": "Masuk di halaman web di bawah. HarmonyX+ terbuka otomatis setelah selesai."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Beberapa pilihan agar Harmony X sesuai dengan Anda."
+      "value": "Beberapa pilihan agar HarmonyX+ sesuai dengan Anda."
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "Akun X terhubung. Harmony X siap digunakan."
+      "value": "Akun X terhubung. HarmonyX+ siap digunakan."
     },
     {
       "name": "onboarding_finish",
@@ -4918,7 +4918,7 @@
     },
     {
       "name": "follow_contacts_sdk_unavailable",
-      "value": "Sinkronisasi kontak perangkat belum tersedia di Harmony X. Sinkronkan melalui aplikasi X resmi, lalu kembali untuk melihat saran."
+      "value": "Sinkronisasi kontak perangkat belum tersedia di HarmonyX+. Sinkronkan melalui aplikasi X resmi, lalu kembali untuk melihat saran."
     },
     {
       "name": "follow_contacts_open_x",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "Pasang MeoW dan hubungkan nama pengguna Anda di sini. Relay HTTPS yang selalu aktif bisa meneruskan peringatan pesan X saat Harmony X ditutup."
+      "value": "Pasang MeoW dan hubungkan nama pengguna Anda di sini. Relay HTTPS yang selalu aktif bisa meneruskan peringatan pesan X saat HarmonyX+ ditutup."
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Lalu lintas Harmony X sejak perangkat terakhir dinyalakan, termasuk media dan permintaan. Penghitungan dimulai ulang setelah reboot."
+      "value": "Lalu lintas HarmonyX+ sejak perangkat terakhir dinyalakan, termasuk media dan permintaan. Penghitungan dimulai ulang setelah reboot."
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Filter ini hanya berlaku di Harmony X. Kelola kata dan akun yang dibisukan untuk seluruh akun di Privasi dan keamanan."
+      "value": "Filter ini hanya berlaku di HarmonyX+. Kelola kata dan akun yang dibisukan untuk seluruh akun di Privasi dan keamanan."
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "Disinkronkan dengan akun X aktif dan mengatur media yang tampil di Harmony X."
+      "value": "Disinkronkan dengan akun X aktif dan mengatur media yang tampil di HarmonyX+."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X mendukung mendengarkan dan memutar rekaman. Suara mikrofon serta permintaan berbicara tidak dikirim."
+      "value": "HarmonyX+ mendukung mendengarkan dan memutar rekaman. Suara mikrofon serta permintaan berbicara tidak dikirim."
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "Setiap pertemuan melengkapi Harmony X."
+      "value": "Setiap pertemuan melengkapi HarmonyX+."
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Kamu bagian dari Harmony X."
+      "value": "Kamu bagian dari HarmonyX+."
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Tampilkan semua postingan"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Tampilkan teks pesan di notifikasi"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Tampilkan teks pesan dalam notifikasi obrolan lokal, termasuk di layar kunci."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "Anda memiliki pesan baru"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Sedang mengetik…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Harga saham · Data mungkin tertunda"
     }
   ]
 }

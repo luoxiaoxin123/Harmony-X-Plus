@@ -6,12 +6,35 @@ import { preferences } from '@kit.ArkData';
 export const STORAGE_KEY_NOTIFICATION_ALERTS: string = 'harmonyx.notification_alerts';
 export const STORAGE_KEY_SYSTEM_NOTIFICATIONS: string = 'harmonyx.system_notifications';
 export const STORAGE_KEY_NOTIFICATION_DND_SILENT: string = 'harmonyx.notification_dnd_silent';
+export const STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW: string = 'harmonyx.message_notification_preview';
 
 export class NotificationSettingsStore {
   private static readonly STORE_NAME: string = 'harmonyx_notifications';
   private static readonly ALERTS_ENABLED_KEY: string = 'alerts_enabled';
   private static readonly SYSTEM_NOTIFICATIONS_KEY: string = 'system_notifications';
   private static readonly DND_SILENT_KEY: string = 'dnd_silent';
+  private static readonly MESSAGE_PREVIEW_KEY: string = 'message_preview';
+
+  loadMessagePreview(context: common.Context): boolean {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context, { name: NotificationSettingsStore.STORE_NAME });
+      return store.getSync(NotificationSettingsStore.MESSAGE_PREVIEW_KEY, false) === true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  saveMessagePreview(context: common.Context, value: boolean): boolean {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context, { name: NotificationSettingsStore.STORE_NAME });
+      store.putSync(NotificationSettingsStore.MESSAGE_PREVIEW_KEY, value);
+      store.flushSync();
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_MESSAGE_NOTIFICATION_PREVIEW, value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 
   loadAlertsEnabled(context: common.Context): boolean {
     try {

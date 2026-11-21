@@ -230,6 +230,7 @@ export class XChatPage {
   minSequenceId: string = '';
   minKeyVersion: string = '';
   needsUnlock: boolean = false;
+  typingUntil: number = 0;
   error: string = '';
   transport: string = 'unknown';
 }
@@ -1084,11 +1085,21 @@ export class XChatService {
     page.transport = this.conversationTransport(conversationId);
     page.needsUnlock = !this.unlocked && page.transport === 'encrypted' && (result.data?.errors?.length ?? 0) > 0;
     if (!page.needsUnlock && (result.data?.errors?.length ?? 0) > 0) { page.error = 'some_messages_unavailable'; }
+    const now: number = Date.now();
     for (let i: number = 0; i < page.events.length; i++) {
       const event: XChatNativeMessage = page.events[i];
       const eventConversation: string = event.conversationId ?? '';
       if (conversationId.length > 0 &&
         eventConversation.replace(':', '-') !== conversationId.replace(':', '-')) { continue; }
+      if (event.type === 'typing') {
+        const timestamp: number = event.timestampMs ?? 0;
+        const sender: string = event.senderId ?? '';
+        if (conversationId.length > 0 && sender.length > 0 && sender !== xPrivateClient.viewerId() &&
+          timestamp <= now + 1000 && timestamp + 8000 > now) {
+          page.typingUntil = Math.max(page.typingUntil, timestamp + 8000);
+        }
+        continue;
+      }
       const sequence: string = event.sequenceId ?? '';
       if (sequence.length > 0 && (page.minSequenceId.length === 0 ||
         XChatService.compareIds(sequence, page.minSequenceId) < 0)) {

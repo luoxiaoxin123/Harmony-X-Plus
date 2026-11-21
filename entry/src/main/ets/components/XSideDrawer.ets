@@ -25,7 +25,7 @@ export struct XSideDrawer {
   @Prop profile: UserProfile | null = null;
   @StorageProp(STORAGE_KEY_ACCOUNTS_CHANGED) @Watch('loadCachedAccount') private accountsChanged: number = 0;
   @State private cachedAccount: XAccount | null = null;
-  @Prop fallbackName: string = 'Harmony X';
+  @Prop fallbackName: string = 'HarmonyX+';
   @Prop fallbackHandle: string = '@harmonyx';
   onClose: () => void = (): void => {};
   onProfile: () => void = (): void => {};

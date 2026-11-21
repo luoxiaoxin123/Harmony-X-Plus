@@ -26,6 +26,9 @@ if [[ "${1:-}" == --prepare ]]; then
 fi
 
 : "${HOS_SDK_HOME:?Set HOS_SDK_HOME to the HarmonyOS API 26 SDK directory}"
+if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+  python3 scripts/ci-version.py
+fi
 if [[ ! -e .npmrc ]]; then
   printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > .npmrc
 fi

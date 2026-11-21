@@ -474,23 +474,23 @@
     },
     {
       "name": "module_desc",
-      "value": "Основной модуль Harmony X"
+      "value": "Основной модуль HarmonyX+"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Главный экран Harmony X"
+      "value": "Главный экран HarmonyX+"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
-      "value": "Открывать ссылки, фото и видео в Harmony X"
+      "value": "Открывать ссылки, фото и видео в HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Добро пожаловать в Harmony X"
+      "value": "Добро пожаловать в HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · модель Stage"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · модель Stage"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Вход в Harmony X"
+      "value": "Вход в HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Вход выполнен. Открываем Harmony X…"
+      "value": "Вход выполнен. Открываем HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Настройте отображение контента в Harmony X."
+      "value": "Настройте отображение контента в HarmonyX+."
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Выберите язык Harmony X. Он изменится сразу и сохранится для следующего запуска."
+      "value": "Выберите язык HarmonyX+. Он изменится сразу и сохранится для следующего запуска."
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Использовать язык системы в Harmony X."
+      "value": "Использовать язык системы в HarmonyX+."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Выберите значок Harmony X. Он изменится на главном экране, в списке приложений и недавних приложениях."
+      "value": "Выберите значок HarmonyX+. Он изменится на главном экране, в списке приложений и недавних приложениях."
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Разрешите уведомления Harmony X в настройках системы"
+      "value": "Разрешите уведомления HarmonyX+ в настройках системы"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "Синхронизировать настройку деликатных медиа аккаунта X с Harmony X."
+      "value": "Синхронизировать настройку деликатных медиа аккаунта X с HarmonyX+."
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Добро пожаловать в Harmony X"
+      "value": "Добро пожаловать в HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Войдите на странице ниже. Harmony X откроется автоматически после входа."
+      "value": "Войдите на странице ниже. HarmonyX+ откроется автоматически после входа."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Несколько настроек, чтобы Harmony X был удобен вам."
+      "value": "Несколько настроек, чтобы HarmonyX+ был удобен вам."
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "Аккаунт X подключён. Можно пользоваться Harmony X."
+      "value": "Аккаунт X подключён. Можно пользоваться HarmonyX+."
     },
     {
       "name": "onboarding_finish",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "Установите MeoW и укажите ник. Постоянно работающий HTTPS-сервер сможет передавать уведомления X, пока Harmony X закрыт."
+      "value": "Установите MeoW и укажите ник. Постоянно работающий HTTPS-сервер сможет передавать уведомления X, пока HarmonyX+ закрыт."
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Фактический трафик Harmony X с запуска устройства, включая медиа и запросы. Счётчики сбрасываются при перезагрузке."
+      "value": "Фактический трафик HarmonyX+ с запуска устройства, включая медиа и запросы. Счётчики сбрасываются при перезагрузке."
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Фильтры действуют только в Harmony X. Общие для аккаунта игнорируемые слова и люди — в разделе конфиденциальности."
+      "value": "Фильтры действуют только в HarmonyX+. Общие для аккаунта игнорируемые слова и люди — в разделе конфиденциальности."
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "Синхронизируется с аккаунтом X и управляет медиа в Harmony X."
+      "value": "Синхронизируется с аккаунтом X и управляет медиа в HarmonyX+."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X поддерживает прослушивание и записи. Звук микрофона и запросы выступить не отправляются."
+      "value": "HarmonyX+ поддерживает прослушивание и записи. Звук микрофона и запросы выступить не отправляются."
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "Каждая встреча дополняет Harmony X."
+      "value": "Каждая встреча дополняет HarmonyX+."
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Вы — часть Harmony X."
+      "value": "Вы — часть HarmonyX+."
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Показать все публикации"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Показывать текст сообщений в уведомлениях"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Показывает текст в локальных уведомлениях чатов, в том числе на экране блокировки."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "У вас новое сообщение"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Печатает…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Котировка · Данные могут поступать с задержкой"
     }
   ]
 }

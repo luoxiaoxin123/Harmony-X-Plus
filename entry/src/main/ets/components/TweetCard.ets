@@ -33,6 +33,7 @@ import { SpaceAwareAvatar } from './SpaceAwareAvatar';
 import { CommunitySource } from './CommunitySource';
 import { ProxyMediaImage } from './ProxyMediaImage';
 import { QuotedPostCard } from './QuotedPostCard';
+import { StockQuoteCard, stockTicker } from './StockQuoteCard';
 import { PostInteractiveContent } from './PostInteractiveContent';
 import { canPostAction } from '../utils/PostContentVisibility';
 import {
@@ -739,6 +740,9 @@ export struct TweetCard {
   @Builder
   private PostFooter(): void {
     Column({ space: 4 }) {
+      if (this.tweet.presentation?.visibility?.hidden !== true && stockTicker(this.tweet.text).length > 0) {
+        StockQuoteCard({ symbol: stockTicker(this.tweet.text) })
+      }
       if (this.interactivePoll() !== undefined || this.tweet.card !== undefined || this.tweet.article !== undefined || this.tweet.presentation !== undefined) {
         PostInteractiveContent({ postId: this.tweet.id, poll: this.interactivePoll(), card: this.tweet.card,
           article: this.tweet.article, presentation: this.tweet.presentation,
@@ -900,6 +904,10 @@ export struct TweetCard {
             article: this.tweet.article, presentation: this.tweet.presentation,
             accentColor: this.accentColor, showPollMedia: true })
         }
+        if (!this.narrowHasMedia() && this.tweet.presentation?.visibility?.hidden !== true &&
+          stockTicker(this.tweet.text).length > 0) {
+          StockQuoteCard({ symbol: stockTicker(this.tweet.text) })
+        }
         if (!this.narrowHasMedia() && this.tweet.quotedTweet !== undefined && this.tweet.presentation?.visibility?.hidden !== true) {
           QuotedPostCard({ quoted: this.tweet.quotedTweet, narrowColumn: true, accentColor: this.accentColor,
             onPhotoOpen: this.onPhotoOpen,
@@ -920,9 +928,9 @@ export struct TweetCard {
             Text() { EmojiSpans(this.getUIContext(), this.tweet.author.name, $r('app.float.timeline_column_author_font'), this.systemEmojiEnabled) }
               .fontFamily(this.appFontFamily).fontSize($r('app.float.timeline_column_author_font'))
               .fontColor(this.readingText($r('app.color.text_secondary'))).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+              .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
           }.layoutWeight(1).alignItems(VerticalAlign.Center)
-            .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
           if (this.showActions && (this.actionsMask & 4) !== 0) {
             Row({ space: 3 }) {
               SymbolGlyph(this.liked ? $r('sys.symbol.heart_fill') : $r('sys.symbol.heart'))
@@ -958,6 +966,7 @@ export struct TweetCard {
   @Builder
   private CardAvatar(): void {
     SpaceAwareAvatar({verifiedType: this.tweet.author.verifiedType ?? '', avatarShape: this.tweet.author.avatarShape ?? '',  userId: this.tweet.author.id, url: this.avatarUrl(), avatarSize: this.avatarSize(), radius: this.avatarSize() / 2,
+            openSpaceOnTap: !this.useDetailLayout,
             followed: this.tweet.author.following === true,
             fallbackText: this.tweet.author.name.substring(0, 1).toUpperCase(),
             fallbackColor: this.tweet.author.avatarColor, tintBackground: true,
@@ -981,6 +990,7 @@ export struct TweetCard {
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .flexShrink(1)
                   .margin({ end: LengthMetrics.vp(4) })
+                  .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
                 if (this.tweet.author.verified) {
                   SymbolGlyph($r('sys.symbol.checkmark_circle_fill'))
                     .fontSize(16)
@@ -999,7 +1009,6 @@ export struct TweetCard {
                 }
               }
               .layoutWeight(1)
-              .onClick((): void => this.onAuthorTapped(this.tweet))
               PostOverflowButton({ compactHeader: true, foreground: this.readingText($r('app.color.text_secondary')), tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, feedbackRequest: this.feedbackRequest })
               if (this.translationEnabled && (this.actionsMask & 64) !== 0 && !this.showActions) {
                 Stack() {
@@ -1024,7 +1033,6 @@ export struct TweetCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .maxLines(1)
               .width('100%')
-              .onClick((): void => this.onAuthorTapped(this.tweet))
             }
           }
           .width('100%')

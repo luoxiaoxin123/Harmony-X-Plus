@@ -323,6 +323,23 @@ test('hidden conversations remain hidden while messages are locked',async()=>{
   dependencies['./XChatActions'].xChatActions.localBoolean=()=>false;
 });
 
+test('typing status expires and ignores the viewer, other conversations and old events', async () => {
+  reset();
+  const service = new XChatService();
+  const now = Date.now();
+  nativeByMethod.decrypt = { ok: true, data: { messages: [
+    { type: 'typing', conversationId: '100:200', senderId: '200', timestampMs: now - 600 },
+    { type: 'typing', conversationId: '100:200', senderId: '100', timestampMs: now },
+    { type: 'typing', conversationId: '100:300', senderId: '300', timestampMs: now },
+    { type: 'typing', conversationId: '100:200', senderId: '200', timestampMs: now + 30000 },
+    { type: 'typing', conversationId: '100:200', senderId: '200', timestampMs: now - 12000 }
+  ] } };
+  queue.push(ok({ data: { get_conversation_page: { encoded_message_events: ['typing'] } } }));
+  const page = await service.conversation('100-200');
+  assert.equal(page.typingUntil, now + 7400);
+  assert.equal(page.messages.length, 0);
+});
+
 test('locked inbox identifies new incoming sequences and honours only the viewer latest read receipt', async () => {
   reset();
   const service = new XChatService();

@@ -474,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Mô-đun chính Harmony X"
+      "value": "Mô-đun chính HarmonyX+"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Thành phần chính Harmony X"
+      "value": "Thành phần chính HarmonyX+"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -490,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Chào mừng đến với Harmony X"
+      "value": "Chào mừng đến với HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1174,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · mô hình Stage"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · mô hình Stage"
     },
     {
       "name": "profile_following",
@@ -1206,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Đăng nhập Harmony X"
+      "value": "Đăng nhập HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1282,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Đã đăng nhập. Đang mở Harmony X…"
+      "value": "Đã đăng nhập. Đang mở HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1458,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Tùy chỉnh cách Harmony X hiển thị nội dung."
+      "value": "Tùy chỉnh cách HarmonyX+ hiển thị nội dung."
     },
     {
       "name": "settings_resources",
@@ -1522,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Chọn ngôn ngữ cho toàn bộ Harmony X. Thay đổi có hiệu lực ngay và được giữ ở lần mở sau."
+      "value": "Chọn ngôn ngữ cho toàn bộ HarmonyX+. Thay đổi có hiệu lực ngay và được giữ ở lần mở sau."
     },
     {
       "name": "settings_language_system",
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Dùng ngôn ngữ hệ thống cho toàn bộ Harmony X."
+      "value": "Dùng ngôn ngữ hệ thống cho toàn bộ HarmonyX+."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "settings_language_zh_cn_desc",
-      "value": "Dùng Harmony X bằng tiếng Trung giản thể."
+      "value": "Dùng HarmonyX+ bằng tiếng Trung giản thể."
     },
     {
       "name": "settings_language_en",
@@ -1546,7 +1546,7 @@
     },
     {
       "name": "settings_language_en_desc",
-      "value": "Dùng Harmony X bằng tiếng Anh."
+      "value": "Dùng HarmonyX+ bằng tiếng Anh."
     },
     {
       "name": "settings_language_it",
@@ -1554,7 +1554,7 @@
     },
     {
       "name": "settings_language_it_desc",
-      "value": "Dùng Harmony X bằng tiếng Ý."
+      "value": "Dùng HarmonyX+ bằng tiếng Ý."
     },
     {
       "name": "settings_font_size",
@@ -1574,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Chọn biểu tượng Harmony X. Màn hình chính, danh sách ứng dụng và ứng dụng gần đây đều dùng biểu tượng này."
+      "value": "Chọn biểu tượng HarmonyX+. Màn hình chính, danh sách ứng dụng và ứng dụng gần đây đều dùng biểu tượng này."
     },
     {
       "name": "settings_app_icon_note",
@@ -2126,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Cho phép thông báo Harmony X trong cài đặt hệ thống"
+      "value": "Cho phép thông báo HarmonyX+ trong cài đặt hệ thống"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2674,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "Đồng bộ tùy chọn phương tiện nhạy cảm của tài khoản X và áp dụng trong Harmony X."
+      "value": "Đồng bộ tùy chọn phương tiện nhạy cảm của tài khoản X và áp dụng trong HarmonyX+."
     },
     {
       "name": "sensitive_media_hidden",
@@ -4470,7 +4470,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Chào mừng đến với Harmony X"
+      "value": "Chào mừng đến với HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4502,7 +4502,7 @@
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Đăng nhập ở trang web bên dưới. Harmony X tự mở khi bạn hoàn tất."
+      "value": "Đăng nhập ở trang web bên dưới. HarmonyX+ tự mở khi bạn hoàn tất."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4646,7 +4646,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Một vài lựa chọn để Harmony X phù hợp hơn với bạn."
+      "value": "Một vài lựa chọn để HarmonyX+ phù hợp hơn với bạn."
     },
     {
       "name": "onboarding_customize_title",
@@ -4666,7 +4666,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "Tài khoản X đã kết nối. Bạn có thể bắt đầu dùng Harmony X."
+      "value": "Tài khoản X đã kết nối. Bạn có thể bắt đầu dùng HarmonyX+."
     },
     {
       "name": "onboarding_finish",
@@ -4918,7 +4918,7 @@
     },
     {
       "name": "follow_contacts_sdk_unavailable",
-      "value": "Harmony X hiện chưa đồng bộ được danh bạ thiết bị. Đồng bộ trong ứng dụng X chính thức rồi quay lại xem gợi ý."
+      "value": "HarmonyX+ hiện chưa đồng bộ được danh bạ thiết bị. Đồng bộ trong ứng dụng X chính thức rồi quay lại xem gợi ý."
     },
     {
       "name": "follow_contacts_open_x",
@@ -6286,7 +6286,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "Cài MeoW và liên kết biệt danh tại đây. Máy chủ chuyển tiếp HTTPS luôn hoạt động có thể chuyển thông báo tin nhắn X khi Harmony X đã đóng."
+      "value": "Cài MeoW và liên kết biệt danh tại đây. Máy chủ chuyển tiếp HTTPS luôn hoạt động có thể chuyển thông báo tin nhắn X khi HarmonyX+ đã đóng."
     },
     {
       "name": "meow_relay_url",
@@ -6590,7 +6590,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Lưu lượng Harmony X thực từ lần khởi động máy gần nhất, gồm phương tiện và yêu cầu. Bộ đếm đặt lại khi khởi động lại."
+      "value": "Lưu lượng HarmonyX+ thực từ lần khởi động máy gần nhất, gồm phương tiện và yêu cầu. Bộ đếm đặt lại khi khởi động lại."
     },
     {
       "name": "storage_network_unavailable",
@@ -6814,7 +6814,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Bộ lọc chỉ ảnh hưởng Harmony X. Quản lý từ và tài khoản ẩn cho toàn tài khoản trong Quyền riêng tư và an toàn."
+      "value": "Bộ lọc chỉ ảnh hưởng HarmonyX+. Quản lý từ và tài khoản ẩn cho toàn tài khoản trong Quyền riêng tư và an toàn."
     },
     {
       "name": "xsettings_muted_list",
@@ -7262,7 +7262,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "Đồng bộ tài khoản X hiện tại và điều chỉnh phương tiện trong Harmony X."
+      "value": "Đồng bộ tài khoản X hiện tại và điều chỉnh phương tiện trong HarmonyX+."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8554,7 +8554,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X hiện hỗ trợ nghe và phát lại. Không gửi âm thanh micro hay yêu cầu phát biểu."
+      "value": "HarmonyX+ hiện hỗ trợ nghe và phát lại. Không gửi âm thanh micro hay yêu cầu phát biểu."
     },
     {
       "name": "spaces_manage_title",
@@ -9386,7 +9386,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10182,7 +10182,7 @@
     },
     {
       "name": "logo_universe_desc",
-      "value": "Mỗi cuộc gặp đều hoàn thiện Harmony X."
+      "value": "Mỗi cuộc gặp đều hoàn thiện HarmonyX+."
     },
     {
       "name": "logo_universe_hint",
@@ -10218,7 +10218,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Bạn là một phần của Harmony X."
+      "value": "Bạn là một phần của HarmonyX+."
     },
     {
       "name": "logo_touch_hint",
@@ -11022,7 +11022,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -13227,6 +13227,30 @@
     {
       "name": "video_clip_failed",
       "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Hiện tất cả bài đăng"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Hiện nội dung tin nhắn trong thông báo"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Hiện nội dung trong thông báo trò chuyện trên thiết bị, kể cả ở màn hình khóa."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "Bạn có tin nhắn mới"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Đang nhập…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Giá cổ phiếu · Dữ liệu có thể bị trễ"
     }
   ]
 }

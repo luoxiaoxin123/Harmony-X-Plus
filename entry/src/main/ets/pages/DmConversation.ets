@@ -72,6 +72,8 @@ import { ChatBackgroundState, chatBackgroundStore } from '../services/ChatBackgr
 import { CHAT_DECORATION_REVISION_KEY, ChatDecorationSelection,
   chatDecorationService } from '../services/ChatDecorationService';
 import { DmWebRouteParam } from './DmWeb';
+import { STORAGE_KEY_REDUCE_MOTION } from '../services/MotionSettingsStore';
+import { ChatTypingIndicator } from '../components/ChatTypingIndicator';
 import { chatMessageTime } from '../utils/ChatTime';
 import { effectiveAppLocale, STORAGE_KEY_APP_LOCALE } from '../utils/AppLocale';
 import { chatInputMaterial, chatPageMaterial, chatTintedControlMaterial } from '../utils/ChatMaterial';
@@ -202,6 +204,12 @@ export struct DmConversationPage {
   private disposed: boolean = false;
   private gifSelectionAccount: string = '';
   private pollTimer: number = -1;
+  private typingTimer: number = -1;
+  private typingUntil: number = 0;
+  private submittingMedia: boolean = false;
+  @State private peerTyping: boolean = false;
+  @State private animatedSendIds: string[] = [];
+  @StorageProp(STORAGE_KEY_REDUCE_MOTION) private reduceMotion: boolean = false;
   private fetching: boolean = false;
   private scroller: Scroller = new Scroller();
   private recorder: media.AVRecorder | null = null;
@@ -216,7 +224,9 @@ export struct DmConversationPage {
   private savingImages: boolean = false;
   private mediaActionGeneration: number = 0;
   private keyboardWindow: window.Window | null = null;
-  private outboxListener: () => void = (): void => { if (this.active && !this.disposed) { this.syncOutbox(); } };
+  private outboxListener: () => void = (): void => {
+    if (this.active && !this.disposed && !this.submittingMedia) { this.syncOutbox(); }
+  };
   private replyFocusTimer: number = -1;
   private replyKeyboardRequested: boolean = false;
   private keyboardHeightListener: (height: number) => void = (height: number): void => {
@@ -352,15 +362,35 @@ export struct DmConversationPage {
 
   private stopPolling(): void {
     if (this.pollTimer >= 0) { clearInterval(this.pollTimer); this.pollTimer = -1; }
+    this.clearTyping();
   }
 
   private startPolling(): void {
-    this.stopPolling();
+    if (this.pollTimer >= 0) { clearInterval(this.pollTimer); }
     this.pollTimer = setInterval((): void => {
       if (this.active && !this.fetching && !this.sending && !this.unlocking && !this.loadingHistory) {
         this.load(false);
       }
     }, 6000);
+  }
+
+  private clearTyping(): void {
+    if (this.typingTimer >= 0) { clearTimeout(this.typingTimer); this.typingTimer = -1; }
+    this.typingUntil = 0;
+    this.peerTyping = false;
+  }
+
+  private updatePeerTyping(deadline: number): void {
+    if (!Number.isFinite(deadline) || deadline <= this.typingUntil || deadline <= Date.now()) { return; }
+    if (this.typingTimer >= 0) { clearTimeout(this.typingTimer); }
+    this.typingUntil = deadline;
+    this.peerTyping = true;
+    this.typingTimer = setTimeout((): void => this.clearTyping(), Math.max(0, deadline - Date.now()));
+  }
+
+  private animateSentMessage(update: () => void): void {
+    if (this.reduceMotion) { update(); }
+    else { this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, update); }
   }
 
   private readRoute(): void {
@@ -492,6 +522,7 @@ export struct DmConversationPage {
         history ? this.maxEntryId : '', history ? this.minKeyVersion : '');
       if (!this.active || generation !== this.requestGeneration) { return; }
       if (this.conversationTransport !== page.transport) { this.conversationTransport = page.transport; }
+      if (!history) { this.updatePeerTyping(page.typingUntil); }
       this.mergeMessages(page);
       this.syncOutbox(false);
       if (this.group && !page.needsUnlock) {
@@ -578,9 +609,14 @@ export struct DmConversationPage {
       !this.canContact() || (!this.plainConversation() && !xChatService.isUnlocked())) { return; }
     if (!this.plainConversation() && this.attachments.length > 0 &&
       this.attachments.every((file: ChatPickedFile): boolean => file.type >= 1 && file.type <= 3)) {
+      this.submittingMedia = true;
       try {
-        chatMediaOutbox.enqueue(getContext(this) as common.UIAbilityContext, this.conversationId,
+        const send: ChatMediaSend = chatMediaOutbox.enqueue(getContext(this) as common.UIAbilityContext, this.conversationId,
           this.attachments, text, this.replyTarget ?? undefined);
+        this.animateSentMessage((): void => {
+          this.animatedSendIds = [send.id + ':pending'];
+          this.syncOutbox();
+        });
         // Ownership has moved to the outbox. Clearing the composer must not
         // discard an upload or remove a camera resource it is still reading.
         this.attachments = []; this.draft = ''; this.replyTarget = null; this.cancelReplyFocus();
@@ -588,7 +624,7 @@ export struct DmConversationPage {
       } catch (error) {
         promptAction.showToast({ message: this.text((error as Error).message === 'media_queue_full' ?
           $r('app.string.chat_media_queue_full') : $r('app.string.dm_send_failed')) });
-      }
+      } finally { this.submittingMedia = false; }
       return;
     }
     this.sending = true;
@@ -609,7 +645,11 @@ export struct DmConversationPage {
       }
       if (!this.active || generation !== this.requestGeneration) { return; }
       this.conversationTransport = xChatService.conversationTransport(this.conversationId);
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
+      this.animateSentMessage((): void => {
+        this.animatedSendIds = page.messages.filter((message: DmMessage): boolean => message.outgoing)
+          .map((message: DmMessage): string => message.id + ':sent');
+        this.mergeMessages(page);
+      });
       this.draft = '';
       this.replyTarget = null;
       this.discardAttachment();
@@ -1546,8 +1586,18 @@ export struct DmConversationPage {
         }
         ForEach(this.visibleMessages(), (message: DmMessage, index: number) => {
           ListItem() { this.MessageBubble(message, index) }
+            .transition(!this.reduceMotion &&
+              this.animatedSendIds.includes(message.id + (this.mediaSend(message.id) === undefined ? ':sent' : ':pending')) ?
+              TransitionEffect.asymmetric(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 20 }))
+                .animation({ duration: 300, curve: Curve.EaseOut }), TransitionEffect.IDENTITY) : TransitionEffect.IDENTITY)
         }, (message: DmMessage, index: number): string =>
           chatMessageRenderKey(message, this.mediaSend(message.id) !== undefined, this.pinnedMessageId, index))
+        if (this.peerTyping && this.searchQuery.length === 0) {
+          ListItem() {
+            Row() { ChatTypingIndicator({ reduceMotion: this.reduceMotion }) }
+              .width('100%').justifyContent(FlexAlign.Start).padding({ left: 16, top: 4, bottom: 4 })
+          }
+        }
         ListItem() { Column().height(this.composerHeight + 16).width('100%') }
       }.width('100%').height('100%')
         // Anchor the timeline at its bottom so keyboard resizing lifts the

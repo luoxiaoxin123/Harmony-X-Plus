@@ -156,6 +156,7 @@ export struct UserDetail {
   @State followPending: boolean = false;
   @State followerAdjust: number = 0;
   @State blocking: boolean = false;
+  @State private showBlockedPosts: boolean = false;
   @State blockPending: boolean = false;
   @State replyPosts: Tweet[] = [];
   @State mediaPosts: Tweet[] = [];
@@ -241,6 +242,7 @@ export struct UserDetail {
       (param.author.id === xPrivateClient.viewerId() || param.author.id === authStore.getUserId());
     if (param.profile !== undefined && param.profile !== null && param.profile.id === param.author.id) {
       this.profile = param.profile;
+      this.blocking = param.profile.blocking === true;
     }
   }
 
@@ -402,7 +404,7 @@ export struct UserDetail {
   }
 
   private actionAnchorsReady(): boolean {
-    return !this.isSelfProfile && this.heroActionsAnchor.width > 0 && this.titleActionsAnchor.width > 0;
+    return !this.isSelfProfile && !this.blocking && this.heroActionsAnchor.width > 0 && this.titleActionsAnchor.width > 0;
   }
 
   private headerActionsProgress(): number {
@@ -427,6 +429,11 @@ export struct UserDetail {
     this.loadProfilePage(this.activitySource(this.selectedTab), true).then((): void => {
       this.refreshing = false;
     });
+  }
+
+  private scrollProfileToTop(): void {
+    this.activityScrollers[this.selectedTab].scrollEdge(Edge.Top);
+    this.scroller.scrollTo({ xOffset: 0, yOffset: 0, animation: { duration: 260, curve: Curve.EaseOut } });
   }
 
   private bannerUrl(): string {
@@ -467,7 +474,7 @@ export struct UserDetail {
 
   private async toggleFollow(): Promise<void> {
     const current: TweetAuthor | null = this.author;
-    if (this.followPending || this.isSelfProfile || current === null) {
+    if (this.followPending || this.blocking || this.isSelfProfile || current === null) {
       return;
     }
     // A profile opened from a mention starts without an id; the loaded profile
@@ -616,6 +623,7 @@ export struct UserDetail {
   }
 
   private tabPosts(tab: number): Tweet[] {
+    if (this.blocking && !this.showBlockedPosts) { return []; }
     const source: Tweet[] = tab === 0 && this.postsFilter === 'posts' ? this.displayPosts() :
       this.activityPages[this.activitySource(tab)].posts;
     const filtered: Tweet[] = this.filteredPosts(source, tab);
@@ -656,6 +664,7 @@ export struct UserDetail {
   }
 
   private async loadProfilePage(tab: number, replace: boolean): Promise<void> {
+    if (this.blocking && !this.showBlockedPosts) { return; }
     if (tab === 6 && !this.isSelfProfile) { return; }
     const userId: string = this.resolvedUserId();
     const state: ProfileActivityPage = this.activityPages[tab];
@@ -983,6 +992,7 @@ export struct UserDetail {
   }
 
   private openMessages(): void {
+    if (this.blocking) { return; }
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     xPrivateClient.load(context);
     const userId: string = this.resolvedUserId();
@@ -1128,10 +1138,13 @@ export struct UserDetail {
       return;
     }
     this.blocking = next;
+    this.showBlockedPosts = false;
     void this.syncReaderModeration();
     if (next) {
       this.following = false;
       this.notificationMode = 3;
+    } else {
+      void this.loadProfilePage(this.activitySource(this.selectedTab), true);
     }
     const done: Resource = next ? $r('app.string.block_done') : $r('app.string.unblock_done');
     promptAction.showToast({ message: this.text(done), duration: 1500 });
@@ -1258,6 +1271,8 @@ export struct UserDetail {
         }
         .alignItems(HorizontalAlign.Start).layoutWeight(1).opacity(this.headerProgress())
         .accessibilityLevel(this.headerProgress() >= 0.5 ? 'auto' : 'no-hide-descendants')
+        .hitTestBehavior(this.headerProgress() >= 0.5 ? HitTestMode.Default : HitTestMode.None)
+        .onClick((): void => { if (this.headerProgress() >= 0.5) { this.scrollProfileToTop(); } })
         if (!this.isSelfProfile) {
           Stack({ alignContent: Alignment.End }) {
             Row().width(PROFILE_COMPACT_ACTIONS_WIDTH).height(36).hitTestBehavior(HitTestMode.None)
@@ -1308,7 +1323,7 @@ export struct UserDetail {
     // Only the action buttons travel into the toolbar. Profile identity stays
     // in the List so scrolling and Refresh move it with the rest of the hero.
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.actionAnchorsReady() && this.headerActionsProgress() > 0) {
+      if (!this.blocking && this.actionAnchorsReady() && this.headerActionsProgress() > 0) {
         ProfileActionButtons({ expandedWidth: this.heroActionsAnchor.width,
           progress: this.headerActionsProgress(), following: this.following, followLabel: this.followLabel(),
           followEnabled: !this.followPending && !this.blockPending && !this.blocking,
@@ -1430,6 +1445,11 @@ export struct UserDetail {
             Text($r('app.string.profile_detail_edit')).fontFamily(this.appFontFamily).fontSize(16)
               .fontWeight(FontWeight.Bold).fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
           }
+        } else if (this.blocking) {
+          Text($r('app.string.block_done')).fontFamily(this.appFontFamily)
+            .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('app.color.text_on_accent'))
+            .height(42).width('100%').textAlign(TextAlign.Center).borderRadius(22)
+            .backgroundColor($r('app.color.danger'))
         } else {
           Stack() {
             ProfileActionButtons({ expandedWidth: this.heroActionsAnchor.width > 0 ? this.heroActionsAnchor.width : 312,
@@ -1653,7 +1673,7 @@ export struct UserDetail {
 
   @Builder
   private ActivityHeader(tab: number): void {
-    if (tab === 0) {
+    if (tab === 0 && !this.blocking) {
       ForEach(this.suggestionGroups.filter((group: FollowSuggestionGroup): boolean => group.afterTweetId.length === 0),
         (group: FollowSuggestionGroup) => {
           Column() { FollowSuggestions({ group: group, contextualUserId: this.resolvedUserId(), showBanner: true }) }
@@ -1708,7 +1728,14 @@ export struct UserDetail {
   private ActivityFooter(tab: number): void {
     Column() {
       Column({ space: 12 }) {
-        if (this.currentTabLoading(tab)) {
+        if (this.blocking && !this.showBlockedPosts) {
+          Button($r('app.string.profile_show_blocked_posts')).fontFamily(this.appFontFamily).fontColor(this.accentColor)
+            .backgroundColor(Color.Transparent)
+            .onClick((): void => {
+              this.showBlockedPosts = true;
+              void this.loadProfilePage(this.activitySource(this.selectedTab), true);
+            })
+        } else if (this.currentTabLoading(tab)) {
           LoadingProgress().width(26).height(26).color(this.accentColor)
         } else if (this.currentTabStatus(tab).length > 0) {
           Text(this.currentTabStatus(tab)).fontFamily(this.appFontFamily).fontSize(14).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)).textAlign(TextAlign.Center)
@@ -1869,7 +1896,7 @@ export struct UserDetail {
           hidden: !this.profileReplyButton || this.homeFloatingAction === HOME_FLOATING_HIDDEN,
           accessibilityLabel: this.text(this.homeFloatingAction === HOME_FLOATING_TOP ?
             $r('app.string.action_scroll_top') : $r('app.string.action_reply')),
-          onTop: (): void => { this.scroller.scrollEdge(Edge.Top); this.headerScrollOffset = 0; },
+          onTop: (): void => this.scrollProfileToTop(),
           onReply: (): void => this.replyToAuthor() })
 
       }.width('100%').height('100%')

@@ -17,6 +17,7 @@ export struct SpaceAwareAvatar {
   @Prop fallbackText: string = '';
   @Prop fallbackColor: ResourceColor = $r('app.color.brand');
   @Prop tintBackground: boolean = false;
+  @Prop openSpaceOnTap: boolean = true;
   @StorageProp(SPACE_SURFACE_REVISION) revision: number = 0;
   @StorageProp('harmonyx.app_foreground') @Watch('onForegroundChanged') foreground: boolean = true;
   private visible: boolean = false;
@@ -66,7 +67,7 @@ export struct SpaceAwareAvatar {
         })
       .onClick((): void => {
         const presence: SpacePresence | null = this.presence();
-        if (presence !== null) { requestSpacePreview(presence.spaceId); } else { this.onProfile(); }
+        if (presence !== null && this.openSpaceOnTap) { requestSpacePreview(presence.spaceId); } else { this.onProfile(); }
       }).monopolizeEvents(true)
   }
 }

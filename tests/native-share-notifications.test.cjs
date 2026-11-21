@@ -28,6 +28,7 @@ function methods(file, name, names) {
 
 function delivery() {
   let active = 'account-a', now = 0, fail = false, onAgent = () => {};
+  let previews = false;
   const published = [], storage = new Map(), agents = [];
   const pref = { getSync: (key, fallback) => storage.get(key) ?? fallback,
     putSync: (key, value) => storage.set(key, value), flushSync() {} };
@@ -39,9 +40,15 @@ function delivery() {
     '@kit.NotificationKit': { notificationManager: { isNotificationEnabled: async () => true, setBadgeNumber: async () => {},
       addSlot: async () => {}, SlotType: { SOCIAL_COMMUNICATION: 1 }, ContentType: { NOTIFICATION_CONTENT_BASIC_TEXT: 1 },
       publish: async request => { if (fail) { fail = false; throw new Error('offline'); } published.push({ request, time: now }); } } },
-    '@ohos.hilog': { default: { warn() {} } }, './AccountStore': { accountStore: { activeId: () => active } }
-  }, { Date: { now: () => now }, setTimeout: (fn, delay) => { now += delay; queueMicrotask(fn); } });
-  return { service: new NotificationDeliveryService(), published, agents, storage,
+    '@ohos.hilog': { default: { warn() {} } }, './AccountStore': { accountStore: { activeId: () => active } },
+    './NotificationSettingsStore': { notificationSettingsStore: { loadMessagePreview: () => previews } }
+  }, { Date: { now: () => now }, $r: key => key, setTimeout: (fn, delay) => { now += delay; queueMicrotask(fn); } });
+  const service = new NotificationDeliveryService();
+  const publishMessages = service.publishUnreadMessages.bind(service);
+  service.publishUnreadMessages = (context, ...args) => publishMessages({
+    ...context, resourceManager: { getStringSync: () => 'New message' }
+  }, ...args);
+  return { service, published, agents, storage, preview: () => { previews = true; },
     switch: value => { active = value; }, fail: () => { fail = true; }, agent: fn => { onAgent = fn; } };
 }
 const notice = id => ({ id, unread: true, authorName: 'Author', text: 'body', postText: '', time: '', targetPostId: 'post', authorUsername: 'author' });
@@ -57,6 +64,15 @@ test('social and DM batches share throttling and concurrent refreshes publish ea
   assert.deepEqual(counts, [2, 1, 0]);
   assert.deepEqual(f.published.map(row => row.time), [0, 250, 500]);
   assert.ok(f.agents.every(agent => agent.wants[0].parameters.accountId === 'account-a'));
+});
+
+test('chat notifications omit message text by default and use decrypted previews when opted in', async () => {
+  const f = delivery();
+  await f.service.publishUnreadMessages({}, [message('private')], 1, 1, false);
+  f.preview();
+  await f.service.publishUnreadMessages({}, [message('visible')], 1, 1, false);
+  await f.service.publishUnreadMessages({}, [{ ...message('locked'), preview: '' }], 1, 1, false);
+  assert.deepEqual(f.published.map(row => row.request.content.normal.text), ['New message', 'hello', 'New message']);
 });
 
 test('deduplication and notification identities are separated by account', async () => {
