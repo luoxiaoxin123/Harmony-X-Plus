@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Nueva versión %s disponible"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "La clave de esta conversación no está disponible. Abre la conversación en X y vuelve a intentarlo."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X aún no ha confirmado la operación. Al reintentar se usará el mismo mensaje."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X rechazó la operación (código %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "No se pudo obtener o registrar la clave de la conversación"
     }
   ]
 }

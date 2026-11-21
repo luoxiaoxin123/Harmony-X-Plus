@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "检测到新版本 %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "当前设备缺少此会话的密钥。请先在 X 客户端打开该会话，再试一次。"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X 尚未确认此操作。重试会沿用原消息。"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X 拒绝了此操作（代码 %s）。"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "获取或注册会话密钥失败"
     }
   ]
 }

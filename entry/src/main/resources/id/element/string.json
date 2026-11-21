@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Versi baru %s tersedia"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Kunci percakapan ini tidak tersedia. Buka percakapan di aplikasi X lalu coba lagi."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X belum mengonfirmasi tindakan ini. Percobaan ulang akan memakai pesan yang sama."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X menolak tindakan ini (kode %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Gagal mengambil atau mendaftarkan kunci percakapan"
     }
   ]
 }

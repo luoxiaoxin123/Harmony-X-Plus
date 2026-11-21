@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "새 버전 %s 사용 가능"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "이 대화의 키를 사용할 수 없습니다. X 앱에서 대화를 연 후 다시 시도하세요."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X에서 아직 작업을 확인하지 않았습니다. 다시 시도하면 같은 메시지를 사용합니다."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X에서 작업을 거부했습니다(코드 %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "대화 키를 가져오거나 등록하지 못했습니다"
     }
   ]
 }

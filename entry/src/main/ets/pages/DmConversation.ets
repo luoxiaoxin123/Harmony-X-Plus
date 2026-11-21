@@ -15,6 +15,7 @@ import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, Bottom
 import type { DmMessage, UserProfile, TweetAuthor } from '../models/Tweet';
 import { formatCount } from '../models/Tweet';
 import { ChatContact, ChatContactService, chatContactService } from '../services/ChatContactService';
+import { chatFailureMessage } from '../services/XChatFailureMessage';
 import type { UserDetailRouteParam } from './UserDetail';
 import { XChatGroupDisplay, XChatPage, XChatService, xChatService } from '../services/XChatService';
 import { ProxyAvatar } from '../components/ProxyAvatar';
@@ -628,7 +629,9 @@ export struct DmConversationPage {
       return;
     }
     this.sending = true;
-    const generation: number = this.requestGeneration;
+    const conversation: string = this.conversationId;
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const account: string = xPrivateStore.load(context).cacheIdentity();
     try {
       const reply: XChatReplyTarget | undefined = this.replyTarget === null ? undefined : {
         sequence_id: this.replyTarget.sequenceId ?? '', sender_id: this.replyTarget.senderId,
@@ -637,13 +640,13 @@ export struct DmConversationPage {
       let page: XChatPage;
       if (this.plainConversation()) {
         page = new XChatPage();
-        page.messages = await chatContactService.sendPlaintext(getContext(this) as common.UIAbilityContext,
-          this.contact, this.conversationId, text);
+        page.messages = await chatContactService.sendPlaintext(context, this.contact, conversation, text);
       } else {
-        page = this.attachments.length === 0 ? await xChatService.send(this.conversationId, text, [], '', '', reply) :
-          await xChatMedia.sendMany(getContext(this) as common.UIAbilityContext, this.conversationId, this.attachments, text, reply);
+        page = this.attachments.length === 0 ? await xChatService.send(conversation, text, [], '', '', reply) :
+          await xChatMedia.sendMany(context, conversation, this.attachments, text, reply);
       }
-      if (!this.active || generation !== this.requestGeneration) { return; }
+      if (!this.active || this.disposed || this.conversationId !== conversation ||
+        account !== xPrivateStore.load(context).cacheIdentity()) { return; }
       this.conversationTransport = xChatService.conversationTransport(this.conversationId);
       this.animateSentMessage((): void => {
         this.animatedSendIds = page.messages.filter((message: DmMessage): boolean => message.outgoing)
@@ -656,8 +659,9 @@ export struct DmConversationPage {
       this.scroller.scrollEdge(Edge.Bottom);
     } catch (error) {
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'send failed: %{public}s', (error as Error).message);
-      if (this.active) {
-        promptAction.showToast({ message: this.text($r('app.string.dm_send_failed')), duration: 2400 });
+      if (this.active && this.conversationId === conversation && account === xPrivateStore.load(context).cacheIdentity()) {
+        promptAction.showToast({ message: chatFailureMessage(context, (error as Error).message, $r('app.string.dm_send_failed')),
+          duration: 2400 });
       }
     } finally { this.sending = false; }
   }

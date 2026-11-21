@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "มีเวอร์ชันใหม่ %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "ไม่พบคีย์ของการสนทนานี้ เปิดการสนทนาในแอป X แล้วลองอีกครั้ง"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X ยังไม่ได้ยืนยันการดำเนินการ การลองอีกครั้งจะใช้ข้อความเดิม"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X ปฏิเสธการดำเนินการ (รหัส %s)"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "เรียกหรือจดทะเบียนคีย์การสนทนาไม่สำเร็จ"
     }
   ]
 }

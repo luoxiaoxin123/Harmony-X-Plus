@@ -413,16 +413,6 @@ export class XPrivateClient {
       body['fieldToggles'] = XPrivateClient.webListFieldToggles();
     }
     const generation: number = this.sessionGeneration();
-    if (operation.operation === 'SendMessageCreateMutation') {
-      // Cookie-authenticated X Chat uses the web client's XChat-safety mutation.
-      const chatQueryId: string = 'LkAIEchf8AGj-WgeLoTVcw';
-      const chatBody: Record<string, Object | null> = { 'variables': resolved, 'queryId': chatQueryId };
-      const chatResult: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + chatQueryId + '/SendMessageMutation',
-        JSON.stringify(chatBody), GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation);
-      if (chatResult.status !== 404 || generation !== this.sessionGeneration()) {
-        return this.finish(operation.operation, cacheable, cacheKey, chatResult);
-      }
-    }
     let posted: XPrivateResult = await this.send('POST', url, JSON.stringify(body),
       GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation, minimalHeaders);
     if (operation.operation === 'GetConversationPageQuery' && (posted.status === 404 || posted.status === 503) &&
@@ -434,6 +424,17 @@ export class XPrivateClient {
       if (alternate.ok || posted.status === 404) { posted = alternate; }
     }
     return this.finish(operation.operation, cacheable, cacheKey, posted);
+  }
+
+  async xChatWebWrite(keys: boolean, variables: Record<string, Object>): Promise<XPrivateResult> {
+    const name: string = keys ? 'AddEncryptedConversationKeysMutation' : 'SendMessageMutation';
+    const id: string = keys ? '4V1KC8ue2tHHvRuIzeczdg' : 'LkAIEchf8AGj-WgeLoTVcw';
+    if (!this.isSignedIn()) { return new XPrivateResult(false, 0, '', 'no_session', name); }
+    const generation: number = this.sessionGeneration();
+    const body: Record<string, Object> = { 'operationName': name, 'variables': variables, 'queryId': id };
+    const result: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + id + '/' + name,
+      JSON.stringify(body), GRAPHQL_ACCEPT, name, 'application/json', false, '', generation);
+    return this.finish(name, false, '', result);
   }
 
   // Records the outcome for the diagnostics page, then hands the result

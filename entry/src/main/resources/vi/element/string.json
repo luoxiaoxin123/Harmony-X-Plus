@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "Đã có phiên bản mới %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Không có khóa cho cuộc trò chuyện này. Hãy mở cuộc trò chuyện trong ứng dụng X rồi thử lại."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X chưa xác nhận thao tác. Lần thử lại sẽ dùng cùng một tin nhắn."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X đã từ chối thao tác (mã %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Không thể lấy hoặc đăng ký khóa cuộc trò chuyện"
     }
   ]
 }

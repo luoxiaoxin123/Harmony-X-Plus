@@ -16,6 +16,7 @@ import { InputModalScope } from '../utils/InputModalScope';
 import { copyPostLink } from '../utils/PostLinkCopy';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
 import { postShareUrl, sharePost } from '../utils/SharePost';
+import { chatFailureMessage } from '../services/XChatFailureMessage';
 import { sheetMaterialOptions } from '../utils/SheetMaterial';
 import { fieldSurfaceColor, pageSurfaceColor } from '../utils/ThemeColors';
 import { ProxyAvatar } from './ProxyAvatar';
@@ -275,11 +276,8 @@ export struct PostShareSheetHost {
             (transport === 'plaintext' || transport === 'empty') && !this.linkRecipients.includes(id)) {
             this.linkRecipients = [...this.linkRecipients, id];
           }
-          const status: string = /_http_(\d{3})$/.exec(reason)?.[1] ?? '';
-          const label: Resource = reason === 'recipient_key_unavailable' ? $r('app.string.post_share_no_recipient_key') :
-            $r('app.string.chat_action_failed');
-          failures.push(recipient.title + ' · ' + this.context().resourceManager.getStringSync(label) +
-            (status.length > 0 ? ' (HTTP ' + status + ')' : ''));
+          failures.push(recipient.title + ' · ' + chatFailureMessage(this.context(), reason,
+            $r('app.string.chat_action_failed')));
         }
       }
       this.sendError = failures.join('\n');

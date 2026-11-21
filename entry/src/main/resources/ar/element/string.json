@@ -13255,6 +13255,22 @@
     {
       "name": "sidebar_update_available",
       "value": "يتوفر إصدار جديد %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "مفتاح هذه المحادثة غير متاح. افتح المحادثة في تطبيق X وحاول مجددًا."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "لم يؤكد X العملية بعد. ستستخدم إعادة المحاولة الرسالة نفسها."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "رفض X العملية (الرمز %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "تعذر جلب مفتاح المحادثة أو تسجيله"
     }
   ]
 }

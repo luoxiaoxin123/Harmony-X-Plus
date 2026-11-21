@@ -63,12 +63,14 @@ decrypts media from the signed message event and its media hash, including
 messages that use per-message keys. Post shares use the SDK's Post attachment
 with the optional note as message text.
 
-Chat transport uses the account's existing cookie session and registered
-GraphQL operations (`GetPublicKeys`, `GetConversationPageQuery`, and
-`SendMessageMutation`). An HTTP 503 retry uses the same signed event and message
-ID. Existing registered keys are recovered using the
-user's current X Chat PIN; no registration, PIN reset or key replacement is
-performed. A send is confirmed only by the returned server event.
+Chat transport uses the account's existing cookie session. It first uses the
+registered `SendMessageCreateMutation` operation and can submit the same signed
+event and message ID through `SendMessageMutation` when delivery is uncertain.
+It looks for a verified receipt for that ID in conversation history before
+retrying. A new direct key stays staged until the key mutation returns a sequence
+ID or history contains its verified key change. An existing encrypted conversation
+with an unreadable key requires recovery. The app uses the current X Chat PIN to
+recover the registered keys.
 Recovery uses the official Juicebox protocol over a native HTTP transport with
 the application's explicit proxy setting. Its diagnostics report only host,
 HTTP status and connection errors; request headers and bodies are excluded.
