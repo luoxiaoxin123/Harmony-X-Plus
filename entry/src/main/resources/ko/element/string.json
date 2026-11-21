@@ -69,6 +69,10 @@
       "value": "얼굴 추적을 지원합니다. 읽기 페이지에서 시작을 눌러야 카메라가 켜집니다."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Huawei 지원 기기"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "이 기기는 필요한 얼굴 추적을 지원하지 않습니다. 터치나 키보드를 사용해 주세요."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "채팅 초기화"
+      "value": "채팅 잠금"
     },
     {
       "name": "chat_phone",

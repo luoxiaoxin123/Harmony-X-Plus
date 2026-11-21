@@ -69,6 +69,10 @@
       "value": "O rastreamento facial está disponível. A câmera só inicia ao tocar em Iniciar na página de leitura."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Dispositivos Huawei compatíveis"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Este dispositivo não oferece o rastreamento facial necessário. Use o toque ou o teclado."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Redefinir Chat"
+      "value": "Bloquear conversa"
     },
     {
       "name": "chat_phone",

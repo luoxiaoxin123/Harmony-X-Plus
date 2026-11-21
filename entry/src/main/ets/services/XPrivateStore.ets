@@ -5,6 +5,7 @@
 // The cookies themselves live with the account they belong to, so this store is
 // a view over AccountStore: reads return the active account's session and
 // writes land on the account the capture belongs to.
+import { xChatKeyStore } from './XChatKeyStore';
 import { common } from '@kit.AbilityKit';
 import hilog from '@ohos.hilog';
 import { XAccount, accountStore } from './AccountStore';
@@ -182,7 +183,7 @@ export class XPrivateStore {
     active.authToken = '';
     active.ct0 = '';
     active.rawCookie = '';
-    accountStore.upsert(context, active);
+    if (accountStore.upsert(context, active)) { xChatKeyStore.remove(active.userId); }
   }
 }
 

@@ -24,12 +24,18 @@ let nativeResult = {ok:true,data:{messages:[],errors:[]}};
 let nativeByMethod = {};
 let systemVpnActive = false;
 let proxySettings = {enabled:false,activeProxy:()=>null};
+const rememberedChatKeys = new Map();
 const dependencies = {
   '@kit.AbilityKit': {},
   '@ohos.hilog': {default:{info(){},warn(){}}},
   'libharmonyx_chat.so': { async invoke(method, input) { nativeCalls.push({method,input:JSON.parse(input)}); return JSON.stringify(nativeByMethod[method] || nativeResult); } },
   './XPrivateClient': { xPrivateClient: client },
   './XPrivateStore': { xPrivateStore: {load() { return {cacheIdentity:()=>active}; }} },
+  './XChatKeyStore': { xChatKeyStore: {
+    load: id => rememberedChatKeys.get(id) ?? '',
+    save: (id, key) => { rememberedChatKeys.set(id, key); return true; },
+    remove: id => { rememberedChatKeys.delete(id); return true; }
+  } },
   './ProxyStore': { proxyStore: {snapshot:()=>proxySettings,refreshSystemVpnState:async()=>systemVpnActive,
     resolveProxyHost: async host => host.includes(':') ? '[' + host.replace(/^\[|\]$/g, '') + ']' : host} },
   './XNotificationParser': {XNotificationParser:{relativeTime:()=> 'now'}}
@@ -55,7 +61,46 @@ function user(id, version='1') { return {rest_id:id,result:{core:{name:'User '+i
 }]}}}; }
 const ok=body=>({ok:true,status:200,body:JSON.stringify(body)});
 const message=(id,seq,text='hello')=>({id,sequenceId:seq,conversationId:'100-200',senderId:'200',senderName:'',senderUsername:'',senderAvatarUrl:'',text,time:'',timestampMs:1,outgoing:false,encrypted:false});
-function reset() { calls=[];nativeCalls=[];queue=[];localWrites=[];nativeByMethod={};legacyResponse=undefined;legacyMessages=undefined;systemVpnActive=false;proxySettings={enabled:false,activeProxy:()=>null};nativeResult={ok:true,data:{messages:[],errors:[]}};active='account-a'; }
+function reset() { calls=[];nativeCalls=[];queue=[];localWrites=[];nativeByMethod={};legacyResponse=undefined;legacyMessages=undefined;systemVpnActive=false;proxySettings={enabled:false,activeProxy:()=>null};nativeResult={ok:true,data:{messages:[],errors:[]}};active='account-a'; rememberedChatKeys.clear(); }
+
+test('a new chat service restores the saved identity without sending the PIN and locking removes it', async () => {
+  reset();
+  const keys = ok({data:{user_results_by_rest_ids:[user('100')]}});
+  const first = new XChatService();
+  queue.push(keys);
+  await first.prepare({}, []);
+  nativeByMethod.unlock = {ok:true,data:{unlocked:true,key_blob:'fixture-key'}};
+  await first.unlock('2580');
+  assert.equal(rememberedChatKeys.get('100'), 'fixture-key');
+
+  const second = new XChatService();
+  queue.push(keys);
+  nativeByMethod.restoreIdentity = {ok:true,data:{unlocked:true}};
+  await second.prepare({}, []);
+  assert.equal(second.isUnlocked(), true);
+  assert.deepEqual(nativeCalls.find(call => call.method === 'restoreIdentity').input,
+    {key_blob:'fixture-key', user_id:'100', version:'1', public_key:'identity-100'});
+  assert.equal(nativeCalls.filter(call => call.method === 'unlock').length, 1);
+  assert.equal(second.lock(), true);
+  assert.equal(second.isUnlocked(), false);
+  assert.equal(rememberedChatKeys.size, 0);
+});
+
+test('post sharing sends the note and an attachment rather than a URL as message text', async () => {
+  reset();
+  const service = new XChatService();
+  nativeByMethod.encrypt = {ok:true,data:{message_id:'post-share',conversation_id:'100-200',
+    encoded_message_create_event:'ciphertext',encoded_message_event_signature:'signature'}};
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'post-share',conversationId:'100-200',senderId:'100',
+    verified:true,content:{content_type:'Text',text:'look'},attachments:[{attachment_type:'Post',rest_id:'123'}]}]}};
+  queue.push(ok({data:{xchat_send_create_message_event:{encoded_message_event:'confirmed'}}}));
+  const url = 'https://x.com/example/status/123';
+  await service.sharePost('100-200', '123', url, 'look');
+  const payload = nativeCalls.find(call => call.method === 'encrypt').input;
+  assert.equal(payload.text, 'look');
+  assert.deepEqual(payload.attachments, [{attachment_type:'post',rest_id:'123',post_url:url}]);
+  assert.equal(calls[0].name, 'SendMessageCreateMutation');
+});
 
 test('XChat Post shares retain an explicit URL or derive one from the authenticated status ID',async()=>{
   reset();const s=new XChatService();

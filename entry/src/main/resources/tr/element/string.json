@@ -69,6 +69,10 @@
       "value": "Yüz takibi destekleniyor. Kamera yalnızca okuma sayfasında Başlat'a dokunduğunuzda açılır."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Desteklenen Huawei cihazları"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Bu cihaz gerekli yüz takibini desteklemiyor. Dokunmatik ekranı veya klavyeyi kullanın."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Sohbeti sıfırla"
+      "value": "Sohbeti Kilitle"
     },
     {
       "name": "chat_phone",

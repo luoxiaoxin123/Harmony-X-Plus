@@ -6218,7 +6218,7 @@ struct Index {
   }
 
   private openOwnProfile(): void {
-    this.showSideDrawer = false;
+    if (!this.isLargeScreen()) { this.showSideDrawer = false; }
     this.showLinkPreview = false;
     this.linkPreviewUrl = '';
     if (!this.hasAnySession()) { this.goLogin(); return; }

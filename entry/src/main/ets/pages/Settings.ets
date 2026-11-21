@@ -10,6 +10,7 @@ import { STORAGE_KEY_FOR_YOU_ONLY_SENSITIVE } from '../services/ContentFilterSto
 import { SceneModeSettingsContent } from '../components/SceneModeSettingsContent';
 import { ReplyQualitySettingsContent } from '../components/ReplyQualitySettingsContent';
 import { EyeReadingSettingsContent } from '../components/EyeReadingSettingsContent';
+import { openExternalLink } from '../utils/PostEntities';
 import { DesktopLayout } from '../utils/DesktopLayout';
 import { ComponentHdrSettingsContent } from '../components/ComponentHdrSettingsContent';
 import { AppearancePreview } from '../components/AppearancePreview';
@@ -4915,6 +4916,12 @@ export struct SettingsSection {
           this.antiPeepBusy = true;
           try { await antiPeepProtection.refresh(); }
           finally { this.antiPeepBusy = false; }
+        })
+      Button($r('app.string.huawei_supported_models')).fontFamily(this.appFontFamily)
+        .fontColor(this.accentColor).backgroundColor(Color.Transparent)
+        .onClick((): void => {
+          openExternalLink(this.getUIContext().getHostContext() as common.UIAbilityContext,
+            'https://consumer.huawei.com/cn/support/content/zh-cn16090707/');
         })
     }
     .width('100%')

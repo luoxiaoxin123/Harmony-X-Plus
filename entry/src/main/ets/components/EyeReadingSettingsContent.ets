@@ -1,8 +1,10 @@
+import { common } from '@kit.AbilityKit';
 import { EyeReadingSettings, eyeReadingSettingsStore, STORAGE_KEY_EYE_READING_ENABLED,
   STORAGE_KEY_EYE_READING_DWELL, STORAGE_KEY_EYE_READING_THRESHOLD } from '../services/EyeReadingSettingsStore';
 import { eyeReadingSupported } from '../services/EyeReadingSession';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { pageTextColor } from '../utils/ThemeColors';
+import { openExternalLink } from '../utils/PostEntities';
 
 @Component
 export struct EyeReadingSettingsContent {
@@ -38,6 +40,12 @@ export struct EyeReadingSettingsContent {
           .onChange((value: boolean): void => { if (value !== this.readingEnabled) { this.save('enabled', value ? 1 : 0); } })
       }.width('100%')
       this.Copy(this.supported ? $r('app.string.eye_reading_supported') : $r('app.string.eye_reading_unsupported'))
+      Button($r('app.string.huawei_supported_models')).fontFamily(this.appFontFamily)
+        .fontColor(this.accent).backgroundColor(Color.Transparent)
+        .onClick((): void => {
+          openExternalLink(this.getUIContext().getHostContext() as common.UIAbilityContext,
+            'https://consumer.huawei.com/cn/mobileservices/books/');
+        })
       Text($r('app.string.eye_reading_dwell')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Subtitle_L'))
         .fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackground))
       Text((this.dwell / 1000).toFixed(1) + ' s').fontFamily(this.appFontFamily).fontColor(this.accent)

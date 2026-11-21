@@ -69,6 +69,10 @@
       "value": "El seguimiento facial está disponible. La cámara solo se inicia al pulsar Iniciar en una página de lectura."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Dispositivos Huawei compatibles"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Este dispositivo no admite el seguimiento facial necesario. Usa la pantalla táctil o el teclado."
     },
@@ -5742,7 +5746,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Restablecer Chat"
+      "value": "Bloquear el chat"
     },
     {
       "name": "chat_phone",

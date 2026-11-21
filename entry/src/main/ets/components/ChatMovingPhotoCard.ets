@@ -150,12 +150,12 @@ export struct ChatMovingPhotoCard {
     this.busy = true; this.failed = false;
     try {
       const path: string = await xChatMedia.receive(this.context(), this.conversationId,
-        cover.mediaHash, this.keyVersion, 1);
+        cover.mediaHash, this.keyVersion, 1, cover.rawEvent);
       if (!this.active || generation !== this.generation) { return; }
       this.coverUri = fileUri.getUriFromPath(path);
       if (!withVideo) { return; }
       const videoPath: string = await xChatMedia.receive(this.context(), this.conversationId,
-        video.mediaHash, this.keyVersion, 3);
+        video.mediaHash, this.keyVersion, 3, video.rawEvent);
       if (!this.active || generation !== this.generation) { return; }
       const photo: photoAccessHelper.MovingPhoto = await photoAccessHelper.MediaAssetManager.loadMovingPhoto(
         this.context(), this.coverUri, fileUri.getUriFromPath(videoPath));

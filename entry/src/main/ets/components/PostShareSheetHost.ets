@@ -5,11 +5,11 @@ import type { DmConversationRouteParam } from '../pages/DmConversation';
 import type { PostShareRoute } from '../pages/PostShare';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_ACCOUNTS_CHANGED } from '../services/AccountStore';
-import { ExternalSharePayload } from '../services/ExternalShareStore';
 import { PostShareRequest, STORAGE_KEY_POST_SHARE_REQUEST, takePostShareRequest } from '../services/PostShareRequest';
 import { DEFAULT_SHEET_MATERIAL_ENABLED, DEFAULT_SHEET_MATERIAL_LEVEL, STORAGE_KEY_SHEET_MATERIAL_ENABLED,
   STORAGE_KEY_SHEET_MATERIAL_LEVEL } from '../services/SheetMaterialSettingsStore';
 import { ChatPerson, xChatActions } from '../services/XChatActions';
+import { xChatService } from '../services/XChatService';
 import { xPrivateClient } from '../services/XPrivateClient';
 import { InputModalScope } from '../utils/InputModalScope';
 import { copyPostLink } from '../utils/PostLinkCopy';
@@ -18,6 +18,7 @@ import { postShareUrl, sharePost } from '../utils/SharePost';
 import { sheetMaterialOptions } from '../utils/SheetMaterial';
 import { fieldSurfaceColor, pageSurfaceColor } from '../utils/ThemeColors';
 import { ProxyAvatar } from './ProxyAvatar';
+import { ChatPinPad } from './ChatPinPad';
 
 @Component
 export struct PostShareSheetHost {
@@ -44,6 +45,9 @@ export struct PostShareSheetHost {
   @State private failed: boolean = false;
   @State private telegramAvailable: boolean = false;
   @State private emailAvailable: boolean = false;
+  @State private sending: boolean = false;
+  @State private askingPin: boolean = false;
+  @State private sendError: string = '';
   private current: PostShareRequest | undefined;
   private afterClose: (() => void) | undefined;
   private readonly modalScope: InputModalScope = new InputModalScope();
@@ -71,6 +75,9 @@ export struct PostShareSheetHost {
     this.recipients = [];
     this.loading = false;
     this.failed = false;
+    this.sending = false;
+    this.askingPin = false;
+    this.sendError = '';
     xPrivateClient.load(this.context());
     this.account = xPrivateClient.sessionIdentity();
     this.signedIn = xPrivateClient.isSignedIn() && xPrivateClient.viewerId().length > 0;
@@ -159,6 +166,7 @@ export struct PostShareSheetHost {
   private changeQuery(query: string): void {
     this.query = query;
     this.selected = null;
+    this.sendError = '';
     this.cancelSearch();
     const normalizedQuery: string = query.trim().replace(/^@/, '');
     this.recipients = this.recentRecipients(normalizedQuery);
@@ -203,21 +211,36 @@ export struct PostShareSheetHost {
     }
   }
 
-  private openConversation(): void {
+  private async sendSelected(pin?: string): Promise<void> {
     const request: PostShareRequest | undefined = this.current;
     const recipient: DmConversationRouteParam | null = this.selected;
     const account: string = this.account;
-    if (request === undefined || recipient === null || account !== xPrivateClient.sessionIdentity()) { return; }
-    const payload: ExternalSharePayload = new ExternalSharePayload();
-    payload.id = 'post-share-' + Date.now().toString();
-    const note: string = this.note.trim();
-    payload.text = (note.length > 0 ? note + '\n' : '') + postShareUrl(request.post);
-    this.closeWith((): void => {
-      if (account !== xPrivateClient.sessionIdentity()) { return; }
-      recipient.sharedPayload = payload;
-      request.beforeNavigate?.();
-      request.pageStack.pushPath({ name: 'DmConversation', param: recipient });
-    });
+    if (this.sending || request === undefined || recipient === null || account !== xPrivateClient.sessionIdentity()) {
+      return;
+    }
+    this.sending = true;
+    this.sendError = '';
+    try {
+      await xChatService.prepare(this.context(), recipient.participantIds);
+      if (account !== xPrivateClient.sessionIdentity() || this.current !== request || !this.open) { return; }
+      if (!xChatService.isUnlocked()) {
+        if (pin === undefined) { this.askingPin = true; return; }
+        await xChatService.unlock(pin);
+      }
+      if (account !== xPrivateClient.sessionIdentity() || this.current !== request || !this.open) { return; }
+      this.askingPin = false;
+      await xChatService.sharePost(recipient.conversationId, request.post.id, postShareUrl(request.post), this.note.trim());
+      if (this.current !== request || !this.open) { return; }
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.chat_sent') });
+      this.open = false;
+    } catch (error) {
+      if (this.current === request && this.open) {
+        const resource: Resource = this.askingPin ? $r('app.string.dm_unlock_failed') : $r('app.string.chat_action_failed');
+        this.sendError = this.context().resourceManager.getStringSync(resource);
+      }
+    } finally {
+      if (this.current === request) { this.sending = false; }
+    }
   }
 
   private openScreenshot(): void {
@@ -269,7 +292,8 @@ export struct PostShareSheetHost {
       backgroundColor: pageSurfaceColor(this.displayMode, this.darkSurface),
       maskColor: '#33000000',
       radius: centered ? LengthMetrics.vp(28) : { topLeft: 28, topRight: 28, bottomLeft: 0, bottomRight: 0 },
-      onDisappear: (): void => { this.sheetClosed(); }
+      onDisappear: (): void => { this.sheetClosed(); },
+      onWillDismiss: (action: DismissSheetAction): void => { if (!this.sending) { action.dismiss(); } }
     }, this.materialEnabled, this.materialLevel, this.breakpoint, compactWindow);
     if (this.materialEnabled) {
       options.borderWidth = 1;
@@ -297,10 +321,11 @@ export struct PostShareSheetHost {
           $r('sys.symbol.checkmark_circle_fill') : $r('sys.symbol.circle')).fontSize(22)
           .fontColor([this.selected?.conversationId === recipient.conversationId ? this.accent : $r('app.color.text_secondary')])
       }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 })
-    }.width('100%').padding(0).backgroundColor(Color.Transparent)
+    }.width('100%').padding(0).backgroundColor(Color.Transparent).enabled(!this.sending)
       .accessibilitySelected(this.selected?.conversationId === recipient.conversationId)
       .onClick((): void => {
         this.selected = this.selected?.conversationId === recipient.conversationId ? null : recipient;
+        this.sendError = '';
       })
   }
 
@@ -328,12 +353,13 @@ export struct PostShareSheetHost {
           .fontWeight(FontWeight.Bold).fontColor($r('app.color.text_primary')).layoutWeight(1)
         Button({ type: ButtonType.Circle }) {
           SymbolGlyph($r('sys.symbol.xmark')).fontSize(16).fontColor([$r('app.color.text_primary')])
-        }.width(40).height(40).backgroundColor(Color.Transparent).accessibilityText($r('app.string.compose_cancel'))
+        }.width(40).height(40).backgroundColor(Color.Transparent).enabled(!this.sending)
+          .accessibilityText($r('app.string.compose_cancel'))
           .onClick((): void => { this.open = false; })
       }.width('100%').padding({ left: 20, right: 8 })
       Search({ value: this.query, placeholder: $r('app.string.chat_search') })
         .height(44).borderRadius(22).margin({ left: 20, right: 20, bottom: 4 })
-        .keyboardAppearance(KeyboardAppearance.IMMERSIVE).enabled(this.signedIn)
+        .keyboardAppearance(KeyboardAppearance.IMMERSIVE).enabled(this.signedIn && !this.sending)
         .backgroundColor(this.materialEnabled ? '#24FFFFFF' : fieldSurfaceColor(this.displayMode, this.darkSurface))
         .border({ width: 1, color: this.materialEnabled ? '#66FFFFFF' : $r('app.color.divider') })
         .fontColor($r('app.color.text_primary')).placeholderColor($r('app.color.text_secondary'))
@@ -362,11 +388,17 @@ export struct PostShareSheetHost {
           TextInput({ text: this.note, placeholder: $r('app.string.post_share_message') }).fontFamily(this.appFontFamily)
             .layoutWeight(1).height(40).maxLength(1000).borderRadius(20).keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
+            .enabled(!this.sending)
             .onChange((note: string): void => { this.note = note; })
-          Button($r('app.string.chat_new')).height(40).fontFamily(this.appFontFamily)
+          Button(this.sending ? $r('app.string.post_sending') : $r('app.string.dm_send'))
+            .height(40).fontFamily(this.appFontFamily).enabled(!this.sending)
             .fontColor($r('app.color.text_on_accent')).backgroundColor(this.accent)
-            .onClick((): void => this.openConversation())
+            .onClick((): void => { void this.sendSelected(); })
         }.width('100%').padding({ left: 16, right: 16, bottom: 4 })
+      }
+      if (this.sendError.length > 0) {
+        Text(this.sendError).fontFamily(this.appFontFamily).fontColor($r('app.color.danger'))
+          .width('100%').padding({ left: 16, right: 16 })
       }
       Divider().color($r('app.color.divider')).width('100%')
       Scroll() {
@@ -382,10 +414,24 @@ export struct PostShareSheetHost {
           }
         }.alignItems(VerticalAlign.Top).padding({ left: 9, right: 9 })
       }.width('100%').align(Alignment.Start).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+        .enabled(!this.sending)
     }.width('100%').height('100%').padding({ top: 5, bottom: this.centered() ? 8 : Math.max(8, this.bottomInset) })
   }
 
+  @Builder
+  private ShareContent(): void {
+    if (this.askingPin) {
+      Column() {
+        ChatPinPad({ busy: this.sending, error: this.sendError,
+          onSubmit: (pin: string): void => { void this.sendSelected(pin); },
+          onClose: (): void => { this.askingPin = false; this.sendError = ''; } })
+      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+    } else {
+      this.Panel()
+    }
+  }
+
   build(): void {
-    Column().width(0).height(0).bindSheet($$this.open, this.Panel(), this.sheetOptions())
+    Column().width(0).height(0).bindSheet($$this.open, this.ShareContent(), this.sheetOptions())
   }
 }

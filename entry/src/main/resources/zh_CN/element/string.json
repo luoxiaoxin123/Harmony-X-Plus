@@ -69,8 +69,12 @@
       "value": "此设备支持人脸跟踪。进入阅读页后，点“开始眼动”才会开启摄像头。"
     },
     {
+      "name": "huawei_supported_models",
+      "value": "华为官方支持机型"
+    },
+    {
       "name": "eye_reading_unsupported",
-      "value": "此设备不支持所需的人脸跟踪能力，请继续使用触摸或键盘阅读。"
+      "value": "系统未向 Harmony X 开放人脸跟踪。华为阅读的眼动翻页支持以华为官方机型清单为准。"
     },
     {
       "name": "eye_reading_dwell",
@@ -5746,7 +5750,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "重置聊天"
+      "value": "锁定聊天"
     },
     {
       "name": "chat_phone",

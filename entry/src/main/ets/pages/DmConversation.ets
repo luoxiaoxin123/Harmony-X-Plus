@@ -1144,7 +1144,7 @@ export struct DmConversationPage {
       for (let i: number = 0; i < attachments.length; i++) {
         const attachment: DmAttachment = attachments[i];
         const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash,
-          message.keyVersion ?? '', attachment.mediaType);
+          message.keyVersion ?? '', attachment.mediaType, attachment.rawEvent);
         if (!this.active || this.disposed || generation !== this.mediaActionGeneration ||
           account !== xPrivateStore.load(context).cacheIdentity() || !xChatService.isUnlocked()) { return; }
         paths.push(path);
@@ -1247,7 +1247,8 @@ export struct DmConversationPage {
       for (let i: number = 0; i < (source.attachments?.length ?? 0); i++) {
         const attachment: DmAttachment = (source.attachments ?? [])[i];
         if (attachment.type === 'Media') {
-          const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash, source.keyVersion ?? '', attachment.mediaType);
+          const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash,
+            source.keyVersion ?? '', attachment.mediaType, attachment.rawEvent);
           files.push({ uri: path, filename: attachment.filename, type: attachment.mediaType, duration: attachment.durationMs });
         }
       }

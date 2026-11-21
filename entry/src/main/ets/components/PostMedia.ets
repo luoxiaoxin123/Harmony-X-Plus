@@ -3358,10 +3358,8 @@ export struct SurfaceVideoPlayer {
     if (this.holdSeekDirection !== 0 || Date.now() < this.suppressVideoTapUntil) { return; }
     if (this.linkCardVideo && !this.fullscreen) { this.onLinkCardOpen(); return; }
     if (!this.mediaViewerLayout && !this.fullscreen) {
-      // An inline surface tap belongs to this player only. Opening the video
-      // feed viewer is reserved for the explicit fullscreen controls.
       if (this.isAnimatedGif()) { this.togglePlay(); }
-      else if (!this.hideVideoChrome()) { this.toggleControls(); }
+      else if (!this.onFullscreenIntent(this.positionSec) && !this.hideVideoChrome()) { this.toggleControls(); }
       return;
     }
     if (this.retainViewerPlayback) { this.onViewerCommentDismiss(); return; }
@@ -4222,6 +4220,8 @@ export struct SurfaceVideoPlayer {
   }
 
   private onCoverTapped(): void {
+    if (!this.mediaViewerLayout && !this.fullscreen && !this.isAnimatedGif() &&
+      this.onFullscreenIntent(this.positionSec)) { return; }
     if (this.failed) {
       this.retry();
       return;
@@ -5469,7 +5469,7 @@ export struct SurfaceVideoPlayer {
             .backgroundColor('#99000000')
             .monopolizeEvents(true)
             .onClick((): void => {
-              this.togglePlay();
+              if (this.isAnimatedGif() || !this.onFullscreenIntent(this.positionSec)) { this.togglePlay(); }
             })
           }
           if (this.ready && this.buffering && this.wantsPlay && !this.failed) {
@@ -6737,7 +6737,7 @@ export struct PostMedia {
       },
       onTap: (): void => {
         if (this.linkCardVideo) { this.onVideoOpen(media); return; }
-        if (this.canStream(media)) { this.activate(media, true); }
+        if (!this.openVideo(media) && this.canStream(media)) { this.activate(media, true); }
       }
     }).id(this.mediaSourceId(media))
   }

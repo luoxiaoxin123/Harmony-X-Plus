@@ -11,6 +11,7 @@ import { XNotificationParser } from './XNotificationParser';
 import { xChatActions } from './XChatActions';
 import { ChatMediaItem, ChatMovingPhotoProtocol } from '../utils/ChatMovingPhotoProtocol';
 import { xChatGroupAvatar } from './XChatGroupAvatar';
+import { xChatKeyStore } from './XChatKeyStore';
 
 interface XChatPublicKey {
   public_key: string;
@@ -157,6 +158,8 @@ export interface XChatNativeData {
   media_bytes?: number;
   media_path?: string;
   valid?: boolean;
+  key_blob?: string;
+  encrypted_title?: string;
 }
 interface XChatEventEncryption { conversationId: string; encrypted: boolean; }
 interface XChatLocalArgs { conversation_id: string; text?: string; key_version?: string; ciphertext?: string; }
@@ -197,7 +200,7 @@ interface XChatUnlockArgs {
   proxy: string;
 }
 export interface XChatReplyTarget { sequence_id: string; sender_id: string; text: string; raw_event: string; key_version?: string; }
-interface XChatEncryptArgs { conversation_id: string; text: string; attachments?: XChatMediaDescriptor[]; media_key_version?: string; ttl_msec?: number; message_id?: string; reply?: XChatReplyTarget; }
+interface XChatEncryptArgs { conversation_id: string; text: string; attachments?: XChatSendAttachment[]; media_key_version?: string; ttl_msec?: number; message_id?: string; reply?: XChatReplyTarget; }
 interface XChatReactionArgs { conversation_id: string; sequence_id: string; emoji: string; remove: boolean; }
 export interface XChatMediaDescriptor {
   attachment_type: string;
@@ -209,7 +212,13 @@ export interface XChatMediaDescriptor {
   media_type: number;
   duration_millis?: number;
 }
-interface XChatMediaArgs { conversation_id: string; input_path: string; output_path: string; key_version?: string; }
+interface XChatPostDescriptor { attachment_type: string; rest_id: string; post_url: string; }
+type XChatSendAttachment = XChatMediaDescriptor | XChatPostDescriptor;
+interface XChatRestoreArgs { key_blob: string; user_id: string; version: string; public_key: string; }
+interface XChatMediaArgs {
+  conversation_id: string; input_path: string; output_path: string; key_version?: string;
+  raw_event?: string; media_hash_key?: string;
+}
 export interface XChatMediaCipher { size: number; keyVersion: string; }
 interface XChatPendingSend { text: string; payload: XChatNativeData; }
 
@@ -239,6 +248,7 @@ export class XChatService {
   private generation: number = 0;
   private unlocked: boolean = false;
   private ownRecord: XChatKeyRecord | null = null;
+  private restoring: Promise<void> | undefined;
   private signingKeys: XChatSigningKey[] = [];
   private users: Map<string, XChatUser> = new Map<string, XChatUser>();
   private groups: Map<string, XChatGroupMetadata> = new Map<string, XChatGroupMetadata>();
@@ -261,6 +271,7 @@ export class XChatService {
     this.accountId = '';
     this.unlocked = false;
     this.ownRecord = null;
+    this.restoring = undefined;
     this.signingKeys = [];
     this.users.clear();
     this.groups.clear();
@@ -400,7 +411,11 @@ export class XChatService {
     return result.ok ? result.data?.text ?? '' : '';
   }
 
-  lock(): void { this.clear(); }
+  lock(): boolean {
+    if (!xChatKeyStore.remove(xPrivateClient.viewerId())) { return false; }
+    this.clear();
+    return true;
+  }
 
   async changePin(context: common.UIAbilityContext, oldPin: string, newPin: string): Promise<void> {
     if (!this.unlocked) { throw new Error('locked'); }
@@ -558,7 +573,8 @@ export class XChatService {
     const result: XPrivateResult = await xPrivateClient.graphql('CreateGroupConversationMutation', {
       'conversation_id': conversationId, 'admin_user_ids': [xPrivateClient.viewerId()],
       'member_user_ids': all, 'conversation_key_version': payload.conversation_key_version ?? '',
-      'participants': participants, 'action_signatures': XChatService.actionInputs(payload.action_signatures ?? []), 'title': title
+      'participants': participants, 'action_signatures': XChatService.actionInputs(payload.action_signatures ?? []),
+      'title': payload.encrypted_title ?? ''
     });
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!result.ok) { throw new Error('group_http_' + result.status); }
@@ -603,12 +619,13 @@ export class XChatService {
   }
 
   async processMedia(conversationId: string, inputPath: string, outputPath: string,
-    keyVersion: string = ''): Promise<XChatMediaCipher> {
+    keyVersion: string = '', rawEvent: string = '', mediaHash: string = ''): Promise<XChatMediaCipher> {
     const generation: number = this.generation;
     const args: XChatMediaArgs = { conversation_id: conversationId, input_path: inputPath,
-      output_path: outputPath, key_version: keyVersion };
-    let result: XChatNativeResult = await this.callNative(keyVersion.length > 0 ? 'decryptMedia' : 'encryptMedia', JSON.stringify(args));
-    if (keyVersion.length === 0 && !result.ok && (result.error ?? '').indexOf('missing_conversation_key') >= 0) {
+      output_path: outputPath, key_version: keyVersion, raw_event: rawEvent, media_hash_key: mediaHash };
+    const decrypt: boolean = keyVersion.length > 0 || rawEvent.length > 0;
+    let result: XChatNativeResult = await this.callNative(decrypt ? 'decryptMedia' : 'encryptMedia', JSON.stringify(args));
+    if (!decrypt && !result.ok && (result.error ?? '').indexOf('missing_conversation_key') >= 0) {
       await this.conversation(conversationId);
       result = await this.callNative('encryptMedia', JSON.stringify(args));
       if (!result.ok && (result.error ?? '').indexOf('missing_conversation_key') >= 0) {
@@ -652,8 +669,8 @@ export class XChatService {
       rows[i].hidden = xChatActions.localBoolean(context, 'hidden:' + (rows[i].conversationId ?? ''), false);
       if (rows[i].group === true && rows[i].from.length === 0) { rows[i].from = context.resourceManager.getStringSync($r('app.string.chat_groups')); }
     }
-    if (!this.unlocked) { return rows; }
-    const generation: number = this.generation;
+    const viewerId: string = xPrivateClient.viewerId();
+    if (!this.unlocked && xChatKeyStore.load(viewerId).length === 0) { return rows; }
     const ids: string[] = [];
     for (let i: number = 0; i < rows.length; i++) {
       const members: string[] = rows[i].participantIds ?? [];
@@ -662,7 +679,9 @@ export class XChatService {
       }
     }
     await this.prepare(context, ids);
-    if (generation !== this.generation) { throw new Error('account_changed'); }
+    if (viewerId !== xPrivateClient.viewerId()) { throw new Error('account_changed'); }
+    if (!this.unlocked) { return rows; }
+    const generation: number = this.generation;
     const data: XChatResponseData | undefined = (JSON.parse(body) as XChatEnvelope).data;
     const inbox: XChatInbox | undefined = data?.get_initial_chat_page ?? data?.get_inbox_page;
     const items: XChatInboxItem[] = inbox?.items ?? [];
@@ -815,7 +834,10 @@ export class XChatService {
     }
     if (ids[0].length === 0) { throw new Error('no_session'); }
     if (Date.now() - this.keysFetchedAt < 60000 &&
-      ids.every((id: string): boolean => this.keyUsers.indexOf(id) >= 0)) { return; }
+      ids.every((id: string): boolean => this.keyUsers.indexOf(id) >= 0)) {
+      await this.restoreSavedKey(generation);
+      return;
+    }
     // The private client reads participant keys through GetPublicKeysQuery; the
     // legacy GetPublicKeys operation reports identity keys the server no longer
     // accepts for group key material.
@@ -858,6 +880,37 @@ export class XChatService {
     this.keysFetchedAt = Date.now();
     hilog.info(0xFF00, 'HarmonyX-Chat', 'keys users=%{public}d versions=%{public}d recovery=%{public}s',
       users.length, keys.length, this.ownRecord === null ? 'unavailable' : 'available');
+    if (!this.unlocked) { await this.restoreSavedKey(generation); }
+  }
+
+  private async restoreSavedKey(generation: number): Promise<void> {
+    if (this.unlocked) { return; }
+    if (this.restoring !== undefined) { return this.restoring; }
+    const metadata: XChatKeyMetadata | undefined = this.ownRecord?.public_key_with_metadata;
+    const viewerId: string = xPrivateClient.viewerId();
+    if (metadata === undefined) { return; }
+    const blob: string = xChatKeyStore.load(viewerId);
+    if (blob.length === 0) { return; }
+    const args: XChatRestoreArgs = { key_blob: blob, user_id: viewerId, version: metadata.version,
+      public_key: metadata.public_key.public_key };
+    const restore: Promise<void> = this.restoreIdentity(args, generation);
+    this.restoring = restore;
+    try { await restore; } finally {
+      if (this.restoring === restore) { this.restoring = undefined; }
+    }
+  }
+
+  private async restoreIdentity(args: XChatRestoreArgs, generation: number): Promise<void> {
+    let result: XChatNativeResult;
+    try { result = await this.callNative('restoreIdentity', JSON.stringify(args)); }
+    finally { args.key_blob = ''; }
+    if (generation !== this.generation) { throw new Error('account_changed'); }
+    if (result.ok && result.data?.unlocked === true) {
+      this.unlocked = true;
+      this.notifyChanged();
+    } else if (result.error === 'registered_key_mismatch') {
+      xChatKeyStore.remove(args.user_id);
+    }
   }
 
   async unlock(pin: string): Promise<void> {
@@ -896,6 +949,10 @@ export class XChatService {
       throw new Error(result.error ?? 'unlock_failed');
     }
     this.unlocked = true;
+    if (result.data?.key_blob !== undefined) {
+      xChatKeyStore.save(args.user_id, result.data.key_blob);
+      result.data.key_blob = undefined;
+    }
     this.notifyChanged();
   }
 
@@ -1002,7 +1059,7 @@ export class XChatService {
           attachment.media_type === 'video' ? 3 : attachment.media_type === 'audio' ? 4 : 5,
         filename: attachment.filename ?? '', url: this.attachmentUrl(attachment),
         width: attachment.dimensions?.width ?? 0, height: attachment.dimensions?.height ?? 0,
-        durationMs: attachment.duration_millis ?? 0
+        durationMs: attachment.duration_millis ?? 0, rawEvent: event.rawEvent
       }));
       page.messages.push({
         id: event.id ?? sequence, sequenceId: sequence,
@@ -1017,7 +1074,8 @@ export class XChatService {
           senderName: this.users.get(preview.sender_id ?? '')?.core?.name ?? preview.sender_display_name ?? '',
           text: preview.message_text ?? '', attachments: (preview.attachments ?? []).map((a: XChatNativeAttachment): DmAttachment => ({
             type: a.attachment_type, mediaHash: a.media_hash_key ?? '', mediaType: a.media_type === 'audio' ? 4 : 1,
-            filename: a.filename ?? '', url: this.attachmentUrl(a), width: a.dimensions?.width ?? 0, height: a.dimensions?.height ?? 0
+            filename: a.filename ?? '', url: this.attachmentUrl(a), width: a.dimensions?.width ?? 0,
+            height: a.dimensions?.height ?? 0, rawEvent: event.rawEvent
           }))
         }
       });
@@ -1031,7 +1089,13 @@ export class XChatService {
     return page;
   }
 
-  async send(conversationId: string, text: string, attachments: XChatMediaDescriptor[] = [], mediaKeyVersion: string = '', messageId: string = '', reply?: XChatReplyTarget): Promise<XChatPage> {
+  async sharePost(conversationId: string, postId: string, postUrl: string, note: string): Promise<void> {
+    if (!/^\d+$/.test(postId) || !postUrl.startsWith('https://x.com/')) { throw new Error('invalid_post'); }
+    const attachment: XChatPostDescriptor = { attachment_type: 'post', rest_id: postId, post_url: postUrl };
+    await this.send(conversationId, note, [attachment]);
+  }
+
+  async send(conversationId: string, text: string, attachments: XChatSendAttachment[] = [], mediaKeyVersion: string = '', messageId: string = '', reply?: XChatReplyTarget): Promise<XChatPage> {
     const generation: number = this.generation;
     const ttl: number = Number(this.conversationInfo(conversationId).ttl);
     const args: XChatEncryptArgs = { conversation_id: conversationId, text: text, attachments: attachments,

@@ -1,14 +1,19 @@
 # Harmony X native XChat adapter
 
 ArkUI renders the conversation. The on-device ARM64 NAPI library embeds X's
-official Chat XDK 0.5.0 and Juicebox SDK; it does not load the X website.
+official Chat XDK 0.7.6 and Juicebox SDK. Message decryption runs on the device.
 The adapter preserves the upstream signature verification, bounded wire parser,
-conversation-key downgrade checks and PIN recovery. Private and conversation
-keys remain in the native SDK for the active account and are cleared on account
-switch/sign-out. The PIN is used for one recovery attempt and is not persisted.
+conversation-key downgrade checks and PIN recovery. The device's Asset Store
+keeps the recovered identity and signing keys per X user, with cloud sync
+disabled and access limited to an unlocked device. The PIN is used for one
+recovery attempt. Closing the app releases native session memory. The next
+session verifies saved keys against X's registered identity before importing
+them. Locking chat removes the saved keys. Account switching clears native
+session memory, and removal of the account removes its saved keys.
 
-The prebuilt `entry/libs/arm64-v8a/libharmonyx_chat.so` targets HarmonyOS ARM64.
-Rebuild from pinned sources with Rust's `aarch64-unknown-linux-ohos` target and
+The bundled libraries in `entry/libs` target HarmonyOS ARM64 and x86_64.
+Rebuild from pinned sources with Rust's `aarch64-unknown-linux-ohos` and
+`x86_64-unknown-linux-ohos` targets and
 the DevEco native SDK:
 
 ```powershell
@@ -52,12 +57,11 @@ action_signatures }`; raw conversation keys never cross NAPI. Prepared keys
 are not activated before server acceptance. Refresh and decrypt the server's
 acknowledged key-change events after submitting an accepted mutation.
 
-`patches/media-message-id.patch` adds an optional stable message ID to the
-SDK's message-encryption parameters and corresponding language bindings.
-The build applies it to the pinned source. Attachment initialization,
-finalization and the signed message use that same ID; uncertain delivery
-retries preserve the original ciphertext and ID. Signature verification and
-SecretStream framing remain upstream implementations.
+The Harmony X SDK patch preserves the existing private transport's message
+IDs, group action signatures, and read receipts. The XDK verifies events and
+decrypts media from the signed message event and its media hash, including
+messages that use per-message keys. Post shares use the SDK's Post attachment
+with the optional note as message text.
 
 Chat transport uses the account's existing cookie session and registered
 GraphQL operations (`GetPublicKeys`, `GetConversationPageQuery`, and
