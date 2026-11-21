@@ -2,6 +2,8 @@ import { OfflineReadingLibrary } from '../components/OfflineReadingLibrary';
 import { offlineReadingStore, OfflineSaveResult } from '../services/OfflineReadingStore';
 import { DesktopLayout } from '../utils/DesktopLayout';
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { AnimatedIconTabs } from '../components/AnimatedIconTabs';
+import { PageSearchField } from '../components/PageSearchField';
 import {
   STORAGE_KEY_TIMELINE_COLUMNS,
   TIMELINE_COLUMNS_AUTO_TWO,
@@ -74,6 +76,8 @@ export struct BookmarksPage {
   @StorageLink('harmonyx.title_bar_style_mode') titleBarStyleMode: number = 0;
   @StorageProp('harmonyx.desktop_layout') desktopLayoutEnabled: boolean = false;
   @StorageProp('harmonyx.breakpoint') windowBreakpoint: string = 'sm';
+  @StorageProp('harmonyx.window_width') private windowWidth: number = 0;
+  @StorageProp('harmonyx.window_height') private windowHeight: number = 0;
   @StorageProp(STORAGE_KEY_TIMELINE_COLUMNS) private timelineColumnsMode: number = 0;
   @StorageLink(STORAGE_KEY_READ_ALOUD_ENTRY_ENABLED) readAloudEntryEnabled: boolean = false;
   @StorageLink(STORAGE_KEY_FILTER_ONLY_MEDIA) filterOnlyMedia: boolean = false;
@@ -134,9 +138,13 @@ export struct BookmarksPage {
   // A single-column phone feed needs the same native press/drag routing as Home.
   // Explicit two-column choices and large/desktop layouts stay on WaterFlow.
   private useTimelineWaterFlow(): boolean {
-    return this.desktopLayout() || ResponsiveLayout.isLarge(this.windowBreakpoint) ||
+    return this.isLandscape() || this.desktopLayout() || ResponsiveLayout.isLarge(this.windowBreakpoint) ||
       this.timelineColumnsMode === TIMELINE_COLUMNS_TWO ||
       this.timelineColumnsMode === TIMELINE_COLUMNS_AUTO_TWO;
+  }
+
+  private isLandscape(): boolean {
+    return this.windowHeight > 0 && this.windowWidth > this.windowHeight;
   }
 
   private useListFeed(): boolean {
@@ -274,6 +282,17 @@ export struct BookmarksPage {
     this.load(true);
   }
 
+  private selectLibrary(index: number): void {
+    this.getUIContext().getFocusController().clearFocus();
+    this.offlineMode = index === 2;
+    if (index === 1) {
+      this.showCollections = true;
+      void this.loadCollections();
+    } else if (index === 0 && this.showCollections) {
+      this.switchToAll();
+    }
+  }
+
   private openCollection(collection: BookmarkCollection): void {
     this.showCollections = false;
     this.selectedCollectionId = collection.id;
@@ -391,17 +410,16 @@ export struct BookmarksPage {
 
   @Builder
   private LibraryTabs(): void {
-    Row({ space: 8 }) {
-      Button($r('app.string.offline_online')).layoutWeight(1)
-        .backgroundColor(this.offlineMode ? $r('app.color.bg_field') : this.accentColor)
-        .fontColor(this.offlineMode ? $r('app.color.text_primary') : $r('app.color.text_on_accent'))
-        .accessibilitySelected(!this.offlineMode).onClick((): void => { this.offlineMode = false; })
-      Button($r('app.string.offline_title')).layoutWeight(1)
-        .backgroundColor(this.offlineMode ? this.accentColor : $r('app.color.bg_field'))
-        .fontColor(this.offlineMode ? $r('app.color.text_on_accent') : $r('app.color.text_primary'))
-        .accessibilitySelected(this.offlineMode).id('bookmarks-offline')
-        .onClick((): void => { this.offlineMode = true; })
-    }.width('100%').padding({ top: 8, bottom: 8 })
+    Row() {
+      AnimatedIconTabs({ items: [
+        { key: 'all', label: $r('app.string.bookmarks_all') },
+        { key: 'collections', label: $r('app.string.bookmarks_collections') },
+        { key: 'offline', label: $r('app.string.offline_title') }
+      ], selected: this.offlineMode ? 2 : (this.showCollections ? 1 : 0),
+        barHeight: 48, segmentedStyle: true,
+        onSelect: (index: number): void => this.selectLibrary(index) })
+        .constraintSize({ maxWidth: 640 })
+    }.width('100%').justifyContent(FlexAlign.Center).padding({ left: 16, right: 16, top: 6, bottom: 6 })
   }
 
   @Builder
@@ -419,62 +437,31 @@ export struct BookmarksPage {
   private BookmarkControls(): void {
     Column() {
       this.LibraryTabs()
-      Column({ space: 10 }) {
-        if (!this.showCollections) {
-          Search({ value: this.searchInput, placeholder: $r('app.string.bookmarks_search_placeholder') })
-            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
-            .width('100%')
-            .height(44)
-            .onChange((value: string): void => {
-              this.searchInput = value;
-            })
-            .onSubmit((value: string): void => {
-              this.submitSearch(value);
-            })
+      if (!this.showCollections) {
+        Row() {
+          PageSearchField({ value: this.searchInput, placeholder: $r('app.string.bookmarks_search_placeholder'),
+            onValueChange: (value: string): void => { this.searchInput = value; },
+            onSubmit: (value: string): void => this.submitSearch(value) }).constraintSize({ maxWidth: 640 })
         }
-        Row({ space: 8 }) {
-          Button($r('app.string.bookmarks_all'), { stateEffect: true })
-            .layoutWeight(1)
-            .fontColor(this.showCollections ? pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, this.showCollections ? $r('app.color.bg_field') : this.accentColor) : $r('app.color.text_on_accent'))
-            .backgroundColor(this.showCollections ? $r('app.color.bg_field') : this.accentColor)
-            .borderRadius(18)
-            .onClick((): void => {
-              this.switchToAll();
-            })
-          Button($r('app.string.bookmarks_collections'), { stateEffect: true })
-            .layoutWeight(1)
-            .fontColor(this.showCollections ? $r('app.color.text_on_accent') : pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, this.showCollections ? this.accentColor : $r('app.color.bg_field')))
-            .backgroundColor(this.showCollections ? this.accentColor : $r('app.color.bg_field'))
-            .borderRadius(18)
-            .onClick((): void => {
-              this.showCollections = true;
-              this.loadCollections();
-            })
-        }
-        .width('100%')
-        if (this.selectedCollectionName.length > 0) {
-          Row({ space: 8 }) {
-            Text(this.selectedCollectionName).fontFamily(this.appFontFamily)
-              .fontSize($r('sys.float.Body_M'))
-              .fontWeight(FontWeight.Medium)
-              .fontColor(pageTextColor($r('app.color.text_accent'), this.pageBackgroundValue, Color.Transparent))
-              .layoutWeight(1)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Button($r('app.string.bookmarks_collection_clear'), { stateEffect: true })
-              .fontSize($r('sys.float.Body_S'))
-              .fontColor(this.accentColor)
-              .backgroundColor(Color.Transparent)
-              .onClick((): void => {
-                this.clearCollection();
-              })
-          }
-          .width('100%')
-        }
+        .width('100%').justifyContent(FlexAlign.Center)
       }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 10, bottom: 4 })
-    }
+      if (!this.showCollections && this.selectedCollectionName.length > 0) {
+        Row({ space: 8 }) {
+          Text(this.selectedCollectionName).fontFamily(this.appFontFamily)
+            .fontSize($r('sys.float.Body_M'))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(pageTextColor($r('app.color.text_accent'), this.pageBackgroundValue, Color.Transparent))
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Button($r('app.string.bookmarks_collection_clear'), { stateEffect: true })
+            .fontSize($r('sys.float.Body_S'))
+            .fontColor(this.accentColor)
+            .backgroundColor(Color.Transparent)
+            .onClick((): void => this.clearCollection())
+        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, bottom: 4 })
+      }
+    }.width('100%')
     if (this.showCollections) {
       if (this.collectionsLoading) {
         Column() {
@@ -658,6 +645,7 @@ export struct BookmarksPage {
         Refresh({ refreshing: $$this.refreshing }) {
           AdaptivePostFeed({ scroller: this.scroller,
             useList: this.useListFeed(),
+            landscapeColumns: this.isLandscape(),
             itemKeys: this.showCollections || this.loading ? [] : this.visiblePosts().map((post: Tweet): string => post.id),
             lazyItems: true,
             feedId: 'bookmarks-post-feed',

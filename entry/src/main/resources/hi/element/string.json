@@ -10174,7 +10174,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · luoxiaoxin123/HarmonyX"
+      "value": "GitHub · luoxiaoxin123/Harmony-X-Plus"
     },
     {
       "name": "logo_motion_pause",
@@ -13251,6 +13251,10 @@
     {
       "name": "post_share_no_recipient_key",
       "value": "इस प्राप्तकर्ता के लिए चैट कुंजी उपलब्ध नहीं है"
+    },
+    {
+      "name": "sidebar_update_available",
+      "value": "नया संस्करण %s उपलब्ध है"
     }
   ]
 }

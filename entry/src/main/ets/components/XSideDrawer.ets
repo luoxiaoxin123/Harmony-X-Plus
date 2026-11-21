@@ -12,6 +12,8 @@ import { SideBarMaterialLayer } from './SideBarMaterialLayer';
 import { ProxyAvatar } from './ProxyAvatar';
 import { XAccount, accountStore, STORAGE_KEY_ACCOUNTS_CHANGED } from '../services/AccountStore';
 import { common } from '@kit.AbilityKit';
+import { PROJECT_UPDATE_KEY, ProjectUpdate } from '../services/ProjectUpdates';
+import { openExternalLink } from '../utils/PostEntities';
 import { DEFAULT_DESKTOP_RAIL_MATERIAL_LEVEL, STORAGE_KEY_DESKTOP_RAIL_MATERIAL_LEVEL,
   SIDEBAR_MATERIAL_GLASS, SIDEBAR_MATERIAL_SYSTEM } from '../services/LayoutSettingsStore';
 
@@ -20,6 +22,7 @@ export struct XSideDrawer {
   scroller: Scroller = new Scroller();
   @StorageProp('harmonyx.compact_window') private compactWindow: boolean = false;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
+  @StorageProp(PROJECT_UPDATE_KEY) private projectUpdate: ProjectUpdate = new ProjectUpdate();
   @StorageProp(STORAGE_KEY_SIDEBAR_ORDER) private itemOrder: string = '';
   @StorageProp(STORAGE_KEY_SIDEBAR_HIDDEN) private hiddenItems: string = DEFAULT_SIDEBAR_HIDDEN;
   @Prop profile: UserProfile | null = null;
@@ -170,6 +173,20 @@ export struct XSideDrawer {
           }
           .padding({ top: 8, bottom: 8 })
           .onClick((): void => this.onFollowers())
+        }
+        if (this.projectUpdate.version.length > 0) {
+          Button({ type: ButtonType.Normal }) {
+            Row({ space: 6 }) {
+              SymbolGlyph($r('sys.symbol.arrow_up_circle')).fontSize(16).fontColor([this.accentColor])
+              Text($r('app.string.sidebar_update_available', this.projectUpdate.version))
+                .fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontColor(this.accentColor)
+                .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+          }.padding({ top: 8, bottom: 8 }).backgroundColor(Color.Transparent)
+            .onClick((): void => {
+              const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
+              openExternalLink(context, this.projectUpdate.url);
+            })
         }
       }
       .width('100%')

@@ -1,4 +1,5 @@
 import { removeLegacyInstallId, removeLegacySupportData } from '../services/LegacySupportData';
+import { projectUpdates } from '../services/ProjectUpdates';
 import { sidebarSettingsStore, SidebarSettings, STORAGE_KEY_SIDEBAR_ORDER, STORAGE_KEY_SIDEBAR_HIDDEN, STORAGE_KEY_SIDEBAR_SEARCH_CAPSULE } from '../services/SidebarSettingsStore';
 import { STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON } from '../services/MediaSettingsStore';
 import { tabOrderSettingsStore, STORAGE_KEY_BOTTOM_TAB_ORDER, STORAGE_KEY_HOME_TAB_ORDER } from '../services/TabOrderSettingsStore';
@@ -805,6 +806,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground(): void {
+    void projectUpdates.check();
     crashDiagnostics.record('application.foreground');
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onForeground');
     huaweiAccountService.revalidate().then((): void => { huaweiCloudSyncService.onForeground(); });

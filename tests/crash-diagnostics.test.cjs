@@ -172,7 +172,7 @@ test('bounded journal batches successful requests and flushes errors without unb
 test('developer contact opens a feedback draft without transmitting report data', async t => {
   const f = fixture(t); f.emit(event('contact'));
   await f.service.contactDeveloper(f.context);
-  assert.equal(f.links[0].uri, 'https://github.com/luoxiaoxin123/HarmonyX/issues/new');
+  assert.equal(f.links[0].uri, 'https://github.com/luoxiaoxin123/Harmony-X-Plus/issues/new');
   assert.equal(f.service.pendingReport().id, 'contact');
   f.failLink(true);
   await assert.rejects(f.service.contactDeveloper(f.context), /No browser/);
@@ -180,7 +180,7 @@ test('developer contact opens a feedback draft without transmitting report data'
 
 test('Help and About use the current project for feedback, releases and the homepage', () => {
   const links = evaluate('entry/src/main/ets/utils/ProjectLinks.ets', {});
-  assert.equal(links.PROJECT_URL, 'https://github.com/luoxiaoxin123/HarmonyX');
+  assert.equal(links.PROJECT_URL, 'https://github.com/luoxiaoxin123/Harmony-X-Plus');
   assert.equal(links.PROJECT_RELEASES_URL, links.PROJECT_URL + '/releases');
   assert.equal(links.PROJECT_NEW_ISSUE_URL, links.PROJECT_URL + '/issues/new');
   const help = fs.readFileSync('entry/src/main/ets/pages/HelpCenter.ets', 'utf8');

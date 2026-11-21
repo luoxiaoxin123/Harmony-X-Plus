@@ -10549,8 +10549,9 @@ struct Index {
   @Builder
   private SearchResultsContent(index: number): void {
     AdaptivePostFeed({ scroller: this.contentPageScroller('search', SEARCH_PRODUCT_IDS[index]),
-      useList: !this.useTimelineWaterFlow(),
-      itemKeys: this.searchResultKeys(index), allowColumns: this.searchPagePosts(index).length > 0,
+      useList: !this.searchLandscape() && !this.useTimelineWaterFlow(),
+      itemKeys: this.searchResultKeys(index), allowColumns: this.searchLandscape() || this.searchPagePosts(index).length > 0,
+      landscapeColumns: this.searchLandscape(),
       lazyItems: true,
       feedId: 'search-post-feed-' + SEARCH_PRODUCT_IDS[index],
       forwardMode: NestedScrollMode.SELF_FIRST, backwardMode: NestedScrollMode.SELF_FIRST,
@@ -10560,6 +10561,10 @@ struct Index {
       footer: (): void => this.SearchResultsFooter(index),
       onLoadMore: (): void => { if (index === this.searchProductIndex()) { this.requestMoreExploreResults(); } }
     }).backgroundColor(pageCanvasColor(this.displayMode, this.darkSurface, this.pageBackgroundValue))
+  }
+
+  private searchLandscape(): boolean {
+    return this.windowHeight > 0 && this.windowWidth > this.windowHeight;
   }
 
   @Builder

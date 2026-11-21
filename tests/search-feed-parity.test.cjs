@@ -7,7 +7,9 @@ const feed = fs.readFileSync('entry/src/main/ets/components/AdaptivePostFeed.ets
 test('search follows the home list/column choice and keeps its title inset in ordinary header content', () => {
   const search = index.slice(index.indexOf('private SearchResultsContent('), index.indexOf('private SearchResultsPage('));
   const header = index.slice(index.indexOf('private SearchResultsHeader('), index.indexOf('private SearchResultsFooter('));
-  assert.match(search, /useList:\s*!this\.useTimelineWaterFlow\(\)/);
+  assert.match(search, /useList:\s*!this\.searchLandscape\(\) && !this\.useTimelineWaterFlow\(\)/);
+  assert.match(search, /landscapeColumns:\s*this\.searchLandscape\(\)/);
+  assert.match(feed, /return this\.landscapeColumns \? 2 : PostFeedLayout\.columns/);
   assert.match(search, /lazyItems:\s*true/);
   assert.match(search, /forwardMode:\s*NestedScrollMode.SELF_FIRST/);
   assert.doesNotMatch(search, /startOffset:|nativeTouchScrolling:/);
