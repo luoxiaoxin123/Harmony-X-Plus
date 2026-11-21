@@ -16,7 +16,6 @@
 | PostDetail | 普通与内嵌布局中的回复排序 | 2 |
 | Communities / CommunityTimeline | 发帖、操作菜单 | 2 |
 | ComposerTools / PostOverflowButton / PostPresentationCard | 编辑工具、帖子菜单、社区笔记 | 3 |
-| LogoUniverse | 图标预览 | 1 |
 | 合计 | 全部 `bindSheet` | 30 |
 
 验证：`devecocli build --modules entry --build-mode debug` 编译和签名打包通过；绑定覆盖 30/30；21 个语言目录的低版本说明已更新。默认值、存储恢复、关闭保留厚度、非法值恢复和 API 兼容分支通过本地逻辑验证。

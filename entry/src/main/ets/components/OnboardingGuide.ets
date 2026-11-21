@@ -7,7 +7,8 @@ import { XAccount, accountStore } from '../services/AccountStore';
 import { xWebCookieBridge } from '../services/XWebCookieBridge';
 import { DISPLAY_MODE_SYSTEM } from '../services/AppearanceStore';
 import { linkSettingsStore, STORAGE_KEY_LINK_IN_APP } from '../services/LinkSettingsStore';
-import { mediaSettingsStore, STORAGE_KEY_HOME_VIDEO_MUTED, STORAGE_KEY_VIDEO_AUTO_PIP } from '../services/MediaSettingsStore';
+import { DEFAULT_VIDEO_AUTO_PIP, mediaSettingsStore, STORAGE_KEY_HOME_VIDEO_MUTED,
+  STORAGE_KEY_VIDEO_AUTO_PIP } from '../services/MediaSettingsStore';
 import { notificationSettingsStore, STORAGE_KEY_NOTIFICATION_ALERTS } from '../services/NotificationSettingsStore';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
 import { SystemMaterialUtil } from '../utils/SystemMaterial';
@@ -39,7 +40,7 @@ export struct OnboardingGuide {
   @StorageLink('harmonyx.accent_color') private accentColor: string = '#007DFF';
   @StorageLink(STORAGE_KEY_LINK_IN_APP) private linksInApp: boolean = false;
   @StorageLink(STORAGE_KEY_HOME_VIDEO_MUTED) private homeVideoMuted: boolean = true;
-  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) private videoAutoPip: boolean = true;
+  @StorageLink(STORAGE_KEY_VIDEO_AUTO_PIP) private videoAutoPip: boolean = DEFAULT_VIDEO_AUTO_PIP;
   @StorageLink(STORAGE_KEY_NOTIFICATION_ALERTS) private notificationAlerts: boolean = true;
   private swiperController: SwiperController = new SwiperController();
   private pollTimer: number = -1;

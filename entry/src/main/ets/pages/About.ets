@@ -62,21 +62,13 @@ struct About {
   @Builder
   private Hero(): void {
     Column({ space: $r('app.float.about_gap') }) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Image($r('app.media.app_icon'))
-          .width($r('app.float.about_icon_size'))
-          .height($r('app.float.about_icon_size'))
-          .objectFit(ImageFit.Contain)
-          .borderRadius($r('app.float.about_card_radius'))
-          .clip(true)
-          .accessibilityLevel('no')
-      }
-      .padding(0)
-      .backgroundColor(Color.Transparent)
-      .borderRadius($r('app.float.about_card_radius'))
-      .accessibilityText($r('app.string.logo_universe_hint'))
-      .id('about-logo-universe')
-      .onClick((): void => { this.pageStack.pushPath({ name: 'LogoUniverse' }); })
+      Image($r('app.media.app_icon'))
+        .width($r('app.float.about_icon_size'))
+        .height($r('app.float.about_icon_size'))
+        .objectFit(ImageFit.Contain)
+        .borderRadius($r('app.float.about_card_radius'))
+        .clip(true)
+        .accessibilityLevel('no')
       Text($r('app.string.app_name')).fontFamily(this.appFontFamily)
         .fontSize($r('sys.float.Title_L'))
         .fontWeight(FontWeight.Bold)
@@ -92,11 +84,6 @@ struct About {
           .fontWeight(FontWeight.Medium)
           .fontColor(this.accentColor)
       }
-      Text($r('app.string.logo_universe_hint')).fontFamily(this.appFontFamily)
-        .fontSize($r('sys.float.Body_S'))
-        .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-        .textAlign(TextAlign.Center)
-        .onClick((): void => { this.pageStack.pushPath({ name: 'LogoUniverse' }); })
     }
     .width('100%')
     .padding({ top: $r('app.float.about_section_gap'), bottom: $r('app.float.about_gap') })

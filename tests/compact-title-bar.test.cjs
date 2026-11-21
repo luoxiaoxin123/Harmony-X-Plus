@@ -81,14 +81,19 @@ test('home chrome finishes fading before the native title slot is hidden', () =>
 test('rightward drags open the drawer from For You in portrait without claiming a photo strip', () => {
   const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe'], {
     HOME_TAB_INDEX: 0, POST_SWIPE_OFF: 0, SourceType: { TouchScreen: 'touch' },
-    GestureJudgeResult: { REJECT: false, CONTINUE: true }
+    GestureJudgeResult: { REJECT: false, CONTINUE: true }, GestureControl: { GestureType: { PAN_GESTURE: 1 } }
   });
   let opened = 0;
   const root = Object.assign(new Harness(), { currentTab: 0, homeFeedMode: 0, activeHomeTopicId: '',
     windowWidth: 390, windowHeight: 844, showSideDrawer: false, refreshing: false, postSwipeRight: 0,
     navPathStack: { size: () => 0 }, isDesktopLayout: () => false, openSideDrawer: () => opened++ });
   const event = { source: 'touch' };
-  const gesture = { getTag: () => 'home-open-drawer' };
+  const gesture = { getTag: () => 'home-open-drawer', isBuiltIn: () => false };
+  const pager = { getTag: () => '', isBuiltIn: () => true, getType: () => 1,
+    getEventTargetInfo: () => ({ getId: () => 'home-feed-pager' }) };
+  assert.equal(root.homeDrawerSwipeStarted, undefined);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: 6 }, pager, []), false);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: -6 }, pager, []), true);
   assert.equal(root.judgeHomeDrawerSwipe(event, gesture, [{
     getEventTargetInfo: () => ({ getId: () => 'post-photo-list-0' })
   }]), false);
@@ -98,6 +103,7 @@ test('rightward drags open the drawer from For You in portrait without claiming 
   assert.equal(opened, 1);
   root.homeFeedMode = 1;
   assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: 6 }, pager, []), true);
   root.homeFeedMode = 0;
   root.windowWidth = 1100;
   assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
