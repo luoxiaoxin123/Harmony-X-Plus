@@ -1,8 +1,12 @@
 <p align="center">
-  <img src="AppScope/resources/base/media/app_icon.png" width="132" alt="Harmony X app icon">
+  <img src="AppScope/resources/base/media/app_icon.png" width="132" alt="Harmony X+ app icon">
 </p>
 
-<h1 align="center">Harmony X</h1>
+<h1 align="center">Harmony X+</h1>
+
+> This project is fully open source, with zero ads, zero charges, and zero memberships. Sponsorship is entirely voluntary and grants no extra features or privileges.
+>
+> The app does not upload hardware device IDs or X cookies to third-party servers and has no forced-update endpoint. X cookies are used to sign in and connect directly to X.
 
 <p align="center">
   A native X client for HarmonyOS.<br>
@@ -115,10 +119,10 @@ The legacy OAuth 2.0 path needs a self-registered X application:
 
 The app no longer exposes a Client ID field in Settings (`OAuthConfigStore` only reads the on-device preference it used to write), so this path is unavailable by default; **Continue with X** remains the working sign-in route.
 
-Harmony X uses PKCE and does not require a Client Secret. Tapping **Continue with X** launches the system browser through `ohos.want.action.viewData`; the X.com permission page shown above is rendered and managed by X, not imitated by the app. Some X endpoints require paid API access; the app reports that state and continues to show sample content.
+The legacy OAuth path uses PKCE without a Client Secret. Some official X endpoints require paid developer API access. This is independent of the app's pricing.
 
 ## Upstream & license
 
-Harmony X is a derivative work of [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit). This repository retains the Apache-2.0 license and applicable upstream attribution. Harmony X-specific additions include the application identity, visual system, localized interface, OAuth flow, responsive UI refinements, and documentation.
+Harmony X+ is based on [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit) and follows the public release notes of [haohaoai0/HarmonyX](https://github.com/haohaoai0/HarmonyX). The repository retains the Apache-2.0 license and applicable upstream attribution.
 
 Licensed under [Apache-2.0](LICENSE).
