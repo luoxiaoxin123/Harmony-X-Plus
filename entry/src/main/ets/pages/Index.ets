@@ -838,6 +838,7 @@ struct Index {
   @State private searchFilterExcludeReplies: boolean = false;
   @State refreshing: boolean = false;
   @State private homeRefreshPullOffset: number = 0;
+  @State private homeRefreshTopKey: string = '';
   @State private exploreRefreshPullOffset: number = 0;
   @State private notificationsRefreshPullOffset: number = 0;
   @State private messagesRefreshPullOffset: number = 0;
@@ -2796,6 +2797,11 @@ struct Index {
   // The capsule promises the newest post, so the merge is followed by a jump to
   // the top of the list instead of a scroll that lands wherever the reader was.
   private jumpToNewestPost(): void {
+    if (this.homeRefreshTopKey) { return; }
+    if (this.refreshing) {
+      this.homeRefreshTopKey = this.tabKey(this.homeTabIndex());
+      return;
+    }
     // The lazy source applies its new rows in the next layout. Capture this
     // page's controller now, then scroll after that layout has completed.
     this.getUIContext().postFrameCallback(new FeedTopFrameCallback(this.getHomeScroller()));
@@ -3538,7 +3544,7 @@ struct Index {
     this.saveCurrentFeedSnapshot();
   }
 
-  private onRefresh(jumpToLatest: boolean = false, requestContext: string = ''): void {
+  private onRefresh(jumpToLatest: boolean = false, requestContext: string = '', fromPull: boolean = false): void {
     // Refresh may set the bound `refreshing` state before this callback runs,
     // so keep the business-level reentry guard separate from the UI flag.
     if (this.loading) {
@@ -3550,6 +3556,10 @@ struct Index {
     }
     this.homeRefreshInFlight = true;
     this.refreshing = true;
+    if (fromPull) {
+      this.homeRefreshTopKey = this.tabKey(this.homeTabIndex());
+      this.setHomeHeaderCollapsed(false);
+    }
     const feedMode: number = this.homeFeedMode;
     const topicId: string = this.activeHomeTopicId;
     this.refreshTimelineWithIndicator(!jumpToLatest, requestContext).then(async (): Promise<void> => {
@@ -3559,12 +3569,31 @@ struct Index {
         else { this.jumpToNewestPost(); }
       }
       await this.loadSupportingData();
+    }).catch((): void => {}).finally((): void => {
       this.homeRefreshInFlight = false;
       this.refreshing = false;
-    }).catch((): void => {
-      this.homeRefreshInFlight = false;
-      this.refreshing = false;
+      if (this.homeRefreshTopKey) { this.restoreHomeTopAfterRefresh(); }
     });
+  }
+
+  private onHomeRefreshOffsetChange(offset: number): void {
+    this.homeRefreshPullOffset = offset;
+    this.restoreHomeTopAfterRefresh();
+  }
+
+  private restoreHomeTopAfterRefresh(): void {
+    const key: string = this.homeRefreshTopKey;
+    // ArkUI retracts the Refresh content after the data has been updated. A
+    // scroll to the top issued before that retracts can be overwritten by it.
+    if (key.length === 0 || this.refreshing || this.homeRefreshPullOffset > 0.5) { return; }
+    this.homeRefreshTopKey = '';
+    if (this.currentTab !== HOME_TAB_INDEX || this.navPathStack.size() > 0 ||
+      key !== this.tabKey(this.homeTabIndex())) { return; }
+    this.setHomeHeaderCollapsed(false);
+    this.setChromeHidden(false);
+    this.scrollDepth = 0;
+    this.fabHidden = false;
+    this.jumpToNewestPost();
   }
 
   // The Me tab refreshes account information; timelines belong to UserDetail.
@@ -5350,6 +5379,7 @@ struct Index {
   }
 
   private showSelectedHomeFeed(): void {
+    this.homeRefreshTopKey = '';
     this.homeViewportHasAnchor = false;
     this.homeViewportRevision += 1;
     this.homeViewportChanging = false;
@@ -6038,6 +6068,7 @@ struct Index {
   // reads deeper into the feed; negative when the user swipes down toward its
   // top. Home keeps the compose action; double-tapping its tab refreshes it.
   private onFeedScroll(scrollOffset: number): void {
+    if (this.currentTab === HOME_TAB_INDEX && this.homeRefreshTopKey) { return; }
     if (this.currentTab === HOME_TAB_INDEX) { this.rememberHomeVisibleItem(this.homeFirstVisibleItem); }
     if (this.currentTab !== 0 && this.currentTab !== 1) {
       return;
@@ -6072,6 +6103,7 @@ struct Index {
   }
 
   private onFeedScrollStop(): void {
+    if (this.currentTab === HOME_TAB_INDEX && this.homeRefreshTopKey) { return; }
     if (this.currentTab === HOME_TAB_INDEX) { this.rememberHomeVisibleItem(this.homeFirstVisibleItem); }
     this.onChromeScrollStop();
     if (this.currentTab === 0) {
@@ -9069,7 +9101,7 @@ struct Index {
         ListItem() { this.HomePageItem(item, index) }.width('100%')
       }, (item: TimelinePageItem): string => item.key)
     }
-    .maintainVisibleContentPosition(true)
+    .maintainVisibleContentPosition(this.homeRefreshTopKey !== this.tabKey(index))
     .onScrollStart((): void => scrollStarted(this.contentPageScroller('home', this.homeTabItems()[index].key)))
     .onScrollFrameBegin((offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult =>
       scrollFrame(this.contentPageScroller('home', this.homeTabItems()[index].key), offset, state))
@@ -9227,9 +9259,9 @@ struct Index {
         })
         .onAnimationEnd((index: number): void => { this.homeTabPosition = index; })
     }.width('100%').height('100%')
-      .onOffsetChange((offset: number): void => { this.homeRefreshPullOffset = offset; })
+      .onOffsetChange((offset: number): void => this.onHomeRefreshOffsetChange(offset))
       .onRefreshing((): void => {
-      if (this.homeViewportChanging) { this.refreshing = false; } else { this.onRefresh(this.homePullRefreshLatest); }
+      if (this.homeViewportChanging) { this.refreshing = false; } else { this.onRefresh(this.homePullRefreshLatest, '', true); }
     })
     RootRefreshIndicator({ topInset: this.homeContentTopInset(), pullOffset: this.homeRefreshPullOffset,
       refreshing: this.refreshing, phoneLayout: !this.isDesktopLayout() })

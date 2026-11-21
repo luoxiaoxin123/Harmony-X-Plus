@@ -1758,13 +1758,6 @@ export struct UserDetail {
     // same vertical container so the recommendation strip takes layout space.
     Column() {
       Column() {
-        if (post.pinned && tab === 0 && this.postsFilter === 'posts') {
-          Row({ space: 8 }) {
-            SymbolGlyph($r('sys.symbol.pin')).fontSize(13).fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
-            Text($r('app.string.profile_pinned')).fontFamily(this.appFontFamily).fontSize(13).fontWeight(FontWeight.Bold)
-              .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-          }.width('100%').padding({ left: 58, top: 10 })
-        }
         if (tab === 2 && this.mediaFilter === 'video') {
           this.VideoRow(post)
         } else {
