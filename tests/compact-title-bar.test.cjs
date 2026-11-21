@@ -120,14 +120,14 @@ test('home chrome finishes fading before the native title slot is hidden', () =>
 });
 
 test('rightward drags open the drawer from For You in portrait without claiming a photo strip', () => {
-  const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe'], {
+  const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe',
+    'updateHomeDrawerSwipe', 'visibleSideDrawerWidth', 'cancelHomeDrawerSwipe'], {
     HOME_TAB_INDEX: 0, POST_SWIPE_OFF: 0, SourceType: { TouchScreen: 'touch' },
     GestureJudgeResult: { REJECT: false, CONTINUE: true }, GestureControl: { GestureType: { PAN_GESTURE: 1 } }
   });
-  let opened = 0;
   const root = Object.assign(new Harness(), { currentTab: 0, homeFeedMode: 0, activeHomeTopicId: '',
     windowWidth: 390, windowHeight: 844, showSideDrawer: false, refreshing: false, postSwipeRight: 0,
-    navPathStack: { size: () => 0 }, isDesktopLayout: () => false, openSideDrawer: () => opened++ });
+    homeDrawerDragWidth: -1, navPathStack: { size: () => 0 }, isDesktopLayout: () => false, sideDrawerWidth: () => 280 });
   const event = { source: 'touch' };
   const gesture = { getTag: () => 'home-open-drawer', isBuiltIn: () => false };
   const pager = { getTag: () => '', isBuiltIn: () => true, getType: () => 1,
@@ -140,8 +140,19 @@ test('rightward drags open the drawer from For You in portrait without claiming 
   }]), false);
   assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), true);
   root.homeDrawerSwipeStarted = true;
-  root.finishHomeDrawerSwipe({ offsetX: 65, offsetY: 20 });
-  assert.equal(opened, 1);
+  root.updateHomeDrawerSwipe({ offsetX: 65 });
+  assert.equal(root.visibleSideDrawerWidth(), 65);
+  root.updateHomeDrawerSwipe({ offsetX: 28 });
+  assert.equal(root.visibleSideDrawerWidth(), 28);
+  root.finishHomeDrawerSwipe({ offsetX: 28, offsetY: 0, velocityX: 0 });
+  assert.equal(root.visibleSideDrawerWidth(), 0);
+  root.homeDrawerSwipeStarted = true;
+  root.updateHomeDrawerSwipe({ offsetX: 300 });
+  assert.equal(root.visibleSideDrawerWidth(), 280);
+  root.finishHomeDrawerSwipe({ offsetX: 150, offsetY: 20, velocityX: 0 });
+  assert.equal(root.showSideDrawer, true);
+  assert.equal(root.visibleSideDrawerWidth(), 280);
+  root.showSideDrawer = false;
   root.homeFeedMode = 1;
   assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
   assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: 6 }, pager, []), true);

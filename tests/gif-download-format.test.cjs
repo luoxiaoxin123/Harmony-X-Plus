@@ -93,13 +93,14 @@ function rootLayoutFixture() {
   const timers=new Map(),paths=['VideoFeedViewer'],updates=[];let sequence=0;
   const Root=methods('pages/Index','Index',['isDesktopLayout','isLargeScreen','isWideScreen','videoRouteOpen',
     'clearVideoLayoutReleaseTimer','onVideoFullscreenOwnerChanged','scheduleVideoLayoutRelease',
-    'onBreakpointChange','onHomeViewportChanged','onCompactWindowChanged'],{
+    'onBreakpointChange','onHomeViewportChanged','onCompactWindowChanged','usesOverlaySideDrawer','cancelHomeDrawerSwipe'],{
     DesktopLayout:{active:(enabled,bp)=>enabled&&bp!=='sm'},
     ResponsiveLayout:{isSmall:bp=>bp==='sm',isLarge:bp=>['lg','xl'].includes(bp),isWide:bp=>bp==='xl'},
     hilog:{info(){}},setTimeout:fn=>{timers.set(++sequence,fn);return sequence;},clearTimeout:id=>timers.delete(id)
   });
   const root=Object.assign(new Root(),{breakpoint:'sm',desktopLayoutEnabled:true,videoLayoutBreakpoint:'',
-    videoFullscreenOwner:'',videoLayoutReleaseTimer:-1,homePageAlive:true,navPathStack:{getAllPathName:()=>paths},
+    videoFullscreenOwner:'',videoLayoutReleaseTimer:-1,homePageAlive:true,sidebarOverlayActive:true,
+    navPathStack:{getAllPathName:()=>paths},
     beginHomeViewportChange:()=>updates.push('viewport'),closeDesktopRail:()=>updates.push('rail'),
     updateNavigationMode:()=>updates.push('navigation'),syncAllWaterFlowSections:()=>updates.push('sections'),
     setTabBarHidden:()=>updates.push('tabs')});

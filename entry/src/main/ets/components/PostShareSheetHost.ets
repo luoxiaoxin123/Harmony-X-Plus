@@ -9,6 +9,7 @@ import { PostShareRequest, STORAGE_KEY_POST_SHARE_REQUEST, takePostShareRequest 
 import { DEFAULT_SHEET_MATERIAL_ENABLED, DEFAULT_SHEET_MATERIAL_LEVEL, STORAGE_KEY_SHEET_MATERIAL_ENABLED,
   STORAGE_KEY_SHEET_MATERIAL_LEVEL } from '../services/SheetMaterialSettingsStore';
 import { ChatPerson, xChatActions } from '../services/XChatActions';
+import { ChatContact, chatContactService } from '../services/ChatContactService';
 import { xChatService } from '../services/XChatService';
 import { xPrivateClient } from '../services/XPrivateClient';
 import { InputModalScope } from '../utils/InputModalScope';
@@ -39,7 +40,9 @@ export struct PostShareSheetHost {
   @State private signedIn: boolean = false;
   @State private query: string = '';
   @State private note: string = '';
-  @State private selected: DmConversationRouteParam | null = null;
+  @State private selected: DmConversationRouteParam[] = [];
+  @State private sentIds: string[] = [];
+  @State private linkRecipients: string[] = [];
   @State private recipients: DmConversationRouteParam[] = [];
   @State private loading: boolean = false;
   @State private failed: boolean = false;
@@ -71,7 +74,9 @@ export struct PostShareSheetHost {
     this.current = request;
     this.query = '';
     this.note = '';
-    this.selected = null;
+    this.selected = [];
+    this.sentIds = [];
+    this.linkRecipients = [];
     this.recipients = [];
     this.loading = false;
     this.failed = false;
@@ -99,7 +104,9 @@ export struct PostShareSheetHost {
     this.afterClose = undefined;
     this.cancelSearch();
     this.recipients = [];
-    this.selected = null;
+    this.selected = [];
+    this.sentIds = [];
+    this.linkRecipients = [];
     this.open = false;
   }
 
@@ -138,7 +145,7 @@ export struct PostShareSheetHost {
     const seen: Set<string> = new Set<string>();
     const needle: string = query.toLowerCase();
     for (const row of this.inbox) {
-      const id: string = row.conversationId ?? '';
+      const id: string = (row.conversationId ?? '').replace(':', '-');
       const username: string = row.username ?? '';
       if (id.length === 0 || row.hidden === true || seen.has(id)) { continue; }
       if (!row.from.toLowerCase().includes(needle) && !username.toLowerCase().includes(needle)) { continue; }
@@ -165,14 +172,29 @@ export struct PostShareSheetHost {
 
   private changeQuery(query: string): void {
     this.query = query;
-    this.selected = null;
-    this.sendError = '';
     this.cancelSearch();
     const normalizedQuery: string = query.trim().replace(/^@/, '');
     this.recipients = this.recentRecipients(normalizedQuery);
     this.failed = false;
     this.loading = this.recipients.length === 0;
     this.timer = setTimeout((): void => { void this.search(); }, 250);
+  }
+
+  private isSelected(id: string): boolean {
+    return this.selected.some((recipient: DmConversationRouteParam): boolean => recipient.conversationId === id);
+  }
+
+  private toggleRecipient(recipient: DmConversationRouteParam): void {
+    const id: string = recipient.conversationId;
+    if (this.sending || this.sentIds.includes(id)) { return; }
+    this.selected = this.isSelected(id) ?
+      this.selected.filter((selected: DmConversationRouteParam): boolean => selected.conversationId !== id) :
+      [...this.selected, recipient];
+  }
+
+  private recipientParticipants(recipient: DmConversationRouteParam): string[] {
+    return !recipient.group && /^\d+-\d+$/.test(recipient.conversationId) ?
+      recipient.conversationId.split('-') : recipient.participantIds;
   }
 
   private validSearch(generation: number): boolean {
@@ -211,31 +233,61 @@ export struct PostShareSheetHost {
     }
   }
 
-  private async sendSelected(pin?: string): Promise<void> {
+  private async sendSelected(pin?: string, links: boolean = false): Promise<void> {
     const request: PostShareRequest | undefined = this.current;
-    const recipient: DmConversationRouteParam | null = this.selected;
+    const recipients: DmConversationRouteParam[] = links ? this.selected.filter((recipient: DmConversationRouteParam): boolean =>
+      this.linkRecipients.includes(recipient.conversationId)) : this.selected.slice();
     const account: string = this.account;
-    if (this.sending || request === undefined || recipient === null || account !== xPrivateClient.sessionIdentity()) {
+    if (this.sending || request === undefined || recipients.length === 0 || account !== xPrivateClient.sessionIdentity()) {
       return;
     }
     this.sending = true;
     this.sendError = '';
     try {
-      if (pin === undefined) {
-        await xChatService.prepare(this.context(), recipient.participantIds);
-      }
-      if (account !== xPrivateClient.sessionIdentity() || this.current !== request || !this.open) { return; }
-      if (!xChatService.isUnlocked()) {
-        if (pin === undefined) { this.askingPin = true; return; }
+      if (pin !== undefined && !xChatService.isUnlocked()) {
         await xChatService.unlock(pin);
       }
-      if (account !== xPrivateClient.sessionIdentity() || this.current !== request || !this.open) { return; }
       this.askingPin = false;
-      await xChatService.sharePost(recipient.conversationId, request.post.id, postShareUrl(request.post), this.note.trim());
-      if (this.current !== request || !this.open) { return; }
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.chat_sent') });
-      this.sending = false;
-      this.open = false;
+      const failures: string[] = [];
+      const url: string = postShareUrl(request.post);
+      const note: string = this.note.trim();
+      for (const recipient of recipients) {
+        if (!this.canContinueSend(request, account)) { return; }
+        const id: string = recipient.conversationId;
+        try {
+          if (links) {
+            await this.sendLegacyLink(recipient, url, note, account);
+          } else {
+            await xChatService.prepare(this.context(), this.recipientParticipants(recipient));
+            if (!this.canContinueSend(request, account)) { return; }
+            if (!xChatService.isUnlocked()) { this.askingPin = true; return; }
+            await xChatService.sharePost(id, request.post.id, url, note);
+          }
+          if (!this.canContinueSend(request, account)) { return; }
+          this.sentIds = [...this.sentIds, id];
+          this.selected = this.selected.filter((selected: DmConversationRouteParam): boolean => selected.conversationId !== id);
+          this.linkRecipients = this.linkRecipients.filter((linkId: string): boolean => linkId !== id);
+        } catch (error) {
+          if (!this.canContinueSend(request, account)) { return; }
+          const reason: string = (error as Error).message;
+          const transport: string = xChatService.conversationTransport(id);
+          if (!recipient.group && reason === 'recipient_key_unavailable' &&
+            (transport === 'plaintext' || transport === 'empty') && !this.linkRecipients.includes(id)) {
+            this.linkRecipients = [...this.linkRecipients, id];
+          }
+          const status: string = /_http_(\d{3})$/.exec(reason)?.[1] ?? '';
+          const label: Resource = reason === 'recipient_key_unavailable' ? $r('app.string.post_share_no_recipient_key') :
+            $r('app.string.chat_action_failed');
+          failures.push(recipient.title + ' · ' + this.context().resourceManager.getStringSync(label) +
+            (status.length > 0 ? ' (HTTP ' + status + ')' : ''));
+        }
+      }
+      this.sendError = failures.join('\n');
+      if (this.selected.length === 0) {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.chat_sent') });
+        this.sending = false;
+        this.open = false;
+      }
     } catch (error) {
       if (this.current === request && this.open) {
         const reason: string = (error as Error).message;
@@ -247,6 +299,20 @@ export struct PostShareSheetHost {
     } finally {
       if (this.current === request) { this.sending = false; }
     }
+  }
+
+  private canContinueSend(request: PostShareRequest, account: string): boolean {
+    return this.open && this.current === request && account === xPrivateClient.sessionIdentity();
+  }
+
+  private async sendLegacyLink(recipient: DmConversationRouteParam, url: string, note: string,
+    account: string): Promise<void> {
+    const viewer: string = xPrivateClient.viewerId();
+    const other: string = this.recipientParticipants(recipient).find((id: string): boolean => id !== viewer) ?? '';
+    const contact: ChatContact = await chatContactService.load(this.context(), other);
+    if (account !== xPrivateClient.sessionIdentity() || !this.open) { throw new Error('account_changed'); }
+    await chatContactService.sendPlaintext(this.context(), contact, recipient.conversationId,
+      note.length > 0 ? note + '\n' + url : url);
   }
 
   private openScreenshot(): void {
@@ -323,16 +389,14 @@ export struct PostShareSheetHost {
               .fontColor($r('app.color.text_secondary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           }
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        SymbolGlyph(this.selected?.conversationId === recipient.conversationId ?
+        SymbolGlyph(this.isSelected(recipient.conversationId) || this.sentIds.includes(recipient.conversationId) ?
           $r('sys.symbol.checkmark_circle_fill') : $r('sys.symbol.circle')).fontSize(22)
-          .fontColor([this.selected?.conversationId === recipient.conversationId ? this.accent : $r('app.color.text_secondary')])
+          .fontColor([this.isSelected(recipient.conversationId) ? this.accent : $r('app.color.text_secondary')])
       }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 })
-    }.width('100%').padding(0).backgroundColor(Color.Transparent).enabled(!this.sending)
-      .accessibilitySelected(this.selected?.conversationId === recipient.conversationId)
-      .onClick((): void => {
-        this.selected = this.selected?.conversationId === recipient.conversationId ? null : recipient;
-        this.sendError = '';
-      })
+    }.width('100%').padding(0).backgroundColor(Color.Transparent)
+      .enabled(!this.sending && !this.sentIds.includes(recipient.conversationId))
+      .accessibilitySelected(this.isSelected(recipient.conversationId))
+      .onClick((): void => this.toggleRecipient(recipient))
   }
 
   @Builder
@@ -346,7 +410,7 @@ export struct PostShareSheetHost {
           .fontColor($r('app.color.text_secondary')).textAlign(TextAlign.Center)
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
       }.width('100%')
-    }.width(79).padding(4).backgroundColor(Color.Transparent)
+    }.width(79).padding(4).backgroundColor(Color.Transparent).enabled(!this.sending)
       .accessibilityText(typeof label === 'string' ? label : this.context().resourceManager.getStringSync(label))
       .onClick(action)
   }
@@ -389,22 +453,40 @@ export struct PostShareSheetHost {
           }
         }
       }.layoutWeight(1).width('100%').scrollBar(BarState.Auto)
-      if (this.selected !== null) {
+      if (this.selected.length > 0) {
+        Scroll() {
+          Row({ space: 6 }) {
+            ForEach(this.selected, (recipient: DmConversationRouteParam): void => {
+              Button(recipient.title + ' ×').height(30).fontFamily(this.appFontFamily)
+                .fontColor($r('app.color.text_primary')).backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
+                .enabled(!this.sending).onClick((): void => this.toggleRecipient(recipient))
+            }, (recipient: DmConversationRouteParam): string => recipient.conversationId)
+          }.padding({ left: 16, right: 16 })
+        }.width('100%').height(32).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
         Row({ space: 8 }) {
           TextInput({ text: this.note, placeholder: $r('app.string.post_share_message') }).fontFamily(this.appFontFamily)
             .layoutWeight(1).height(40).maxLength(1000).borderRadius(20).keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
             .enabled(!this.sending)
             .onChange((note: string): void => { this.note = note; })
-          Button(this.sending ? $r('app.string.post_sending') : $r('app.string.dm_send'))
+          Button(this.sending ? this.context().resourceManager.getStringSync($r('app.string.post_sending')) :
+            this.context().resourceManager.getStringSync($r('app.string.dm_send')) + ' (' + this.selected.length + ')')
             .height(40).fontFamily(this.appFontFamily).enabled(!this.sending)
             .fontColor($r('app.color.text_on_accent')).backgroundColor(this.accent)
             .onClick((): void => { void this.sendSelected(); })
         }.width('100%').padding({ left: 16, right: 16, bottom: 4 })
       }
       if (this.sendError.length > 0) {
-        Text(this.sendError).fontFamily(this.appFontFamily).fontColor($r('app.color.danger'))
-          .width('100%').padding({ left: 16, right: 16 })
+        Scroll() {
+          Text(this.sendError).fontFamily(this.appFontFamily).fontColor($r('app.color.danger'))
+            .width('100%').padding({ left: 16, right: 16 })
+        }.width('100%').constraintSize({ maxHeight: 96 }).align(Alignment.Start)
+      }
+      if (this.selected.some((recipient: DmConversationRouteParam): boolean =>
+        this.linkRecipients.includes(recipient.conversationId))) {
+        Button($r('app.string.post_share_send_as_link')).fontFamily(this.appFontFamily).fontColor(this.accent)
+          .backgroundColor(Color.Transparent).enabled(!this.sending)
+          .onClick((): void => { void this.sendSelected(undefined, true); })
       }
       Divider().color($r('app.color.divider')).width('100%')
       Scroll() {

@@ -1602,8 +1602,22 @@ export class XPrivateClient {
     return this.graphql('user_by_rest_id', variables, '', fresh);
   }
 
-  userAbout(screenName: string): Promise<XPrivateResult> {
-    return this.graphql('AboutAccountQuery', { 'screenName': screenName });
+  async userAbout(screenName: string): Promise<XPrivateResult> {
+    const operation: string = 'AboutAccountQuery';
+    if (!this.isSignedIn()) { return new XPrivateResult(false, 0, '', 'no_session', operation); }
+    const generation: number = this.sessionGeneration();
+    const query: string = '?variables=' + encodeURIComponent(JSON.stringify({ 'screenName': screenName }));
+    let result: XPrivateResult = await this.send('GET', WEB_GRAPHQL_BASE + '/TzOG2twZEfhr9KmClvVVqA/' + operation + query,
+      '', GRAPHQL_ACCEPT, operation, '', true, '', generation);
+    if (!result.ok && result.status === 404 && generation === this.sessionGeneration()) {
+      result = await this.send('GET', WEB_GRAPHQL_BASE + '/XRqGa7EeokUU5kppkh13EA/' + operation + query,
+        '', GRAPHQL_ACCEPT, operation, '', true, '', generation);
+    }
+    if (generation !== this.sessionGeneration()) {
+      return new XPrivateResult(false, 0, '', 'account_changed', operation);
+    }
+    requestLog.record(operation, result.status, result.ok, result.errorText);
+    return result;
   }
 
   userProfileActivity(userId: string, cursor: string, count: number,

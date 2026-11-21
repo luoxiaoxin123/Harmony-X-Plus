@@ -2063,7 +2063,6 @@ export struct VideoFeedViewer {
       captionEnabled: this.captionsEnabled,
       pipEnabled: true,
       pipNavigationHandleId: this.getUniqueId(),
-      showDownloadButton: false,
       naturalVideoSize: true,
       limitNaturalHeight: false,
       immersiveVideo: this.videoImmersiveFill,

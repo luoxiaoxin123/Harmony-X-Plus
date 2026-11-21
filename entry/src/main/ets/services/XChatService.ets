@@ -599,10 +599,11 @@ export class XChatService {
     const ids: string[] = conversationId.replace(':', '-').split('-');
     if (ids.length !== 2 || ids.indexOf(xPrivateClient.viewerId()) < 0) { throw new Error('missing_conversation_key'); }
     const generation: number = this.generation;
-    const keys: XChatPublicKeyInput[] = this.signingKeys.filter((key: XChatSigningKey): boolean => ids.indexOf(key.user_id) >= 0)
-      .map((key: XChatSigningKey): XChatPublicKeyInput => ({ user_id: key.user_id,
-        public_key: key.identity_public_key, key_version: key.public_key_version }));
-    const args: XChatCreateArgs = { public_keys: keys, conversation_id: '', members: [], admins: [], title: '' };
+    const participantIds: string[] = ids[0] === ids[1] ? [ids[0]] : ids;
+    const keys: XChatPublicKeyInput[] = this.groupPublicKeys(participantIds);
+    if (keys.length !== participantIds.length) { throw new Error('recipient_key_unavailable'); }
+    const args: XChatCreateArgs = { public_keys: keys, conversation_id: conversationId.replace(':', '-'),
+      members: [], admins: [], title: '' };
     const native: XChatNativeResult = await this.callNative('prepareConversation', JSON.stringify(args));
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!native.ok || native.data === undefined) { throw new Error(native.error ?? 'conversation_sign_failed'); }
@@ -1167,7 +1168,10 @@ export class XChatService {
       let encrypted: XChatNativeResult = await this.callNative('encrypt', JSON.stringify(args));
       if (!encrypted.ok && (encrypted.error ?? '').indexOf('no cached conversation key') >= 0) {
         try { await this.conversation(conversationId); }
-        catch (error) { if ((error as Error).message !== 'conversation_unavailable') { throw error as Error; } }
+        catch (error) {
+          const reason: string = (error as Error).message;
+          if (reason !== 'conversation_unavailable' && reason !== 'conversation_http_404') { throw error as Error; }
+        }
         encrypted = await this.callNative('encrypt', JSON.stringify(args));
         if (!encrypted.ok && (encrypted.error ?? '').indexOf('no cached conversation key') >= 0) {
           await this.initializeDirect(conversationId);

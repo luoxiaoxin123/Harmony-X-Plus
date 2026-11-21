@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "Cours de l’action"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Médias affichés par défaut sur le profil"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Envoyer sous forme de lien"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "Aucune clé de discussion disponible pour ce destinataire"
     }
   ]
 }

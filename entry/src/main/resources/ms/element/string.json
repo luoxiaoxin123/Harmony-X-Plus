@@ -13239,6 +13239,18 @@
     {
       "name": "post_stock_quote",
       "value": "Harga saham"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Media profil lalai"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Hantar sebagai pautan"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "Tiada kunci sembang untuk penerima ini"
     }
   ]
 }

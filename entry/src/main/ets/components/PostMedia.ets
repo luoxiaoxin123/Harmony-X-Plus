@@ -1,4 +1,3 @@
-import { MediaDownloadButton } from './MediaDownloadButton';
 import type { PostCardReadingState } from '../services/PostCardReadingState';
 import { STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON } from '../services/MediaSettingsStore';
 import { postUsesHorizontalMediaStrip } from '../utils/PostMediaStrip';
@@ -130,7 +129,6 @@ import {
 } from '../services/MediaSettingsStore';
 import { videoBackgroundPlayback } from '../services/VideoBackgroundPlayback';
 import { videoPipPlaybackKeeper, VideoPipPlaybackHandle } from '../services/VideoPipPlaybackKeeper';
-import { VideoDownloadChoice, videoDownloadChoices } from '../services/VideoDownloadChoice';
 import { gifVideoDownloadUrl } from '../services/GifDownloadChoice';
 import { HdsButton } from './HdsButton';
 import { ProxyMediaImage } from './ProxyMediaImage';
@@ -5742,7 +5740,6 @@ export struct PostMedia {
   @StorageProp(STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY) inlineVideoHoldPlay: boolean = false;
   readingState: PostCardReadingState | null = null;
   private restoredMediaOffsets: Set<number> = new Set();
-  @StorageProp(STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON) private videoDownloadButton: boolean = true;
   private inputModalScope: InputModalScope = new InputModalScope();
   @Prop controlsUsePageBackground: boolean = true;
   @Prop controlSurface: ResourceColor = Color.Transparent;
@@ -5790,7 +5787,6 @@ export struct PostMedia {
   @Prop viewerPlayerRetained: boolean = true;
   @Prop initialPositionMediaId: string = '';
   @Prop initialPositionSeconds: number = 0;
-  @Prop showDownloadButton: boolean = true;
   @Prop naturalVideoSize: boolean = false;
   @Prop limitNaturalHeight: boolean = false;
   @Prop adaptiveShortVideo: boolean = false;
@@ -6656,11 +6652,6 @@ export struct PostMedia {
     inlineVideoGate.release(media.id);
   }
 
-  private videoDownloadUrl(media: MediaAttachment): string {
-    const choices: VideoDownloadChoice[] = videoDownloadChoices(media);
-    return choices.length > 0 ? choices[0].url : '';
-  }
-
   private openVideo(media: MediaAttachment): boolean {
     if (isAnimatedGif(media) || this.mediaViewerLayout || !this.canStream(media)) {
       return false;
@@ -7018,11 +7009,6 @@ export struct PostMedia {
             // None excludes only this Column; its preview and control spacer
             // would still hide the live player's buttons from touch testing.
             .hitTestBehavior(this.showsPlayer(media) ? HitTestMode.BLOCK_DESCENDANTS : HitTestMode.Default)
-          }
-          if (this.showDownloadButton && this.videoDownloadButton && media.type === 'video' &&
-            this.videoDownloadUrl(media).length > 0 && !this.mediaViewerLayout && !this.hideInlineControls) {
-            MediaDownloadButton({ url: this.videoDownloadUrl(media), mediaId: media.id,
-              isVideo: true, videoMedia: media }).position({ top: 12, right: 12 }).zIndex(5)
           }
         }
         .width('100%')
