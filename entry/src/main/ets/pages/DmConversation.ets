@@ -129,8 +129,9 @@ export struct DmConversationPage {
   @StorageLink('harmonyx.title_bar_style_mode') titleBarStyleMode: number = 0;
   @StorageProp(STORAGE_KEY_REPLY_CAPSULE_MATERIAL_LEVEL) capsuleMaterialLevel: number = DEFAULT_REPLY_CAPSULE_MATERIAL_LEVEL;
   @StorageProp(STORAGE_KEY_TITLE_BAR_GLASS_MATERIAL_LEVEL) inputMaterialLevel: number = DEFAULT_TITLE_BAR_GLASS_MATERIAL_LEVEL;
-  @State private messages: DmMessage[] = [];
-  @State private mediaSends: ChatMediaSend[] = [];
+  @State @Watch('updateVisibleMessages') private messages: DmMessage[] = [];
+  @State @Watch('updateVisibleMessages') private mediaSends: ChatMediaSend[] = [];
+  @State private visibleTimeline: DmMessage[] = [];
   @State private chatBackground: ChatBackgroundState = new ChatBackgroundState();
   @State private chatDecoration: ChatDecorationSelection = new ChatDecorationSelection();
   @State private status: string = '';
@@ -166,7 +167,7 @@ export struct DmConversationPage {
   @State private recordingSamples: number[] = [];
   @State private voiceVisible: boolean = true;
   @State private searchVisible: boolean = false;
-  @State private searchQuery: string = '';
+  @State @Watch('updateVisibleMessages') private searchQuery: string = '';
   @State private composerHeight: number = 80;
   @State private keyboardVisible: boolean = false;
   @StorageProp('harmonyx.window_height') private chatWindowHeight: number =
@@ -854,17 +855,18 @@ export struct DmConversationPage {
     this.pageStack.pushPath({ name: 'DmWeb', param: param });
   }
 
-  private visibleMessages(): DmMessage[] {
+  private updateVisibleMessages(): void {
     const rows: DmMessage[] = ChatMediaOutbox.timeline(this.messages, this.mediaSends);
     const query: string = this.searchQuery.trim().toLowerCase();
-    return query.length === 0 ? rows : rows.filter((message: DmMessage): boolean => message.text.toLowerCase().indexOf(query) >= 0);
+    this.visibleTimeline = query.length === 0 ? rows :
+      rows.filter((message: DmMessage): boolean => message.text.toLowerCase().indexOf(query) >= 0);
   }
 
   private mediaSend(id: string): ChatMediaSend | undefined {
+    const send: ChatMediaSend | undefined = this.mediaSends.find((entry: ChatMediaSend): boolean => entry.id === id);
     // An echoed/confirmed row replaces the local card, including confirmation
     // that arrived through polling after a request timed out.
-    if (this.messages.some((message: DmMessage): boolean => message.id === id)) { return undefined; }
-    return this.mediaSends.find((send: ChatMediaSend): boolean => send.id === id);
+    return send !== undefined && !this.messages.some((message: DmMessage): boolean => message.id === id) ? send : undefined;
   }
 
   private mediaFailed(id: string): boolean { return this.mediaSend(id)?.state === 'failed'; }
@@ -879,8 +881,10 @@ export struct DmConversationPage {
     if (refreshMedia) {
       this.mediaSends = chatMediaOutbox.pending(getContext(this) as common.UIAbilityContext, this.conversationId);
     }
-    const confirmed: DmMessage[] = xChatService.cachedMessages(this.conversationId)
-      .filter((message: DmMessage): boolean => !this.messages.some((row: DmMessage): boolean => row.id === message.id));
+    const cached: DmMessage[] = xChatService.cachedMessages(this.conversationId);
+    if (cached.length === 0) { return; }
+    const shownIds: Set<string> = new Set<string>(this.messages.map((message: DmMessage): string => message.id));
+    const confirmed: DmMessage[] = cached.filter((message: DmMessage): boolean => !shownIds.has(message.id));
     if (confirmed.length > 0) {
       const page: XChatPage = new XChatPage(); page.messages = confirmed;
       this.mergeMessages(page);
@@ -892,13 +896,14 @@ export struct DmConversationPage {
   }
 
   private showTime(index: number): boolean {
-    const rows: DmMessage[] = this.visibleMessages();
-    return index === 0 || rows[index].timestampMs - rows[index - 1].timestampMs > 300000;
+    const rows: DmMessage[] = this.visibleTimeline;
+    return index === 0 || (index > 0 && index < rows.length &&
+      rows[index].timestampMs - rows[index - 1].timestampMs > 300000);
   }
 
   private groupEnd(index: number): boolean {
-    const rows: DmMessage[] = this.visibleMessages();
-    return index === rows.length - 1 || !rows[index + 1].outgoing || this.showTime(index + 1);
+    const rows: DmMessage[] = this.visibleTimeline;
+    return index >= rows.length - 1 || !rows[index + 1].outgoing || this.showTime(index + 1);
   }
 
   private acceptsPicker(generation: number, account: string): boolean {
@@ -1495,7 +1500,7 @@ export struct DmConversationPage {
   }
 
   private jumpToMessage(sequenceId: string): void {
-    const index: number = this.visibleMessages().findIndex((message: DmMessage): boolean => message.sequenceId === sequenceId || message.id === sequenceId);
+    const index: number = this.visibleTimeline.findIndex((message: DmMessage): boolean => message.sequenceId === sequenceId || message.id === sequenceId);
     if (index >= 0) { this.scroller.scrollToIndex(index + 1 + (this.hasMore ? 1 : 0) + (this.status.length > 0 ? 1 : 0) +
       (this.messages.some((m: DmMessage): boolean => m.id === this.pinnedMessageId) ? 1 : 0), true, ScrollAlign.CENTER); }
     else { promptAction.showToast({ message: this.text($r('app.string.chat_message_load_original')) }); }
@@ -1740,12 +1745,12 @@ export struct DmConversationPage {
 
   @Builder
   private Content(): void {
-    if (this.loading && this.visibleMessages().length === 0 && (this.group || this.contact.id.length === 0)) {
+    if (this.loading && this.visibleTimeline.length === 0 && (this.group || this.contact.id.length === 0)) {
       Column({ space: 12 }) {
         LoadingProgress().color(this.accentColor).width(24).height(24)
         Text($r('app.string.dm_loading')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontColor($r('app.color.text_secondary'))
       }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-    } else if (this.visibleMessages().length === 0 && !this.group && this.contact.id.length > 0) {
+    } else if (this.visibleTimeline.length === 0 && !this.group && this.contact.id.length > 0) {
       Scroll() {
         Column() {
           this.ContactIntro();
@@ -1757,7 +1762,7 @@ export struct DmConversationPage {
         }.width('100%')
       }.width('100%').height('100%').padding({ top: this.statusBarHeight + 64,
         bottom: this.composerHeight + 16 }).scrollBar(BarState.Off)
-    } else if (this.visibleMessages().length === 0) {
+    } else if (this.visibleTimeline.length === 0) {
       Column({ space: 16 }) {
         SymbolGlyph($r('sys.symbol.message')).fontSize(36).fontColor([$r('app.color.text_secondary')])
         Text(this.status.length > 0 ? this.status : this.text(this.needsUnlock ?
@@ -1799,7 +1804,7 @@ export struct DmConversationPage {
           }
         }
         if (this.historyUnavailable) { ListItem() { this.WebChatButton() } }
-        ForEach(this.visibleMessages(), (message: DmMessage, index: number) => {
+        ForEach(this.visibleTimeline, (message: DmMessage, index: number) => {
           ListItem() { this.MessageBubble(message, index) }
             .transition(!this.reduceMotion &&
               this.animatedSendIds.includes(message.id + (this.mediaSend(message.id) === undefined ? ':sent' : ':pending')) ?

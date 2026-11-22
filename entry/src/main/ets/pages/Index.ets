@@ -34,6 +34,7 @@ import { InputHelpBuilder } from './InputHelp';
 import { ThreadReaderBuilder } from './ThreadReader';
 import { AdaptivePostGrid } from '../components/AdaptivePostGrid';
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { PostFeedProjection } from '../utils/PostFeedDataSource';
 import { motionDuration, motionCurve } from '../utils/AppMotion';
 import { STORAGE_KEY_REDUCE_MOTION, STORAGE_KEY_MOTION_DURATION } from '../services/MotionSettingsStore';
 import { hapticTick } from '../utils/Haptics';
@@ -403,7 +404,6 @@ import { materialModifier } from '../utils/SystemMaterial';
 // stale numeric index can never reinterpret a user row as a post or return an
 // empty slot to UserRowCard.
 class SearchResultRow {
-  key: string = '';
   tweet: Tweet | null = null;
   user: UserRow | null = null;
 }
@@ -967,6 +967,9 @@ struct Index {
   private homePageSources: Map<string, TimelinePageDataSource> = new Map<string, TimelinePageDataSource>();
   private contentPageLayouts: Map<string, ContentPageSections> = new Map<string, ContentPageSections>();
   private searchTabSnapshots: Map<string, SearchTabSnapshot> = new Map<string, SearchTabSnapshot>();
+  private searchPostProjections: PostFeedProjection[] =
+    SEARCH_PRODUCT_IDS.map((): PostFeedProjection => new PostFeedProjection());
+  private readonly emptySearchPosts: Tweet[] = [];
   private getHomeScroller(): Scroller { return this.contentPageScroller('home', this.homeTabItems()[this.homeTabIndex()]?.key ?? 'for-you'); }
   private homeFirstVisibleItem: number = 0;
   private homeVisiblePostId: string = '';
@@ -2127,8 +2130,9 @@ struct Index {
 
   private searchPagePosts(index: number): Tweet[] {
     const source: Tweet[] = index === this.searchProductIndex() ? this.exploreResults :
-      this.searchTabSnapshots.get(SEARCH_PRODUCT_IDS[index])?.posts ?? [];
-    return contentFilterStore.filter(source, this.contentFilterSettings());
+      this.searchTabSnapshots.get(SEARCH_PRODUCT_IDS[index])?.posts ?? this.emptySearchPosts;
+    return this.searchPostProjections[index].get(source, this.filterRevision,
+      (posts: Tweet[]): Tweet[] => contentFilterStore.filter(posts, this.contentFilterSettings()));
   }
 
   private searchPageUsers(index: number): UserRow[] {
@@ -10479,31 +10483,22 @@ struct Index {
   }
 
   private searchResultKeys(index: number): string[] {
-    return this.searchResultRows(index).map((row: SearchResultRow): string => row.key);
-  }
-
-  private searchResultRows(index: number): SearchResultRow[] {
-    const rows: SearchResultRow[] = [];
-    const posts: Tweet[] = this.searchPagePosts(index);
-    for (let i: number = 0; i < posts.length; i++) {
-      const row: SearchResultRow = new SearchResultRow();
-      row.key = 'surface-post-' + posts[i].id;
-      row.tweet = posts[i];
-      rows.push(row);
-    }
-    const users: UserRow[] = this.searchPageUsers(index);
-    for (let i: number = 0; i < users.length; i++) {
-      const row: SearchResultRow = new SearchResultRow();
-      row.key = 'user-' + users[i].id;
-      row.user = users[i];
-      rows.push(row);
-    }
-    return rows;
+    return this.searchPagePosts(index).map((post: Tweet): string => 'surface-post-' + post.id)
+      .concat(this.searchPageUsers(index).map((user: UserRow): string => 'user-' + user.id));
   }
 
   private searchResultRow(index: number, item: number): SearchResultRow | null {
-    const rows: SearchResultRow[] = this.searchResultRows(index);
-    return item >= 0 && item < rows.length ? rows[item] : null;
+    if (item < 0) { return null; }
+    const posts: Tweet[] = this.searchPagePosts(index);
+    const row: SearchResultRow = new SearchResultRow();
+    if (item < posts.length) {
+      row.tweet = posts[item];
+      return row;
+    }
+    const user: UserRow | undefined = this.searchPageUsers(index)[item - posts.length];
+    if (user === undefined) { return null; }
+    row.user = user;
+    return row;
   }
 
   private searchResultUser(index: number, item: number): UserRow | null {
@@ -10514,6 +10509,10 @@ struct Index {
   private searchResultTweet(index: number, item: number): Tweet | null {
     const row: SearchResultRow | null = this.searchResultRow(index, item);
     return row === null ? null : row.tweet;
+  }
+
+  private searchHasResults(index: number): boolean {
+    return this.searchPagePosts(index).length > 0 || this.searchPageUsers(index).length > 0;
   }
 
   @Builder
@@ -10533,7 +10532,7 @@ struct Index {
     if (!this.isDesktopLayout()) {
       Column().width('100%').height(this.statusBarHeight + 104)
     }
-    if (this.searchPageLoading(index) && this.searchResultKeys(index).length === 0) {
+    if (this.searchPageLoading(index) && !this.searchHasResults(index)) {
       ForEach(this.frameIndexes(4), (skeleton: number) => { this.SearchResultSkeletonRow(skeleton) },
         (skeleton: number): string => 'search-skeleton-' + skeleton.toString())
     } else if (this.searchPageStatus(index).length > 0) {
@@ -10546,7 +10545,7 @@ struct Index {
 
   @Builder
   private SearchResultsFooter(index: number): void {
-    if (this.searchResultKeys(index).length > 0) {
+    if (this.searchHasResults(index)) {
       this.ExploreWaterFlowFooter()
     } else if (!this.searchPageLoading(index) && this.activeExploreQuery.length > 0) {
       Text(SEARCH_PRODUCT_IDS[index] === 'Lists' ? $r('app.string.search_lists_empty') :

@@ -1,4 +1,5 @@
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { PostFeedProjection } from '../utils/PostFeedDataSource';
 import { pageTextColor } from '../utils/ThemeColors';
 import { pageBackgroundActive } from '../services/PageBackgroundStore';
 import { appPageBackground } from '../components/PageBackgroundLayer';
@@ -105,6 +106,7 @@ export struct ListTimeline {
   private loaded: boolean = false;
   private nextToken: string = '';
   private scroller: Scroller = new Scroller();
+  private postProjection: PostFeedProjection = new PostFeedProjection();
 
   aboutToAppear(): void {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -381,7 +383,8 @@ export struct ListTimeline {
   }
 
   private visiblePosts(): Tweet[] {
-    return contentFilterStore.filter(this.posts, this.contentFilterSettings());
+    return this.postProjection.get(this.posts, this.filterRevision,
+      (posts: Tweet[]): Tweet[] => contentFilterStore.filter(posts, this.contentFilterSettings()));
   }
 
   // Everything the list has paged in becomes the reading queue.

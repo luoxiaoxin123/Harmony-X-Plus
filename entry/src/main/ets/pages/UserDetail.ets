@@ -6,6 +6,7 @@ import { AboutAccountRouteParam } from './AboutAccount';
 import { scrollFrame, scrollStarted, scrollStopped, stopScrollOnTouch } from '../utils/ScrollInteraction';
 import { ProfileBioTranslation } from '../components/ProfileBioTranslation';
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { PostFeedProjection } from '../utils/PostFeedDataSource';
 import { pageTextColor } from '../utils/ThemeColors';
 import { appPageBackground } from '../components/PageBackgroundLayer';
 import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
@@ -188,6 +189,8 @@ export struct UserDetail {
   @State private activityPages: ProfileActivityPage[] = [new ProfileActivityPage(),
     new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(),
     new ProfileActivityPage(), new ProfileActivityPage()];
+  private readonly activityPostProjections: PostFeedProjection[] =
+    this.activityPages.map((): PostFeedProjection => new PostFeedProjection());
   @State private mediaFilter: string = 'video';
   @StorageProp(STORAGE_KEY_PROFILE_PHOTOS_FIRST) private profilePhotosFirst: boolean = false;
   @State private postsFilter: string = 'posts';
@@ -333,10 +336,6 @@ export struct UserDetail {
     return result;
   }
 
-  private displayPosts(): Tweet[] {
-    return this.activityPages[0].loaded ? this.activityPages[0].posts : this.postsForAuthor();
-  }
-
   private contentFilterSettings(tab: number = 0): ContentFilterSettings {
     return new ContentFilterSettings(
       tab === 0 ? this.filterOnlyMedia : false,
@@ -350,10 +349,6 @@ export struct UserDetail {
 
   private filteredPosts(posts: Tweet[], tab: number = 0): Tweet[] {
     return contentFilterStore.filter(posts, this.contentFilterSettings(tab));
-  }
-
-  private visibleDisplayPosts(): Tweet[] {
-    return this.filteredPosts(this.displayPosts());
   }
 
   private authorName(): string {
@@ -628,22 +623,24 @@ export struct UserDetail {
 
   private tabPosts(tab: number): Tweet[] {
     if (this.blocking && !this.showBlockedPosts) { return []; }
-    const source: Tweet[] = tab === 0 && this.postsFilter === 'posts' ? this.displayPosts() :
-      this.activityPages[this.activitySource(tab)].posts;
-    const filtered: Tweet[] = this.filteredPosts(source, tab);
-    const out: Tweet[] = [];
-    for (let i: number = 0; i < filtered.length; i++) {
-      const post: Tweet = filtered[i];
-      if (tab === 2 && this.mediaFilter === 'video' && ProfileAccountData.video(post) === null) {
-        continue;
+    const page: ProfileActivityPage = this.activityPages[this.activitySource(tab)];
+    const preview: boolean = tab === 0 && this.postsFilter === 'posts' && !page.loaded;
+    if (preview && this.author === null) { return []; }
+    const authorId: string | undefined = preview ? this.author?.id : undefined;
+    const source: Tweet[] = preview ? this.posts : page.posts;
+    const media: string = tab === 2 ? this.mediaFilter : '';
+    const variant: string = JSON.stringify([this.filterRevision.toString(), authorId ?? '', media, preview.toString()]);
+    return this.activityPostProjections[tab].get(source, variant, (posts: Tweet[]): Tweet[] => {
+      const authored: Tweet[] = authorId === undefined ? posts :
+        posts.filter((post: Tweet): boolean => post.author.id === authorId);
+      const filtered: Tweet[] = this.filteredPosts(authored, tab);
+      if (media === 'video') { return filtered.filter((post: Tweet): boolean => ProfileAccountData.video(post) !== null); }
+      if (media === 'photo') {
+        return filtered.filter((post: Tweet): boolean =>
+          (post.attachments ?? []).some((attachment: MediaAttachment): boolean => attachment.type === 'photo'));
       }
-      if (tab === 2 && this.mediaFilter === 'photo' &&
-        !(post.attachments ?? []).some((m: MediaAttachment): boolean => m.type === 'photo')) {
-        continue;
-      }
-      out.push(post);
-    }
-    return out;
+      return filtered;
+    });
   }
 
   private tabMoreCursor(tab: number): string {

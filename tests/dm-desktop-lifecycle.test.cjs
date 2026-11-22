@@ -62,6 +62,34 @@ test('reopening a conversation renders the cached messages before starting the n
   assert.equal(loaded, true);
 });
 
+test('chat rows use one visible timeline for message times, grouping and search', () => {
+  let merges = 0;
+  const Conversation = compile(`export class Conversation {
+    ${extract('pages/DmConversation', 'DmConversationPage', ['updateVisibleMessages', 'showTime', 'groupEnd', 'mediaSend'])}
+  }`, {
+    ChatMediaOutbox: { timeline(messages) { merges++; return messages.slice(); } }
+  }).Conversation;
+  const messages = [
+    { id: 'a', text: 'one', timestampMs: 10, outgoing: true },
+    { id: 'b', text: 'two', timestampMs: 20, outgoing: true },
+    { id: 'c', text: 'one again', timestampMs: 300500, outgoing: true }
+  ];
+  const page = Object.assign(new Conversation(), {
+    messages, searchQuery: '', mediaSends: [{ id: 'b' }, { id: 'pending' }]
+  });
+  page.updateVisibleMessages();
+  assert.deepEqual(messages.map((_row, index) => page.showTime(index)), [true, false, true]);
+  assert.deepEqual(messages.map((_row, index) => page.groupEnd(index)), [false, true, true]);
+  assert.equal(merges, 1);
+  assert.equal(page.mediaSend('b'), undefined);
+  assert.equal(page.mediaSend('pending').id, 'pending');
+  page.searchQuery = ' ONE ';
+  page.updateVisibleMessages();
+  assert.deepEqual(page.visibleTimeline.map(row => row.id), ['a', 'c']);
+  assert.equal(page.showTime(1), true);
+  assert.equal(merges, 2);
+});
+
 test('repost attribution opens the person who reposted and leaves the original post author intact', () => {
   const Card = compile(`export class Card { ${extract('components/TweetCard', 'TweetCard', ['openRepostAuthor'])} }`, {}).Card;
   const card = new Card();
