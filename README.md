@@ -148,6 +148,9 @@ queryId 会随 X 前端发版轮换，过期的 ID 会返回 400。`server/tools
 
 ## 上游与许可证
 
-Harmony X+ 基于 [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit) 二次开发，并参考 [haohaoai0/HarmonyX](https://github.com/haohaoai0/HarmonyX) 的公开发布记录。仓库保留 Apache-2.0 许可证及适用的上游署名。
+Harmony X+ 基于 [Abhi-Flex1/OpenTwit](https://github.com/Abhi-Flex1/OpenTwit) 二次开发，并基于 [haohaoai0/HarmonyX](https://github.com/haohaoai0/HarmonyX) 的最后一个开源版本0.3.9。仓库保留 Apache-2.0 许可证及适用的上游署名。
 
 本项目采用 [Apache-2.0](LICENSE) 许可证。
+
+## 致谢
+[Linux.do](https://linux.do/)
