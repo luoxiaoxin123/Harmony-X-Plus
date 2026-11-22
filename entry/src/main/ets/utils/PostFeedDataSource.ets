@@ -1,3 +1,22 @@
+import type { Tweet } from '../models/Tweet';
+
+// Feed pages replace their post arrays when a new page arrives. Keep the
+// derived order available to lazy rows until the input or view options change.
+export class PostFeedProjection {
+  private source: Tweet[] | undefined;
+  private variant: string | number = '';
+  private rows: Tweet[] = [];
+
+  get(source: Tweet[], variant: string | number, project: (posts: Tweet[]) => Tweet[]): Tweet[] {
+    if (this.source !== source || this.variant !== variant) {
+      this.rows = project(source);
+      this.source = source;
+      this.variant = variant;
+    }
+    return this.rows;
+  }
+}
+
 export class PostFeedItem {
   key: string;
   index: number;

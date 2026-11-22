@@ -305,6 +305,56 @@ test('history detail replaces the preview with the complete fetched post while o
   detail.tweet={...live,text:'Existing hero'};detail.applyLivePostState(live);assert.equal(detail.tweet.text,'Existing hero');
 });
 
+test('detail positions the focal reply or restored reading offset only until the user takes over scrolling', () => {
+  let nextTimer = 0;
+  const timers = new Map();
+  const positions = [];
+  const Detail = methods('pages/PostDetail', 'PostDetail', ['positionFocalReply', 'focalAncestors',
+    'restoreContinuationScroll', 'cancelDetailPositioning', 'scheduleDetailPosition', 'takeDetailScrollControl', 'detailTouchIntercept',
+    'detailScrollFrame'], {
+    setTimeout: action => { timers.set(++nextTimer, action); return nextTimer; },
+    clearTimeout: id => timers.delete(id), ScrollAlign: { START: 'start' },
+    TouchType: { Down: 0 }, ScrollState: { Scroll: 1, Fling: 2 },
+    stopScrollOnTouch: () => 0, scrollFrame: (_scroller, offset) => ({ offsetRemain: offset })
+  });
+  const create = offset => Object.assign(new Detail(), {
+    tweet: { id: 'reply', replyContext: [{ id: 'parent' }] }, alive: true, detailVisible: true,
+    detailPositionTimer: -1, continuationScrollOffset: offset, focusedReplyContextKey: '',
+    useWideThreadLayout: () => false, scroller: {
+      scrollToIndex: index => positions.push(index),
+      scrollTo: ({ yOffset }) => positions.push(yOffset)
+    }
+  });
+  const idle = create(0);
+  idle.positionFocalReply();
+  timers.get(nextTimer)();
+  assert.deepEqual(positions, [1]);
+
+  const touched = create(0);
+  touched.positionFocalReply();
+  const stale = timers.get(nextTimer);
+  touched.detailTouchIntercept({ type: 0 }, touched.scroller);
+  stale();
+  touched.tweet.replyContext.push({ id: 'ancestor' });
+  touched.positionFocalReply();
+  assert.equal(touched.detailPositionTimer, -1);
+  assert.deepEqual(positions, [1]);
+
+  const wheel = create(220);
+  wheel.restoreContinuationScroll();
+  const restore = timers.get(nextTimer);
+  assert.deepEqual(wheel.detailScrollFrame(wheel.scroller, 20, 1), { offsetRemain: 20 });
+  restore();
+  assert.deepEqual(positions, [1]);
+
+  const resume = create(220);
+  resume.restoreContinuationScroll();
+  timers.get(nextTimer)();
+  resume.positionFocalReply();
+  assert.deepEqual(positions, [1, 220]);
+  assert.equal(resume.detailPositionTimer, -1);
+});
+
 test('history entry defers old-link previews and bounds them to the viewport and a small lookahead', () => {
   const timers=[];
   const Page=methods('pages/BrowsingHistory','BrowsingHistory',['needsPreview','loadVisiblePreviews','drainPreviews'],{
