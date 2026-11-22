@@ -31,10 +31,17 @@ export class PostFeedDataSource implements IDataSource {
     }
     next.push(new PostFeedItem('footer', -2));
     const previous: PostFeedItem[] = this.items;
+    const footerIndex: number = previous.length - 1;
+    const appended: boolean = footerIndex >= 1 && next.length > previous.length &&
+      previous.every((item: PostFeedItem, index: number): boolean => index === footerIndex || item.key === next[index].key);
     this.items = next;
     for (const listener of this.listeners) {
-      if (previous.length !== next.length) { listener.onDataReloaded(); }
-      else {
+      if (appended) {
+        // Insert before the existing footer to retain the cards already on screen.
+        for (let index: number = footerIndex; index < next.length - 1; index++) { listener.onDataAdded(index); }
+      } else if (previous.length !== next.length) {
+        listener.onDataReloaded();
+      } else {
         for (let index: number = 0; index < next.length; index++) {
           if (previous[index].key !== next[index].key) { listener.onDataChanged(index); }
         }

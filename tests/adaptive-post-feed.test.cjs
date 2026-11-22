@@ -116,15 +116,20 @@ test('history can opt into lazy cards and a single-column gap without changing o
 
 test('lazy feed enrichment invalidates only the changed card and keeps unchanged keys on append', () => {
   const { PostFeedDataSource } = evaluate(fs.readFileSync('entry/src/main/ets/utils/PostFeedDataSource.ets', 'utf8'));
-  const source = new PostFeedDataSource(), changed = []; let reloads = 0;
+  const source = new PostFeedDataSource(), changed = [], inserted = []; let reloads = 0;
   source.replace(['10-preview', '11-preview']);
   const firstKey = source.getData(1).key;
-  const listener = { onDataReloaded() { reloads++; }, onDataChanged(i) { changed.push(i); } };
+  const listener = { onDataReloaded() { reloads++; }, onDataChanged(i) { changed.push(i); },
+    onDataAdded(i) { inserted.push([i, source.getData(i).key]); } };
   source.registerDataChangeListener(listener); source.registerDataChangeListener(listener);
   source.replace(['10-preview', '11-enriched']);
   assert.deepEqual(changed, [2]); assert.equal(reloads, 0);
-  source.replace(['10-preview', '11-enriched', '12-preview']);
-  assert.equal(reloads, 1); assert.equal(source.getData(1).key, firstKey);
+  source.replace(['10-preview', '11-enriched', '12-preview', '13-preview']);
+  assert.deepEqual(inserted, [[3, 'post:2:12-preview'], [4, 'post:3:13-preview']]);
+  assert.equal(source.getData(5).key, 'footer');
+  assert.equal(reloads, 0); assert.equal(source.getData(1).key, firstKey);
+  source.replace(['new', 'other']);
+  assert.equal(reloads, 1);
   source.unregisterDataChangeListener(listener); source.replace([]); assert.equal(reloads, 1);
 });
 

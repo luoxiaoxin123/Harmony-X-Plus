@@ -13,32 +13,24 @@ export function scrollStopped(scroller: Scroller): void {
 export function scrollFrame(scroller: Scroller, offset: number,
   state: ScrollState): OnScrollFrameBeginHandlerResult {
   if (state === ScrollState.Scroll) { canceledControllers.delete(scroller); }
-  // A queued inertia frame must not move the content after the stopping press,
-  // including after release. A fresh drag immediately restores native physics.
+  // A fresh drag restores native physics after a press stops inertia.
   return { offsetRemain: state === ScrollState.Fling && canceledControllers.has(scroller) ? 0 : offset };
 }
 
-function stopAtCurrentPosition(scroller: Scroller): boolean {
-  const wasScrolling: boolean = scrollingControllers.has(scroller);
+function cancelInertia(scroller: Scroller): boolean {
+  if (!scrollingControllers.delete(scroller)) { return false; }
   canceledControllers.add(scroller);
-  scrollStopped(scroller);
-  try {
-    const offset: OffsetResult = scroller.currentOffset();
-    scroller.scrollTo({ xOffset: offset.xOffset, yOffset: offset.yOffset, animation: false });
-  } catch (_error) {
-    // A pane may have detached its controller during navigation.
-  }
-  return wasScrolling;
+  return true;
 }
 
-// Hit testing runs before a card/media child can consume the press. Cancel
-// native inertia and programmatic scroll animations at their current position.
+// The scrollable handles touch-down and stops its animation. An absolute
+// scrollTo here would compete with the new drag and can re-layout WaterFlow.
 export function stopScrollOnTouch(event: TouchEvent, scroller: Scroller,
   nestedScrollers: Scroller[] = []): HitTestMode {
   if (event.type !== TouchType.Down) { return HitTestMode.Default; }
-  let wasScrolling: boolean = stopAtCurrentPosition(scroller);
+  let wasScrolling: boolean = cancelInertia(scroller);
   for (let index: number = 0; index < nestedScrollers.length; index++) {
-    const nestedWasScrolling: boolean = stopAtCurrentPosition(nestedScrollers[index]);
+    const nestedWasScrolling: boolean = cancelInertia(nestedScrollers[index]);
     wasScrolling = wasScrolling || nestedWasScrolling;
   }
   // The stopping press belongs to the scroll container, so it can immediately
