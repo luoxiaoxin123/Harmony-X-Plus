@@ -69,6 +69,10 @@
       "value": "चेहरा ट्रैकिंग समर्थित है। पढ़ने वाले पेज पर शुरू करें दबाने के बाद ही कैमरा चालू होगा।"
     },
     {
+      "name": "huawei_supported_models",
+      "value": "समर्थित Huawei डिवाइस"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "यह डिवाइस आवश्यक चेहरा ट्रैकिंग का समर्थन नहीं करता। टच या कीबोर्ड से पढ़ें।"
     },
@@ -470,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Harmony X प्रवेश मॉड्यूल"
+      "value": "HarmonyX+ प्रवेश मॉड्यूल"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Harmony X मुख्य स्क्रीन"
+      "value": "HarmonyX+ मुख्य स्क्रीन"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -486,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1150,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Harmony X में स्वागत है"
+      "value": "HarmonyX+ में स्वागत है"
     },
     {
       "name": "profile_signed_in",
@@ -1170,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · Stage मॉडल"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · Stage मॉडल"
     },
     {
       "name": "profile_following",
@@ -1202,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Harmony X में लॉग इन करें"
+      "value": "HarmonyX+ में लॉग इन करें"
     },
     {
       "name": "login_description",
@@ -1278,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "लॉग इन हो गया। Harmony X खुल रहा है…"
+      "value": "लॉग इन हो गया। HarmonyX+ खुल रहा है…"
     },
     {
       "name": "callback_back_to_login",
@@ -1454,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Harmony X में सामग्री दिखने का तरीका बदलें।"
+      "value": "HarmonyX+ में सामग्री दिखने का तरीका बदलें।"
     },
     {
       "name": "settings_resources",
@@ -1518,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Harmony X की भाषा चुनें। बदलाव तुरंत लागू होगा और अगली बार भी यही भाषा रहेगी।"
+      "value": "HarmonyX+ की भाषा चुनें। बदलाव तुरंत लागू होगा और अगली बार भी यही भाषा रहेगी।"
     },
     {
       "name": "settings_language_system",
@@ -1526,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Harmony X में सिस्टम की भाषा इस्तेमाल करें।"
+      "value": "HarmonyX+ में सिस्टम की भाषा इस्तेमाल करें।"
     },
     {
       "name": "settings_language_zh_cn",
@@ -1570,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Harmony X का आइकन चुनें। होम स्क्रीन, ऐप सूची और हाल के ऐप में यही दिखेगा।"
+      "value": "HarmonyX+ का आइकन चुनें। होम स्क्रीन, ऐप सूची और हाल के ऐप में यही दिखेगा।"
     },
     {
       "name": "settings_app_icon_note",
@@ -2122,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "सिस्टम सेटिंग्स में Harmony X की सूचनाओं की अनुमति दें"
+      "value": "सिस्टम सेटिंग्स में HarmonyX+ की सूचनाओं की अनुमति दें"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2670,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "X खाते की संवेदनशील मीडिया सेटिंग सिंक करके Harmony X में लागू करें।"
+      "value": "X खाते की संवेदनशील मीडिया सेटिंग सिंक करके HarmonyX+ में लागू करें।"
     },
     {
       "name": "sensitive_media_hidden",
@@ -3977,6 +3981,26 @@
       "value": "XChat: बातचीत और संदेश संख्या पढ़ सकते हैं; भेजने और एन्क्रिप्शन खोलने के लिए कुंजियों का आदान-प्रदान चाहिए।"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "वेब पर X Chat खोलें"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "शेयर करने वाला टेक्स्ट कॉपी करें और X Chat खोलें"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat तैयार नहीं है। वेब पर इसे अनलॉक करके फिर प्रयास करें।"
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "इस बातचीत में पहले से वेब ड्राफ़्ट है। पहले उसे देखें।"
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "वेब से भेजने की पुष्टि नहीं हुई। बातचीत खोलकर जाँचें।"
+    },
+    {
       "name": "dm_web_failed",
       "value": "संदेश लोड नहीं हुए। नेटवर्क या प्रॉक्सी जाँचकर फिर कोशिश करें।"
     },
@@ -4466,7 +4490,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Harmony X में स्वागत है"
+      "value": "HarmonyX+ में स्वागत है"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4494,11 +4518,11 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Google से साइन इन न करें; अपना ईमेल सीधे दर्ज करें। नेटवर्क ठीक होने पर भी पेज खाली दिखे तो कृपया प्रतीक्षा करें।"
+      "value": "Google से लॉगिन करने के बजाय अपना ईमेल पता दर्ज करें।"
     },
     {
       "name": "onboarding_login_hint",
-      "value": "नीचे के वेब पेज में लॉग इन करें। पूरा होने पर Harmony X अपने आप खुलेगा।"
+      "value": "नीचे के वेब पेज में लॉग इन करें। पूरा होने पर HarmonyX+ अपने आप खुलेगा।"
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4642,7 +4666,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Harmony X को अपने हिसाब से बनाने के कुछ विकल्प।"
+      "value": "HarmonyX+ को अपने हिसाब से बनाने के कुछ विकल्प।"
     },
     {
       "name": "onboarding_customize_title",
@@ -4662,7 +4686,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "आपका X खाता जुड़ा है। अब Harmony X इस्तेमाल कर सकते हैं।"
+      "value": "आपका X खाता जुड़ा है। अब HarmonyX+ इस्तेमाल कर सकते हैं।"
     },
     {
       "name": "onboarding_finish",
@@ -5742,7 +5766,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Chat रीसेट करें"
+      "value": "चैट लॉक करें"
     },
     {
       "name": "chat_phone",
@@ -6282,7 +6306,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "MeoW इंस्टॉल कर अपना उपनाम जोड़ें। हमेशा चालू HTTPS रिले Harmony X बंद होने पर X संदेश अलर्ट भेज सकता है।"
+      "value": "MeoW इंस्टॉल कर अपना उपनाम जोड़ें। हमेशा चालू HTTPS रिले HarmonyX+ बंद होने पर X संदेश अलर्ट भेज सकता है।"
     },
     {
       "name": "meow_relay_url",
@@ -6586,7 +6610,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "डिवाइस चालू होने से अब तक का Harmony X डेटा, मीडिया और अनुरोध समेत। रीबूट पर गिनती फिर शुरू होगी।"
+      "value": "डिवाइस चालू होने से अब तक का HarmonyX+ डेटा, मीडिया और अनुरोध समेत। रीबूट पर गिनती फिर शुरू होगी।"
     },
     {
       "name": "storage_network_unavailable",
@@ -6810,7 +6834,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "ये फ़िल्टर सिर्फ़ Harmony X पर लागू हैं। खाते भर के म्यूट शब्द और लोग निजता और सुरक्षा में बदलें।"
+      "value": "ये फ़िल्टर सिर्फ़ HarmonyX+ पर लागू हैं। खाते भर के म्यूट शब्द और लोग निजता और सुरक्षा में बदलें।"
     },
     {
       "name": "xsettings_muted_list",
@@ -7258,7 +7282,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "मौजूदा X खाते से सिंक करके Harmony X का मीडिया बदलता है।"
+      "value": "मौजूदा X खाते से सिंक करके HarmonyX+ का मीडिया बदलता है।"
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8550,7 +8574,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X अभी सुनने और रिकॉर्डिंग का सपोर्ट देता है। माइक्रोफ़ोन की आवाज़ और बोलने के अनुरोध नहीं भेजे जाते।"
+      "value": "HarmonyX+ अभी सुनने और रिकॉर्डिंग का सपोर्ट देता है। माइक्रोफ़ोन की आवाज़ और बोलने के अनुरोध नहीं भेजे जाते।"
     },
     {
       "name": "spaces_manage_title",
@@ -9382,7 +9406,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10170,19 +10194,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · luoxiaoxin123/HarmonyX"
-    },
-    {
-      "name": "logo_universe_title",
-      "value": "तैरता हुआ ब्रह्मांड"
-    },
-    {
-      "name": "logo_universe_desc",
-      "value": "हर मुलाकात Harmony X को और पूरा बनाती है।"
-    },
-    {
-      "name": "logo_universe_hint",
-      "value": "तैरते ब्रह्मांड में जाने के लिए आइकन टैप करें"
+      "value": "GitHub · luoxiaoxin123/Harmony-X-Plus"
     },
     {
       "name": "logo_motion_pause",
@@ -10214,7 +10226,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "आप भी Harmony X का हिस्सा हैं।"
+      "value": "आप भी HarmonyX+ का हिस्सा हैं।"
     },
     {
       "name": "logo_touch_hint",
@@ -11018,7 +11030,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -12923,6 +12935,362 @@
     {
       "name": "grok_chat_hint",
       "value": "बातचीत शुरू करने के लिए Grok से सवाल पूछें।"
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "This post exceeds the character limit. Edit it to continue."
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "Remember playback speed"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X का लॉगिन पेज दिखाई नहीं दिया। फिर से कोशिश करें या ब्राउज़र में कनेक्शन जाँचें।"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "ब्राउज़र में X जाँचें"
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "Couldn’t load the X sign-in page."
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "The author has blocked your account."
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "Post card layout"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "Post detail layout"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "Classic"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "Wide"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "Compact"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "Post media size"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "Post swipe gestures"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "Swipe left"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "Swipe right"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "Disabled"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "You can add one GIF per post."
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "Image description (ALT)"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "Describe this image for people who use a screen reader."
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "Apply description"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "Couldn’t save the description. Your draft is still available."
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "Remove attachment"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "Open color picker"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "Profile reply button"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "Show the floating reply button on user profiles."
+    },
+    {
+      "name": "external_article_read",
+      "value": "Read article"
+    },
+    {
+      "name": "external_article_save",
+      "value": "Save offline"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "Saved offline"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "Smaller text"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "Larger text"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "Couldn’t extract the article. You can still open the original page."
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "Preview profile"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "Continue editing"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "Photo file names"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "Fields appear in the order you turn them on."
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "Post date"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "Author username"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "Photo number"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "Original image code"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "Post ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "Full interface"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces sounds"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "Play a short sound when you join or leave a live Space."
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "Brightness"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "Contrast"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "Saturation"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "Eraser"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "Mosaic"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "Free crop"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "Apply crop"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "Split vertically"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "Add photo sticker"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "Edit photos in order"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "Make collage"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "Horizontal row"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "Vertical column"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "Grid"
+    },
+    {
+      "name": "post_share_message",
+      "value": "Add a message"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "Find a direct message recipient"
+    },
+    {
+      "name": "post_share_system",
+      "value": "System share"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "Post screenshot"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "Copy screenshot"
+    },
+    {
+      "name": "post_share_email",
+      "value": "Email"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "Copy post text"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "Open in X"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "Clip video"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "Start"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "Length"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "Preview start"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "Create preview"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "Continue to post"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "सभी पोस्ट दिखाएँ"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "सूचनाओं में संदेश का टेक्स्ट दिखाएँ"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "लॉक स्क्रीन समेत स्थानीय चैट सूचनाओं में संदेश का टेक्स्ट दिखाएँ।"
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "आपको एक नया संदेश मिला है"
+    },
+    {
+      "name": "chat_typing",
+      "value": "टाइप कर रहे हैं…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "शेयर भाव"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "प्रोफ़ाइल का डिफ़ॉल्ट मीडिया"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "लिंक के रूप में भेजें"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "इस प्राप्तकर्ता के लिए चैट कुंजी उपलब्ध नहीं है"
+    },
+    {
+      "name": "sidebar_update_available",
+      "value": "नया संस्करण %s उपलब्ध है"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "इस बातचीत की कुंजी उपलब्ध नहीं है।"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X ने अभी कार्रवाई की पुष्टि नहीं की है। दोबारा कोशिश करने पर वही संदेश इस्तेमाल होगा।"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X ने कार्रवाई अस्वीकार कर दी (कोड %s)।"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "बातचीत की कुंजी पाना या पंजीकृत करना संभव नहीं हुआ"
     }
   ]
 }

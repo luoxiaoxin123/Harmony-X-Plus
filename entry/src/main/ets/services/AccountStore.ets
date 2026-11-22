@@ -5,6 +5,7 @@
 // token when the developer-API path was used. Keeping both per account is what
 // makes switching instant — the other account keeps its session and never has
 // to sign in again. Everything stays in this app's private preferences.
+import { xChatKeyStore } from './XChatKeyStore';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import hilog from '@ohos.hilog';
@@ -306,16 +307,23 @@ export class AccountStore {
   remove(context: common.Context, id: string): boolean {
     const accounts: XAccount[] = this.list(context);
     const next: XAccount[] = [];
+    let removedUserId: string = '';
     for (let i: number = 0; i < accounts.length; i++) {
       if (accounts[i].id !== id) {
         next.push(accounts[i]);
+      } else {
+        removedUserId = accounts[i].userId;
       }
     }
     if (next.length === accounts.length) {
       return false;
     }
     const active: string = next.length === 0 ? '' : next[0].id;
-    return this.persist(context, next, active, true);
+    const persisted: boolean = this.persist(context, next, active, true);
+    if (persisted && removedUserId.length > 0 && !next.some((account: XAccount): boolean => account.userId === removedUserId)) {
+      xChatKeyStore.remove(removedUserId);
+    }
+    return persisted;
   }
 
   // Profile metadata is cosmetic: it refreshes the drawer label but must not

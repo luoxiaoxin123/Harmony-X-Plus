@@ -1,3 +1,9 @@
+import { createPhotoCollage } from '../services/ComposerPhotoEditing';
+import { ComposerMedia, COMPOSER_MAX_MEDIA_ITEMS, COMPOSER_MAX_ALT_CHARACTERS, COMPOSER_MEDIA_IMAGE,
+  COMPOSER_MEDIA_GIF, COMPOSER_MEDIA_VIDEO, addComposerMedia, legacyComposerMedia } from '../models/ComposerMedia';
+import { image } from '@kit.ImageKit';
+import { media } from '@kit.MediaKit';
+import { STANDARD_POST_CHARACTERS, weightedPostLength } from '../utils/PostCharacterCount';
 import { submitInputKey, backInputKey } from '../utils/InputSupport';
 import { DEFAULT_COMPONENT_HDR_ENABLED, DEFAULT_COMPONENT_HDR_RATIO, STORAGE_KEY_COMPONENT_HDR_ENABLED,
   STORAGE_KEY_COMPONENT_HDR_RATIO } from '../services/ComponentHdrSettingsStore';
@@ -72,13 +78,11 @@ import {
   STORAGE_KEY_REPLY_CAPSULE_BUTTON_MATERIAL_ENABLED
 } from '../services/AppearanceStore';
 
-const STANDARD_POST_CHARACTERS: number = 280;
 const MAX_POST_CHARACTERS: number = 4000;
 const COMPOSER_EDITOR_MIN_SCROLL_HEIGHT: number = 360;
 const COMPOSER_TEXT_AREA_HEIGHT: number = 240;
 const COMPOSER_HEADER_HEIGHT: number = 64;
 const COMPOSER_PICKER_BAR_HEIGHT: number = 64;
-const COMPOSER_MAX_MEDIA_ITEMS: number = 4;
 const COMPOSER_MEDIA_GRID_GAP: number = 8;
 const DOMAIN = 0xFF00;
 const TAG = 'HarmonyX-Composer';
@@ -113,11 +117,6 @@ export interface ReplyComposerRouteParam {
   communityName: string;
   parentTweet: Tweet | null;
   sharedPayload?: ExternalSharePayload;
-}
-
-interface ComposerMediaItem {
-  uri: string;
-  isGif: boolean;
 }
 
 @Builder
@@ -735,13 +734,16 @@ export struct ReplyComposerPage {
   @State private avatarUrl: string = '';
   @State private avatarName: string = '';
   @State private verifiedType: string = '';
+  @State private supportsLongPosts: boolean = false;
   @State private avatarShape: string = '';
   @State private avatarColor: string = '#007DFF';
   @StorageLink('harmonyx.accent_color') accentColor: string = '#007DFF';
   @State private draft: string = '';
-  @State private imageUris: string[] = [];
-  @State private gifUri: string = '';
-  @State private videoUri: string = '';
+  @State private attachments: ComposerMedia[] = [];
+  @State private altEditorUri: string = '';
+  @State private altEditorText: string = '';
+  @State private videoPreviewUri: string = '';
+  @State private preparingCollage: boolean = false;
   @State private publishing: boolean = false;
   @State private publishError: string = '';
   @State private draftNotice: string = '';
@@ -801,7 +803,10 @@ export struct ReplyComposerPage {
   private async loadCurrentUserAvatar(): Promise<void> {
     const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
     await authStore.load(context);
+    const accountId: string = accountStore.activeId(context);
     const profile: UserProfile | null = await this.resolveViewer(context);
+    if (accountStore.activeId(context) !== accountId) { return; }
+    this.supportsLongPosts = profile?.supportsLongPosts === true && xPrivateClient.isSignedIn();
     if (profile === null) {
       return;
     }
@@ -835,9 +840,7 @@ export struct ReplyComposerPage {
     if (param.imageUri.length > 0) {
       routeImages.push(param.imageUri);
     }
-    this.imageUris = routeImages;
-    this.gifUri = param.gifUri;
-    this.videoUri = param.videoUri ?? '';
+    this.attachments = legacyComposerMedia(routeImages, param.gifUri, param.videoUri ?? '');
     this.routeLoaded = true;
     this.positionReplyTargetAboveEditor();
     this.restoreDraft();
@@ -852,7 +855,7 @@ export struct ReplyComposerPage {
     this.sharedImportId = payload.id;
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     const accountId: string = accountStore.activeId(context);
-    if (this.draft.length > 0 || this.imageUris.length > 0 || this.gifUri.length > 0 || this.videoUri.length > 0 ||
+    if (this.draft.length > 0 || this.attachments.length > 0 ||
       this.composeOptions.hasSettings()) {
       const choice: promptAction.ShowDialogSuccessResponse = await promptAction.showDialog({
         message: this.text($r('app.string.share_replace_draft')),
@@ -864,10 +867,7 @@ export struct ReplyComposerPage {
     if (!this.composerPageActive || this.publishing || accountStore.activeId(context) !== accountId) { return; }
     this.composeOptions = new ComposerOptions();
     this.draft = payload.text;
-    this.imageUris = payload.files.filter((file: ExternalShareFile): boolean => file.type === 1)
-      .map((file: ExternalShareFile): string => file.uri);
-    this.gifUri = payload.files.find((file: ExternalShareFile): boolean => file.type === 2)?.uri ?? '';
-    this.videoUri = payload.files.find((file: ExternalShareFile): boolean => file.type === 3)?.uri ?? '';
+    this.attachments = payload.files.map((file: ExternalShareFile): ComposerMedia => new ComposerMedia(file.uri, file.type));
     this.draftNotice = '';
     this.scheduleDraftSave();
   }
@@ -920,28 +920,10 @@ export struct ReplyComposerPage {
   }
 
   private imageGridRowsTemplate(): string {
-    return this.imageGridItemCount() > 2 ? '1fr 1fr' : '1fr';
+    return '1fr '.repeat(Math.max(1, Math.ceil(this.attachments.length / 2))).trim();
   }
 
-  private imageGridItemCount(): number {
-    return this.imageUris.length + (this.gifUri.length > 0 ? 1 : 0);
-  }
-
-  private remainingImageSlots(): number {
-    return Math.max(0, COMPOSER_MAX_MEDIA_ITEMS - this.imageGridItemCount());
-  }
-
-  private imageGridItems(): ComposerMediaItem[] {
-    const items: ComposerMediaItem[] = [];
-    for (let index: number = 0; index < this.imageUris.length; index++) {
-      const uri: string = this.imageUris[index];
-      items.push({ uri: uri, isGif: false });
-    }
-    if (this.gifUri.length > 0) {
-      items.push({ uri: this.gifUri, isGif: true });
-    }
-    return items;
-  }
+  private imageGridItemCount(): number { return this.attachments.length; }
 
   private imageGridHeight(): number {
     const itemCount: number = this.imageGridItemCount();
@@ -1016,9 +998,7 @@ export struct ReplyComposerPage {
     }
     this.hasLocalDraft = true;
     this.draft = saved.text;
-    this.imageUris = saved.imageUris;
-    this.gifUri = saved.gifUri;
-    this.videoUri = saved.videoUri;
+    this.attachments = saved.media;
     this.composeOptions = saved.options;
     this.draftNotice = this.text($r('app.string.compose_draft_restored'));
   }
@@ -1050,25 +1030,20 @@ export struct ReplyComposerPage {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     const hasChangedText: boolean = this.draft !== this.routeInitialText && this.draft.trim().length > 0;
     if (!hasChangedText && this.serverDraftLoaded && this.draft.trim().length > 0 &&
-      this.imageUris.length === 0 && this.gifUri.length === 0 && this.videoUri.length === 0 &&
+      this.attachments.length === 0 &&
       !this.composeOptions.hasSettings()) {
       // A reply capsule may have supplied text before the server-draft lookup
       // finishes. Closing without changing that supplied text must not erase
       // an independent server draft for the same conversation.
       return;
     }
-    if (!hasChangedText && this.imageUris.length === 0 && this.gifUri.length === 0 &&
-      this.videoUri.length === 0 && !this.composeOptions.hasSettings()) {
+    if (!hasChangedText && this.attachments.length === 0 && !this.composeOptions.hasSettings()) {
       composerDraftStore.clear(context, this.draftScope());
       this.hasLocalDraft = false;
       this.deleteServerDraft();
       return;
     }
-    const images: string[] = [];
-    for (let i: number = 0; i < this.imageUris.length; i++) {
-      images.push(this.imageUris[i]);
-    }
-    const saved: ComposerDraft = new ComposerDraft(this.draft, images, this.gifUri, this.videoUri, Date.now());
+    const saved: ComposerDraft = new ComposerDraft(this.draft, this.attachments, Date.now());
     saved.options = this.composeOptions.copy();
     composerDraftStore.save(context, this.draftScope(), saved);
     this.hasLocalDraft = true;
@@ -1085,25 +1060,28 @@ export struct ReplyComposerPage {
 
   private canPublish(): boolean {
     const text: string = this.draft.trim();
-    const mentionOnly: boolean = this.replyToId.length === 0 && this.replyToUser.length > 0 &&
+    const mentionOnly: boolean = this.replyToUser.length > 0 &&
       text === '@' + this.replyToUser.trim();
     const hasContent: boolean =
-      (text.length > 0 && !mentionOnly) || this.imageUris.length > 0 || this.gifUri.length > 0 ||
-      this.videoUri.length > 0;
-    return hasContent && this.draft.length <= this.maxCharacters() && this.composeOptions.pollValid();
+      (text.length > 0 && !mentionOnly) || this.attachments.length > 0;
+    return hasContent && this.characterCount() <= this.maxCharacters() && this.composeOptions.pollValid();
   }
 
   private maxCharacters(): number {
-    return this.communityId.length > 0 || this.composeOptions.scheduledAt > 0 ||
+    return !this.supportsLongPosts || this.communityId.length > 0 || this.composeOptions.scheduledAt > 0 ||
       this.composeOptions.pollChoices.length > 0 ? STANDARD_POST_CHARACTERS : MAX_POST_CHARACTERS;
   }
 
+  private characterCount(): number {
+    return weightedPostLength(this.draft, this.replyToId.length > 0 ? this.replyToUser : '');
+  }
+
   private characterCountLabel(): string {
-    return this.draft.length.toString() + '/' + this.maxCharacters().toString();
+    return this.characterCount().toString() + '/' + this.maxCharacters().toString();
   }
 
   private isLongPost(): boolean {
-    return this.communityId.length === 0 && this.draft.length > STANDARD_POST_CHARACTERS;
+    return this.maxCharacters() > STANDARD_POST_CHARACTERS && this.characterCount() > STANDARD_POST_CHARACTERS;
   }
 
   // Existing server drafts have already been created by X, so they can be
@@ -1148,7 +1126,7 @@ export struct ReplyComposerPage {
     if (this.serverDraftId.length === 0 || this.serverDraftSyncing || this.draft.trim().length === 0) {
       return;
     }
-    if (this.imageUris.length > 0 || this.gifUri.length > 0 || this.videoUri.length > 0 || this.composeOptions.hasSettings()) {
+    if (this.attachments.length > 0 || this.composeOptions.hasSettings()) {
       // Existing draft text is still kept locally with its attachments.  X's
       // draft response shape does not consistently preserve media across
       // clients, so do not overwrite a remote draft with a partial payload.
@@ -1213,137 +1191,115 @@ export struct ReplyComposerPage {
       const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
       composerDraftStore.clear(context, this.draftScope());
       this.draft = '';
-      this.imageUris = [];
-      this.gifUri = '';
-      this.videoUri = '';
+      this.attachments = [];
     }
     this.draftNotice = this.text($r('app.string.compose_server_draft_deleted'));
     promptAction.showToast({ message: this.draftNotice, duration: 1500 });
   }
 
-  private async selectImage(): Promise<void> {
-    if (this.publishing || this.composeOptions.pollChoices.length > 0) { return; }
-    const remaining: number = this.remainingImageSlots();
-    if (remaining <= 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')), duration: 1800 });
+  private canAddMedia(): boolean {
+    if (this.publishing || !this.composerPageActive || this.composeOptions.pollChoices.length > 0) { return false; }
+    if (this.attachments.length < COMPOSER_MAX_MEDIA_ITEMS) { return true; }
+    promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')) });
+    return false;
+  }
+
+  private hasGif(): boolean {
+    return this.attachments.some((item: ComposerMedia): boolean => item.type === COMPOSER_MEDIA_GIF);
+  }
+
+  private addAttachment(uri: string, type: number): void {
+    if (!this.canAddMedia()) { return; }
+    if (type === COMPOSER_MEDIA_GIF && this.hasGif()) {
+      promptAction.showToast({ message: this.text($r('app.string.compose_one_gif')) });
       return;
     }
+    const next: ComposerMedia[] = addComposerMedia(this.attachments, new ComposerMedia(uri, type));
+    if (next !== this.attachments) { this.attachments = next; this.scheduleDraftSave(); }
+  }
+
+  private async pickerMediaType(uri: string): Promise<number> {
+    const path: string = uri.split('?')[0].toLowerCase();
+    if (path.endsWith('.gif')) { return COMPOSER_MEDIA_GIF; }
+    if (/\.(mp4|mov|m4v|webm|mkv|3gp|avi|ts)$/.test(path)) { return COMPOSER_MEDIA_VIDEO; }
+    let file: fileIo.File | undefined;
+    let source: image.ImageSource | undefined;
+    let extractor: media.AVMetadataExtractor | undefined;
     try {
-      const options: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
-      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
-      options.maxSelectNumber = remaining;
-      const photoPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker();
-      const result: photoAccessHelper.PhotoSelectResult = await photoPicker.select(options);
-      if (this.publishing || this.composeOptions.pollChoices.length > 0) { return; }
-      if (result.photoUris.length > 0) {
-        const next: string[] = [];
-        for (let i: number = 0; i < this.imageUris.length; i++) {
-          next.push(this.imageUris[i]);
+      file = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+      source = image.createImageSource(file.fd);
+      try {
+        const info: image.ImageInfo = await source.getImageInfo();
+        if (info.size.width > 0 && info.size.height > 0) {
+          return info.mimeType === 'image/gif' ? COMPOSER_MEDIA_GIF : COMPOSER_MEDIA_IMAGE;
         }
-        const gifCount: number = this.gifUri.length > 0 ? 1 : 0;
-        for (let i: number = 0; i < result.photoUris.length &&
-          next.length + gifCount < COMPOSER_MAX_MEDIA_ITEMS; i++) {
-          const uri: string = result.photoUris[i];
-          if (uri.length > 0 && next.indexOf(uri) < 0) {
-            next.push(uri);
-          }
-        }
-        this.imageUris = next;
-        this.videoUri = '';
-        this.scheduleDraftSave();
-      }
-    } catch (error) {
+      } catch (error) { /* The mixed picker may have returned a video. */ }
+      extractor = await media.createAVMetadataExtractor();
+      extractor.fdSrc = { fd: file.fd };
+      const metadata: media.AVMetadata = await extractor.fetchMetadata();
+      return metadata.hasVideo === 'yes' ? COMPOSER_MEDIA_VIDEO : 0;
+    } catch (error) { return 0; }
+    finally {
+      if (extractor !== undefined) { try { await extractor.release(); } catch (error) {} }
+      if (source !== undefined) { try { await source.release(); } catch (error) {} }
+      if (file !== undefined) { try { fileIo.closeSync(file.fd); } catch (error) {} }
     }
   }
 
+  private async selectImage(): Promise<void> {
+    if (!this.canAddMedia()) { return; }
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const accountId: string = accountStore.activeId(context);
+    try {
+      const options: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_VIDEO_TYPE;
+      options.maxSelectNumber = COMPOSER_MAX_MEDIA_ITEMS - this.attachments.length;
+      const photoPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker();
+      const result: photoAccessHelper.PhotoSelectResult = await photoPicker.select(options);
+      for (let index: number = 0; index < result.photoUris.length; index++) {
+        if (!this.canAddMedia() || accountStore.activeId(context) !== accountId) { return; }
+        const uri: string = result.photoUris[index];
+        const type: number = await this.pickerMediaType(uri);
+        if (accountStore.activeId(context) !== accountId) { return; }
+        if (type > 0) { this.addAttachment(uri, type); }
+        else { promptAction.showToast({ message: this.text($r('app.string.post_media_failed')) }); }
+      }
+    } catch (error) { /* Picker cancellation leaves the draft intact. */ }
+  }
+
   private async selectGif(): Promise<void> {
-    if (this.composeOptions.pollChoices.length > 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_poll_conflict')) }); return;
-    }
-    if (this.gifUri.length === 0 && this.remainingImageSlots() <= 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')), duration: 1800 });
-      return;
-    }
+    if (!this.canAddMedia()) { return; }
     try {
       const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const options: picker.DocumentSelectOptions = new picker.DocumentSelectOptions();
       options.fileSuffixFilters = ['gif'];
       options.maxSelectNumber = 1;
-      const gifPicker: picker.DocumentViewPicker = new picker.DocumentViewPicker(context);
-      const result: Array<string> = await gifPicker.select(options);
-      if (result.length > 0) {
-        this.gifUri = result[0];
-        this.videoUri = '';
-        this.scheduleDraftSave();
-      }
-    } catch (error) {
-    }
+      const result: string[] = await new picker.DocumentViewPicker(context).select(options);
+      if (result.length > 0) { this.addAttachment(result[0], COMPOSER_MEDIA_GIF); }
+    } catch (error) { /* Picker cancellation leaves the draft intact. */ }
   }
 
   private openGifSearch(): void {
-    if (this.composeOptions.pollChoices.length > 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_poll_conflict')) }); return;
-    }
-    if (this.gifUri.length === 0 && this.remainingImageSlots() <= 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')), duration: 1800 });
-      return;
-    }
+    if (!this.canAddMedia()) { return; }
     this.pageStack.pushPath({ name: 'GifSearchPage' }, false);
   }
 
   private consumeGifSearchSelection(): void {
     const uri: string = gifSearchSelectionStore.take();
-    if (uri.length === 0) {
-      return;
-    }
-    if (this.publishing || this.composeOptions.pollChoices.length > 0) { return; }
-    if (this.gifUri.length === 0 && this.remainingImageSlots() <= 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')), duration: 1800 });
-      return;
-    }
-    this.gifUri = uri;
-    this.videoUri = '';
+    if (uri.length > 0) { this.addAttachment(uri, COMPOSER_MEDIA_GIF); }
+  }
+
+  private removeAttachment(uri: string): void {
+    this.attachments = this.attachments.filter((item: ComposerMedia): boolean => item.uri !== uri);
+    if (this.altEditorUri === uri) { this.altEditorUri = ''; }
+    if (this.videoPreviewUri === uri) { this.videoPreviewUri = ''; }
     this.scheduleDraftSave();
   }
 
-  private removeImage(uri: string): void {
-    const next: string[] = [];
-    for (let i: number = 0; i < this.imageUris.length; i++) {
-      if (this.imageUris[i] !== uri) {
-        next.push(this.imageUris[i]);
-      }
-    }
-    this.imageUris = next;
-    this.scheduleDraftSave();
-  }
-
-  private removeGif(): void {
-    this.gifUri = '';
-    this.scheduleDraftSave();
-  }
-
-  private async selectVideo(): Promise<void> {
-    if (this.composeOptions.pollChoices.length > 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_poll_conflict')) }); return;
-    }
-    try {
-      const options: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
-      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.VIDEO_TYPE;
-      options.maxSelectNumber = 1;
-      const videoPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker();
-      const result: photoAccessHelper.PhotoSelectResult = await videoPicker.select(options);
-      if (result.photoUris.length > 0) {
-        this.videoUri = result.photoUris[0];
-        this.imageUris = [];
-        this.gifUri = '';
-        this.scheduleDraftSave();
-      }
-    } catch (error) {
-    }
-  }
-
-  private removeVideo(): void {
-    this.videoUri = '';
+  private updateAlt(): void {
+    this.attachments = this.attachments.map((item: ComposerMedia): ComposerMedia =>
+      item.uri === this.altEditorUri ? new ComposerMedia(item.uri, item.type, this.altEditorText.trim()) : item);
+    this.altEditorUri = '';
     this.scheduleDraftSave();
   }
 
@@ -1351,13 +1307,7 @@ export struct ReplyComposerPage {
   // security-reviewed capture surface without requiring the app to hold the
   // CAMERA permission. The captured file comes back as a media URI.
   private async takePhoto(): Promise<void> {
-    if (this.composeOptions.pollChoices.length > 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_poll_conflict')) }); return;
-    }
-    if (this.remainingImageSlots() <= 0) {
-      promptAction.showToast({ message: this.text($r('app.string.compose_media_limit')), duration: 1800 });
-      return;
-    }
+    if (!this.canAddMedia()) { return; }
     try {
       const context: common.UIAbilityContext =
         this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -1377,19 +1327,7 @@ export struct ReplyComposerPage {
       if (result.resultCode !== 0 || result.resultUri.length === 0) {
         return;
       }
-      const next: string[] = [];
-      const gifCount: number = this.gifUri.length > 0 ? 1 : 0;
-      for (let i: number = 0; i < this.imageUris.length &&
-        next.length + gifCount < COMPOSER_MAX_MEDIA_ITEMS; i++) {
-        next.push(this.imageUris[i]);
-      }
-      if (result.resultUri.length > 0 && next.length + gifCount < COMPOSER_MAX_MEDIA_ITEMS &&
-        next.indexOf(result.resultUri) < 0) {
-        next.push(result.resultUri);
-      }
-      this.imageUris = next;
-      this.videoUri = '';
-      this.scheduleDraftSave();
+      this.addAttachment(result.resultUri, COMPOSER_MEDIA_IMAGE);
     } catch (error) {
       hilog.error(DOMAIN, TAG, 'cameraPicker failed: %{public}s', JSON.stringify(error));
       promptAction.showToast({
@@ -1402,7 +1340,7 @@ export struct ReplyComposerPage {
   // This is deliberately a local recording path.  ServiceCollaborationKit
   // exposes TAKE_PHOTO for a remote camera, but no public TAKE_VIDEO service.
   private async takeVideo(): Promise<void> {
-    if (this.publishing || this.composeOptions.pollChoices.length > 0) { return; }
+    if (!this.canAddMedia()) { return; }
     try {
       const context: common.UIAbilityContext =
         this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -1422,10 +1360,7 @@ export struct ReplyComposerPage {
       if (result.resultCode !== 0 || result.resultUri.length === 0) {
         return;
       }
-      this.videoUri = result.resultUri;
-      this.imageUris = [];
-      this.gifUri = '';
-      this.scheduleDraftSave();
+      this.addAttachment(result.resultUri, COMPOSER_MEDIA_VIDEO);
     } catch (error) {
       hilog.error(DOMAIN, TAG, 'camera video picker failed: %{public}s', JSON.stringify(error));
       promptAction.showToast({
@@ -1499,27 +1434,6 @@ export struct ReplyComposerPage {
     }
   }
 
-  @Builder
-  private VideoGalleryMenu(): void {
-    Menu() {
-      MenuItem({ content: $r('app.string.compose_gallery_local_video') })
-        .onClick((): void => {
-          this.selectVideo();
-        });
-      if (deviceInfo.apiAvailable('6.1.0(23)')) {
-        createCollaborationServiceMenuItems(
-          [CollaborationServiceFilter.VIDEO_PICKER],
-          1,
-          [
-            CollaborationDeviceFilterType.PHONE,
-            CollaborationDeviceFilterType.TABLET,
-            CollaborationDeviceFilterType.PC_2IN1
-          ]
-        );
-      }
-    }
-  }
-
   private handleRemoteMedia(stateCode: number, bufferType: string, buffer: ArrayBuffer): void {
     if (this.publishing || this.composeOptions.pollChoices.length > 0 || stateCode !== 0 || buffer.byteLength === 0) {
       return;
@@ -1528,24 +1442,7 @@ export struct ReplyComposerPage {
     if (uri.length === 0) {
       return;
     }
-    if (bufferType === 'general.video') {
-      this.videoUri = uri;
-      this.imageUris = [];
-      this.gifUri = '';
-    } else {
-      const next: string[] = [];
-      const gifCount: number = this.gifUri.length > 0 ? 1 : 0;
-      for (let i: number = 0; i < this.imageUris.length &&
-        next.length + gifCount < COMPOSER_MAX_MEDIA_ITEMS; i++) {
-        next.push(this.imageUris[i]);
-      }
-      if (next.length + gifCount < COMPOSER_MAX_MEDIA_ITEMS && next.indexOf(uri) < 0) {
-        next.push(uri);
-      }
-      this.imageUris = next;
-      this.videoUri = '';
-    }
-    this.scheduleDraftSave();
+    this.addAttachment(uri, bufferType === 'general.video' ? COMPOSER_MEDIA_VIDEO : COMPOSER_MEDIA_IMAGE);
   }
 
   private storeRemoteMedia(buffer: ArrayBuffer, bufferType: string): string {
@@ -1620,7 +1517,7 @@ export struct ReplyComposerPage {
         this.publishError = this.text($r('app.string.compose_schedule_invalid')); return;
       }
       if (this.composeOptions.pollChoices.length > 0 &&
-        (this.imageUris.length > 0 || this.gifUri.length > 0 || this.videoUri.length > 0)) {
+        (this.attachments.length > 0)) {
         this.publishError = this.text($r('app.string.compose_poll_conflict')); return;
       }
       if (this.communityId.length > 0 && !usePrivate) {
@@ -1632,7 +1529,7 @@ export struct ReplyComposerPage {
         return;
       }
       const hasMedia: boolean =
-        this.imageUris.length > 0 || this.gifUri.length > 0 || this.videoUri.length > 0;
+        this.attachments.length > 0;
       const canUseOfficialApi: boolean = authStore.isSignedIn() &&
         authStore.getUserId().length > 0 && !hasMedia && !this.isLongPost() &&
         !this.undoPublishEnabled && this.communityId.length === 0 && !this.composeOptions.needsWebSession();
@@ -1682,44 +1579,35 @@ export struct ReplyComposerPage {
   // Returns OK, FALLBACK (for the 226 challenge) or ERROR with publishError set.
   private async publishViaPrivate(context: common.UIAbilityContext, content: string, options: ComposerOptions): Promise<number> {
     const generation: number = xPrivateClient.sessionGeneration();
-    const mediaUris: string[] = [];
-    for (let i: number = 0; i < this.imageUris.length; i++) {
-      mediaUris.push(this.imageUris[i]);
-    }
-    if (this.gifUri.length > 0) {
-      mediaUris.push(this.gifUri);
-    }
+    const attachments: ComposerMedia[] = this.attachments.slice();
     const mediaIds: string[] = [];
-    if (this.videoUri.length > 0) {
-      this.videoUploadPercent = 0;
-      const upload: XPrivateResult = await xPrivateClient.uploadVideo(this.videoUri,
-        (percent: number): void => {
-          this.videoUploadPercent = percent;
-        });
+    for (let index: number = 0; index < attachments.length; index++) {
+      const item: ComposerMedia = attachments[index];
+      const video: boolean = item.type === COMPOSER_MEDIA_VIDEO;
+      if (video) { this.videoUploadPercent = 0; }
+      const upload: XPrivateResult = video ? await xPrivateClient.uploadVideo(item.uri,
+        (percent: number): void => { this.videoUploadPercent = percent; }) : await xPrivateClient.uploadMedia(item.uri);
       this.videoUploadPercent = -1;
+      if (generation !== xPrivateClient.sessionGeneration()) {
+        this.publishError = this.text($r('app.string.compose_account_changed')); return PRIVATE_PUBLISH_ERROR;
+      }
       const mediaId: string = upload.ok ? XPrivateClient.mediaIdFrom(upload.body) : '';
       if (mediaId.length === 0) {
-        this.publishError = this.videoUploadError(upload);
+        this.publishError = video ? this.videoUploadError(upload) :
+          this.text($r('app.string.post_media_failed')) + (upload.status > 0 ? ' · HTTP ' + upload.status : '');
         return PRIVATE_PUBLISH_ERROR;
       }
-      mediaIds.push(mediaId);
-    } else {
-      for (let i: number = 0; i < mediaUris.length; i++) {
-        const upload: XPrivateResult = await xPrivateClient.uploadMedia(mediaUris[i], '');
+      if (item.alt.length > 0) {
+        const result: XPrivateResult = await xPrivateClient.setPostMediaDescription(mediaId, item.alt);
         if (generation !== xPrivateClient.sessionGeneration()) {
           this.publishError = this.text($r('app.string.compose_account_changed')); return PRIVATE_PUBLISH_ERROR;
         }
-        const mediaId: string = upload.ok ? XPrivateClient.mediaIdFrom(upload.body) : '';
-        if (mediaId.length === 0) {
-          const status: string = upload.status > 0 ? ' · HTTP ' + upload.status.toString() : '';
-          this.publishError = this.text($r('app.string.post_media_failed')) + status;
+        if (!result.ok) {
+          this.publishError = this.text($r('app.string.compose_alt_upload_failed')) + ' (' + (index + 1) + ')';
           return PRIVATE_PUBLISH_ERROR;
         }
-        mediaIds.push(mediaId);
       }
-    }
-    if (generation !== xPrivateClient.sessionGeneration()) {
-      this.publishError = this.text($r('app.string.compose_account_changed')); return PRIVATE_PUBLISH_ERROR;
+      mediaIds.push(mediaId);
     }
     if (options.scheduledAt > 0) {
       const schedule: XPrivateResult = await xPrivateClient.createScheduledTweet(content, this.replyToId,
@@ -1957,23 +1845,23 @@ export struct ReplyComposerPage {
   @Builder
   private ImageGrid(): void {
     Grid() {
-      ForEach(this.imageGridItems(), (item: ComposerMediaItem): void => {
+      ForEach(this.attachments, (item: ComposerMedia): void => {
         GridItem() {
-          this.Attachment(item.uri, item.isGif, (): void => {
-            if (item.isGif) {
-              this.removeGif();
-            } else {
-              this.removeImage(item.uri);
-            }
-          }, (): void => {
-            if (item.isGif) {
-              this.openGifPreview(item.uri);
-            } else {
-              this.openImageEditor(item.uri);
-            }
-          }, item.isGif ? ImageFit.Contain : ImageFit.Cover);
+          if (item.type === COMPOSER_MEDIA_VIDEO) {
+            this.VideoAttachment(item.uri)
+          } else {
+            Stack({ alignContent: Alignment.BottomStart }) {
+              this.Attachment(item.uri, item.type === COMPOSER_MEDIA_GIF,
+                (): void => this.removeAttachment(item.uri), (): void => this.openAttachmentPreview(item),
+                item.type === COMPOSER_MEDIA_GIF ? ImageFit.Contain : ImageFit.Cover)
+              Button('ALT').constraintSize({ minWidth: 40, minHeight: 40 }).margin(6)
+                .accessibilityText($r('app.string.compose_media_alt'))
+                .enabled(!this.publishing)
+                .onClick((): void => { this.altEditorText = item.alt; this.altEditorUri = item.uri; })
+            }.width('100%').height('100%')
+          }
         }
-      }, (item: ComposerMediaItem): string => item.uri)
+      }, (item: ComposerMedia): string => item.uri + ':' + item.alt)
     }
     .columnsTemplate(this.imageGridColumnsTemplate())
     .rowsTemplate(this.imageGridRowsTemplate())
@@ -1986,13 +1874,32 @@ export struct ReplyComposerPage {
     });
   }
 
-  private openGifPreview(uri: string): void {
-    const param: PhotoViewerRouteParam = { urls: [uri], index: 0, alt: '', transitionPrefix: '' };
+  private openAttachmentPreview(item: ComposerMedia): void {
+    if (item.type === COMPOSER_MEDIA_IMAGE) { this.openImageEditor(item.uri); return; }
+    const param: PhotoViewerRouteParam = { urls: [item.uri], index: 0, alt: item.alt, transitionPrefix: '' };
     this.pageStack.pushPath({ name: 'PhotoViewer', param: param });
   }
 
-  private openImageEditor(uri: string): void {
-    const param: ImageEditRouteParam = { imageUri: uri };
+  private editableImages(): ComposerMedia[] {
+    return this.attachments.filter((item: ComposerMedia): boolean => item.type === COMPOSER_MEDIA_IMAGE);
+  }
+
+  private async makeCollage(layout: number): Promise<void> {
+    if (!this.canAddMedia() || this.preparingCollage) { return; }
+    const selected: string[] = this.editableImages().map((item: ComposerMedia): string => item.uri);
+    if (selected.length < 2) { return; }
+    this.preparingCollage = true;
+    try {
+      const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+      const uri: string = await createPhotoCollage(context, selected, layout);
+      this.addAttachment(uri, COMPOSER_MEDIA_IMAGE);
+    } catch (error) {
+      promptAction.showToast({ message: this.text($r('app.string.image_edit_save_failed')) });
+    } finally { this.preparingCollage = false; }
+  }
+
+  private openImageEditor(uri: string, following: string[] = []): void {
+    const param: ImageEditRouteParam = { imageUri: uri, maxOutputCount: COMPOSER_MAX_MEDIA_ITEMS - this.attachments.length + 1 };
     this.pageStack.pushPath({
       name: 'ImageEdit',
       param: param,
@@ -2001,52 +1908,65 @@ export struct ReplyComposerPage {
         if (result === undefined || result === null || result.imageUri.length === 0) {
           return;
         }
-        const next: string[] = [];
-        for (let index: number = 0; index < this.imageUris.length; index++) {
-          const current: string = this.imageUris[index];
-          next.push(current === uri ? result.imageUri : current);
-        }
-        this.imageUris = next;
+        const original: ComposerMedia | undefined = this.attachments.find((item: ComposerMedia): boolean => item.uri === uri);
+        const index: number = this.attachments.findIndex((item: ComposerMedia): boolean => item.uri === uri);
+        if (original === undefined || index < 0) { return; }
+        const replacement: string[] = result.imageUris ?? [result.imageUri];
+        const edited: ComposerMedia[] = replacement.map((imageUri: string): ComposerMedia =>
+          new ComposerMedia(imageUri, original.type, original.alt));
+        this.attachments = [...this.attachments.slice(0, index), ...edited, ...this.attachments.slice(index + 1)];
         this.scheduleDraftSave();
+        if (following.length > 0 && this.composerPageActive) {
+          setTimeout((): void => this.openImageEditor(following[0], following.slice(1)), 200);
+        }
       }
     });
   }
 
   @Builder
-  private VideoAttachment(onRemove: () => void): void {
-    Stack({ alignContent: Alignment.Center }) {
-      Column()
-        .width(112)
-        .height(112)
-        .backgroundColor($r('app.color.bg_field'))
-        .borderRadius(12)
-      SymbolGlyph($r('sys.symbol.video_fill'))
-        .fontSize(34)
-        .fontColor([this.accentColor])
-        .foregroundFilter(ComponentHdrHighlight.filter(this.getUIContext(), this.componentHdrEnabled && !this.publishing, this.componentHdrRatio));
-      Text($r('app.string.compose_video_label')).fontFamily(this.appFontFamily)
-        .fontSize($r('sys.float.Caption_L'))
-        .maxFontScale(1)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.text_on_accent'))
-        .backgroundColor(this.accentColor)
-        .borderRadius(6)
-        .padding({ left: 6, right: 6, top: 3, bottom: 3 })
-        .position({ x: 6, y: 6 });
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.xmark'))
-          .fontSize(13)
-          .fontColor([$r('app.color.text_on_inverse')]);
+  private VideoAttachment(uri: string): void {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      if (this.videoPreviewUri === uri) {
+        Video({ src: uri }).width('100%').height('100%').controls(true).autoPlay(true)
+      } else {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
+          Column({ space: 8 }) {
+            SymbolGlyph($r('sys.symbol.play_fill')).fontSize(24).fontColor([this.accentColor])
+            Text($r('app.string.compose_video_label')).fontFamily(this.appFontFamily)
+          }
+        }.width('100%').height('100%').backgroundColor($r('app.color.bg_field'))
+          .onClick((): void => { this.videoPreviewUri = uri; })
       }
-      .width(26)
-      .height(26)
-      .backgroundColor($r('app.color.text_primary'))
-      .position({ x: 80, y: 6 })
-      .enabled(!this.publishing)
-      .onClick(onRemove);
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.xmark')).fontSize(14).fontColor([$r('app.color.text_on_inverse')])
+      }.width(36).height(36).margin(6).backgroundColor($r('app.color.text_primary'))
+        .enabled(!this.publishing).accessibilityText($r('app.string.compose_remove_media'))
+        .onClick((): void => this.removeAttachment(uri))
+    }.width('100%').height('100%').borderRadius(12).clip(true)
+  }
+
+  @Builder
+  private CollageMenu(): void {
+    Menu() {
+      MenuItem({ content: $r('app.string.image_edit_collage_horizontal') }).onClick((): void => { void this.makeCollage(0); })
+      MenuItem({ content: $r('app.string.image_edit_collage_vertical') }).onClick((): void => { void this.makeCollage(1); })
+      MenuItem({ content: $r('app.string.image_edit_collage_grid') }).onClick((): void => { void this.makeCollage(2); })
     }
-    .width(112)
-    .height(112)
+  }
+
+  @Builder
+  private AltEditor(): void {
+    Column({ space: 12 }) {
+      Text($r('app.string.compose_media_alt')).fontFamily(this.appFontFamily)
+        .fontSize($r('sys.float.Subtitle_L')).width('100%')
+      TextArea({ text: this.altEditorText, placeholder: $r('app.string.compose_media_alt_hint') })
+        .maxLength(COMPOSER_MAX_ALT_CHARACTERS).height(88)
+        .onChange((value: string): void => { this.altEditorText = value; })
+      Row({ space: 12 }) {
+        Button($r('app.string.compose_cancel')).onClick((): void => { this.altEditorUri = ''; })
+        Button($r('app.string.compose_alt_apply')).onClick((): void => this.updateAlt())
+      }.width('100%').justifyContent(FlexAlign.End)
+    }.width('100%')
   }
 
   @Builder
@@ -2114,22 +2034,6 @@ export struct ReplyComposerPage {
   }
 
   @Builder
-  private VideoGalleryButton(): void {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.video'))
-        .fontSize(25)
-        .fontColor([this.accentColor])
-        .foregroundFilter(ComponentHdrHighlight.filter(this.getUIContext(), this.componentHdrEnabled && !this.publishing, this.componentHdrRatio));
-    }
-    .width(48)
-    .height(48)
-    .backgroundColor(Color.Transparent)
-    .enabled(!this.publishing && this.composeOptions.pollChoices.length === 0)
-    .accessibilityText(this.text($r('app.string.compose_add_video')))
-    .bindMenu(this.VideoGalleryMenu)
-  }
-
-  @Builder
   private ReplyTargetPost(): void {
     if (this.parentTweet !== null) {
       Column() {
@@ -2158,7 +2062,6 @@ export struct ReplyComposerPage {
   private ExtraComposeTools(): void {
       Row({ space: 4 }) {
         this.CameraButton();
-        this.VideoGalleryButton();
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_counterclockwise'))
             .fontSize(22)
@@ -2196,7 +2099,7 @@ export struct ReplyComposerPage {
   private FixedPickerBar(): void {
     Column() {
       ComposerTools({ options: $composeOptions, disabled: this.publishing, accentColor: this.accentColor,
-        hasMedia: this.imageUris.length > 0 || this.gifUri.length > 0 || this.videoUri.length > 0,
+        hasMedia: this.attachments.length > 0,
         community: this.communityId.length > 0, isReply: this.isReply(),
         leadingActions: (): void => this.PrimaryComposeTools(), trailingActions: (): void => this.ExtraComposeTools(),
         onChange: (): void => {
@@ -2311,22 +2214,32 @@ export struct ReplyComposerPage {
                     }
                     if (this.imageGridItemCount() > 0) {
                       this.ImageGrid();
-                    } else if (this.videoUri.length > 0) {
-                      this.VideoAttachment((): void => {
-                        this.removeVideo();
-                      });
                     }
+                    if (this.editableImages().length > 1) {
+                      Row({ space: 8 }) {
+                        Button($r('app.string.image_edit_sequence')).enabled(!this.publishing).onClick((): void => {
+                          const images: ComposerMedia[] = this.editableImages();
+                          this.openImageEditor(images[0].uri, images.slice(1).map((item: ComposerMedia): string => item.uri));
+                        })
+                        Button($r('app.string.image_edit_collage')).enabled(!this.publishing && !this.preparingCollage &&
+                          this.attachments.length < COMPOSER_MAX_MEDIA_ITEMS).bindMenu(this.CollageMenu())
+                      }.width('100%')
+                    }
+                    if (this.altEditorUri.length > 0) { this.AltEditor(); }
                     Row() {
                       Blank();
                       Text(this.characterCountLabel()).fontFamily(this.appFontFamily)
                         .fontSize($r('sys.float.Body_M'))
-                        .fontColor(this.draft.length > this.maxCharacters() ?
+                        .fontColor(this.characterCount() > this.maxCharacters() ?
                           $r('app.color.danger') : $r('app.color.text_secondary'))
                         .accessibilityText(this.text($r('app.string.compose_character_count')) +
                           this.characterCountLabel());
                     }
                     .width('100%');
-                    if (this.isLongPost()) {
+                    if (this.characterCount() > this.maxCharacters()) {
+                      Text($r('app.string.compose_character_limit_exceeded')).fontFamily(this.appFontFamily)
+                        .fontSize($r('sys.float.Body_S')).fontColor($r('app.color.danger')).width('100%');
+                    } else if (this.isLongPost()) {
                       Text($r('app.string.compose_long_post_active')).fontFamily(this.appFontFamily)
                         .fontSize($r('sys.float.Body_S'))
                         .fontColor($r('app.color.text_accent'))

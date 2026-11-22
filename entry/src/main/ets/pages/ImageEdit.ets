@@ -1,3 +1,5 @@
+import { writeComposerPhoto } from '../services/ComposerPhotoEditing';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { STORAGE_KEY_PAGE_TRANSITION_MODE, DEFAULT_PAGE_TRANSITION_MODE } from '../services/PageTransitionSettingsStore';
 import { pageSystemTransition, PageTransitionMotion } from '../utils/PageTransition';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
@@ -68,12 +70,26 @@ interface ImageEditFilterPreset {
   saturation: number;
 }
 
+interface CropFraction {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface ImageEditHistoryEntry {
   drawingAction: boolean;
   ratioIndex: number;
+  freeCrop: CropFraction | null;
+  sticker: string;
+  stickerX: number;
+  stickerY: number;
   rotationQuarterTurns: number;
   flippedHorizontally: boolean;
   filterIndex: number;
+  brightness: number;
+  contrast: number;
+  saturation: number;
   overlayText: string;
   overlayTextColor: string;
   overlayTextOffsetX: number;
@@ -96,10 +112,12 @@ const IMAGE_EDIT_COLORS: string[] = ['#FFFFFF', '#101828', '#FFE17A', '#FF5C5C',
 
 export interface ImageEditRouteParam {
   imageUri: string;
+  maxOutputCount?: number;
 }
 
 export interface ImageEditResult {
   imageUri: string;
+  imageUris?: string[];
 }
 
 @Builder
@@ -127,6 +145,17 @@ export struct ImageEditPage {
   @State private canUndo: boolean = false;
   @State private canRedo: boolean = false;
   @State private ratioIndex: number = 0;
+  @State private freeCropping: boolean = false;
+  @State private freeCrop: CropFraction | null = null;
+  @State private cropSelection: CropFraction | null = null;
+  @State private sticker: string = '';
+  @State private stickerX: number = 0;
+  @State private stickerY: number = 0;
+  private stickerStartX: number = 0;
+  private stickerStartY: number = 0;
+  private cropStartX: number = 0;
+  private cropStartY: number = 0;
+  private maxOutputCount: number = 1;
   @State private rotationQuarterTurns: number = 0;
   @State private flippedHorizontally: boolean = false;
   @State private activeTool: number = TOOL_CROP;
@@ -134,6 +163,10 @@ export struct ImageEditPage {
   private toolTabsModifier: AttributeModifier<HdsTabsAttribute> =
     new ToolTabsMaterialModifier(0, '#007DFF');
   @State private filterIndex: number = FILTER_ORIGINAL;
+  @State private brightnessAmount: number = 100;
+  @State private contrastAmount: number = 100;
+  @State private saturationAmount: number = 100;
+  @State private drawMode: number = 0;
   @State private overlayText: string = '';
   @State private overlayTextColor: string = '#FFFFFF';
   @State private overlayTextOffsetX: number = 0;
@@ -176,6 +209,7 @@ export struct ImageEditPage {
 
   private readRoute(param: ImageEditRouteParam): void {
     this.imageUri = param.imageUri;
+    this.maxOutputCount = Math.max(1, Math.min(3, param.maxOutputCount ?? 1));
     void this.loadImage();
   }
 
@@ -211,6 +245,8 @@ export struct ImageEditPage {
     if (this.ratioIndex === 3) {
       return 16 / 9;
     }
+    if (this.ratioIndex === 4) { return 3 / 4; }
+    if (this.ratioIndex === 5) { return 9 / 16; }
     return 0;
   }
 
@@ -233,7 +269,15 @@ export struct ImageEditPage {
         await preview.flip(true, false);
       }
       const ratio: number = this.aspectRatioForSelection();
-      if (ratio > 0) {
+      const crop: CropFraction | null = this.freeCrop;
+      if (crop !== null) {
+        const size: image.Size = preview.getImageInfoSync().size;
+        const x: number = Math.floor(crop.x * size.width);
+        const y: number = Math.floor(crop.y * size.height);
+        await preview.crop({ x: x, y: y,
+          size: { width: Math.max(1, Math.min(size.width - x, Math.floor(crop.width * size.width))),
+            height: Math.max(1, Math.min(size.height - y, Math.floor(crop.height * size.height))) } });
+      } else if (ratio > 0) {
         const size: image.Size = preview.getImageInfoSync().size;
         let cropWidth: number = size.width;
         let cropHeight: number = size.height;
@@ -329,10 +373,12 @@ export struct ImageEditPage {
   private historyEntry(drawingAction: boolean): ImageEditHistoryEntry {
     return {
       drawingAction: drawingAction,
-      ratioIndex: this.ratioIndex,
+      ratioIndex: this.ratioIndex, freeCrop: this.freeCrop,
+      sticker: this.sticker, stickerX: this.stickerX, stickerY: this.stickerY,
       rotationQuarterTurns: this.rotationQuarterTurns,
       flippedHorizontally: this.flippedHorizontally,
       filterIndex: this.filterIndex,
+      brightness: this.brightnessAmount, contrast: this.contrastAmount, saturation: this.saturationAmount,
       overlayText: this.overlayText,
       overlayTextColor: this.overlayTextColor,
       overlayTextOffsetX: this.overlayTextOffsetX,
@@ -356,13 +402,20 @@ export struct ImageEditPage {
   }
 
   private restoreHistoryEntry(entry: ImageEditHistoryEntry): void {
-    const cropChanged: boolean = this.ratioIndex !== entry.ratioIndex ||
+    const cropChanged: boolean = this.freeCrop !== entry.freeCrop || this.ratioIndex !== entry.ratioIndex ||
       this.rotationQuarterTurns !== entry.rotationQuarterTurns ||
       this.flippedHorizontally !== entry.flippedHorizontally;
     this.ratioIndex = entry.ratioIndex;
+    this.freeCrop = entry.freeCrop;
+    this.sticker = entry.sticker;
+    this.stickerX = entry.stickerX;
+    this.stickerY = entry.stickerY;
     this.rotationQuarterTurns = entry.rotationQuarterTurns;
     this.flippedHorizontally = entry.flippedHorizontally;
     this.filterIndex = entry.filterIndex;
+    this.brightnessAmount = entry.brightness;
+    this.contrastAmount = entry.contrast;
+    this.saturationAmount = entry.saturation;
     this.overlayText = entry.overlayText;
     this.overlayTextColor = entry.overlayTextColor;
     this.overlayTextOffsetX = entry.overlayTextOffsetX;
@@ -486,11 +539,14 @@ export struct ImageEditPage {
   }
 
   private selectRatio(index: number): void {
-    if (this.processing || this.ratioIndex === index) {
+    if (this.processing || this.ratioIndex === index && this.freeCrop === null) {
       return;
     }
     this.recordEditHistory(false);
     this.ratioIndex = index;
+    this.freeCrop = null;
+    this.freeCropping = false;
+    this.cropSelection = null;
     void this.refreshPreview();
   }
 
@@ -547,7 +603,8 @@ export struct ImageEditPage {
 
   private hasEdits(): boolean {
     return this.rotationQuarterTurns !== 0 || this.flippedHorizontally || this.ratioIndex !== 0 ||
-      this.filterIndex !== FILTER_ORIGINAL || this.overlayText.trim().length > 0 ||
+      this.filterIndex !== FILTER_ORIGINAL || this.brightnessAmount !== 100 || this.contrastAmount !== 100 ||
+      this.saturationAmount !== 100 || this.freeCrop !== null || this.sticker.length > 0 || this.overlayText.trim().length > 0 ||
       this.drawingStrokeCount > 0;
   }
 
@@ -606,6 +663,84 @@ export struct ImageEditPage {
     return captured;
   }
 
+  private async pickSticker(): Promise<void> {
+    if (this.processing) { return; }
+    try {
+      const options: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
+      options.maxSelectNumber = 1;
+      const result: photoAccessHelper.PhotoSelectResult = await new photoAccessHelper.PhotoViewPicker().select(options);
+      if (result.photoUris.length === 0 || this.processing) { return; }
+      this.recordEditHistory(false);
+      this.sticker = result.photoUris[0];
+      this.stickerX = 0;
+      this.stickerY = 0;
+    } catch (error) { /* Picker cancellation leaves the previous sticker in place. */ }
+  }
+
+  private startFreeCrop(): void {
+    if (this.processing) { return; }
+    this.cropSelection = null;
+    this.freeCropping = !this.freeCropping;
+    if (this.freeCropping && this.ratioIndex > 0) {
+      this.recordEditHistory(false);
+      this.ratioIndex = 0;
+      this.freeCrop = null;
+      void this.refreshPreview();
+    }
+  }
+
+  private applyFreeCrop(): void {
+    const selection: CropFraction | null = this.cropSelection;
+    if (selection === null || selection.width < 0.04 || selection.height < 0.04 || this.processing) { return; }
+    this.recordEditHistory(false);
+    const previous: CropFraction | null = this.freeCrop;
+    this.freeCrop = previous === null ? selection : {
+      x: previous.x + selection.x * previous.width,
+      y: previous.y + selection.y * previous.height,
+      width: selection.width * previous.width,
+      height: selection.height * previous.height
+    };
+    this.freeCropping = false;
+    this.cropSelection = null;
+    void this.refreshPreview();
+  }
+
+  private async splitImage(): Promise<void> {
+    if (this.processing || this.loading || this.previewPixelMap === null || this.maxOutputCount < 2) { return; }
+    this.overlayTextSelected = false;
+    this.freeCropping = false;
+    this.processing = true;
+    let captured: image.PixelMap | undefined;
+    const saved: string[] = [];
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    try {
+      captured = await this.captureEditedPreview();
+      const size: image.Size = captured.getImageInfoSync().size;
+      const count: number = Math.min(3, this.maxOutputCount, size.width);
+      if (count < 2) { throw new Error('Image too small'); }
+      const rendering: OffscreenCanvasRenderingContext2D =
+        new OffscreenCanvas(Math.ceil(size.width / count), size.height).getContext('2d');
+      for (let index: number = 0; index < count; index++) {
+        const left: number = Math.floor(index * size.width / count);
+        const width: number = Math.floor((index + 1) * size.width / count) - left;
+        rendering.drawImage(captured, left, 0, width, size.height, 0, 0, width, size.height);
+        const strip: image.PixelMap = rendering.getPixelMap(0, 0, width, size.height);
+        try { saved.push(await writeComposerPhoto(context, strip)); }
+        finally { await strip.release(); }
+      }
+      const result: ImageEditResult = { imageUri: saved[0], imageUris: saved };
+      this.pageStack.pop(result);
+    } catch (error) {
+      saved.forEach((uri: string): void => { try { fileIo.unlinkSync(new fileUri.FileUri(uri).path); } catch (cleanupError) {} });
+      this.hasError = true;
+      this.errorMessage = $r('app.string.image_edit_save_failed');
+    } finally {
+      if (captured !== undefined) { try { await captured.release(); } catch (error) {} }
+      this.processing = false;
+    }
+  }
+
   private async applyEdits(): Promise<void> {
     if (this.processing || this.loading || this.previewPixelMap === null) {
       return;
@@ -616,6 +751,8 @@ export struct ImageEditPage {
       return;
     }
     this.overlayTextSelected = false;
+    this.freeCropping = false;
+    this.cropSelection = null;
     this.processing = true;
     this.hasError = false;
     let outputFile: fileIo.File | undefined = undefined;
@@ -732,11 +869,10 @@ export struct ImageEditPage {
 
   private toolPanelHeight(): number {
     if (this.activeTool === TOOL_TEXT) {
-      return 210;
+      return 250;
     }
-    if (this.activeTool === TOOL_DRAW) {
-      return 144;
-    }
+    if (this.activeTool === TOOL_DRAW) { return 144; }
+    if (this.activeTool === TOOL_FILTER || this.activeTool === TOOL_CROP) { return 214; }
     return 164;
   }
 
@@ -828,12 +964,12 @@ export struct ImageEditPage {
               .height('100%')
               .objectFit(ImageFit.Contain)
               .colorBlend(this.currentFilter().colorBlend)
-              .brightness(this.currentFilter().brightness)
-              .contrast(this.currentFilter().contrast)
-              .saturate(this.currentFilter().saturation);
+              .brightness(this.currentFilter().brightness * this.brightnessAmount / 100)
+              .contrast(this.currentFilter().contrast * this.contrastAmount / 100)
+              .saturate(this.currentFilter().saturation * this.saturationAmount / 100);
             if (this.drawingCanvasMounted) {
               ImageEditDrawingCanvas({
-                active: this.activeTool === TOOL_DRAW,
+                active: this.activeTool === TOOL_DRAW, mode: this.drawMode, source: this.previewPixelMap,
                 penColor: this.penColor,
                 undoSignal: this.undoSignal,
                 redoSignal: this.redoSignal,
@@ -843,6 +979,20 @@ export struct ImageEditPage {
               })
                 .width('100%')
                 .height('100%');
+            }
+            if (this.sticker.length > 0) {
+              Image(this.sticker).width('28%').height('28%').objectFit(ImageFit.Contain)
+                .translate({ x: this.stickerX * this.previewWidth, y: this.stickerY * this.previewHeight })
+                .gesture(PanGesture({ fingers: 1, direction: PanDirection.All })
+                  .onActionStart((): void => {
+                    this.recordEditHistory(false);
+                    this.stickerStartX = this.stickerX;
+                    this.stickerStartY = this.stickerY;
+                  })
+                  .onActionUpdate((event: GestureEvent): void => {
+                    this.stickerX = Math.max(-0.36, Math.min(0.36, this.stickerStartX + event.offsetX / this.previewWidth));
+                    this.stickerY = Math.max(-0.36, Math.min(0.36, this.stickerStartY + event.offsetY / this.previewHeight));
+                  }))
             }
             if (this.overlayText.trim().length > 0) {
               Column({ space: 8 }) {
@@ -904,6 +1054,28 @@ export struct ImageEditPage {
           .width(this.previewWidth)
           .height(this.previewHeight)
           .id(IMAGE_EDIT_PREVIEW_ID);
+          if (this.freeCropping) {
+            Stack({ alignContent: Alignment.TopStart }) {
+              if (this.cropSelection !== null) {
+                Rect().width(this.cropSelection.width * this.previewWidth)
+                  .height(this.cropSelection.height * this.previewHeight).fill('#2050A0FF')
+                  .stroke(Color.White).strokeWidth(2)
+                  .position({ x: this.cropSelection.x * this.previewWidth, y: this.cropSelection.y * this.previewHeight })
+              }
+            }.width(this.previewWidth).height(this.previewHeight).hitTestBehavior(HitTestMode.Block)
+              .gesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 2 })
+                .onActionStart((event: GestureEvent): void => {
+                  if (event.fingerList.length === 0) { return; }
+                  this.cropStartX = Math.max(0, Math.min(1, event.fingerList[0].localX / this.previewWidth));
+                  this.cropStartY = Math.max(0, Math.min(1, event.fingerList[0].localY / this.previewHeight));
+                })
+                .onActionUpdate((event: GestureEvent): void => {
+                  const endX: number = Math.max(0, Math.min(1, this.cropStartX + event.offsetX / this.previewWidth));
+                  const endY: number = Math.max(0, Math.min(1, this.cropStartY + event.offsetY / this.previewHeight));
+                  this.cropSelection = { x: Math.min(this.cropStartX, endX), y: Math.min(this.cropStartY, endY),
+                    width: Math.abs(endX - this.cropStartX), height: Math.abs(endY - this.cropStartY) };
+                }))
+          }
         } else if (this.loading || this.processing) {
           LoadingProgress()
             .width(42)
@@ -975,9 +1147,23 @@ export struct ImageEditPage {
             this.RatioButton(1, $r('app.string.image_edit_square'));
             this.RatioButton(2, $r('app.string.image_edit_ratio_4_3'));
             this.RatioButton(3, $r('app.string.image_edit_ratio_16_9'));
+            this.RatioButton(4, $r('app.string.image_edit_ratio_3_4'));
+            this.RatioButton(5, $r('app.string.image_edit_ratio_9_16'));
           }
           .width('100%');
 
+          Row({ space: 6 }) {
+            Button($r('app.string.image_edit_free_crop')).layoutWeight(1)
+              .onClick((): void => this.startFreeCrop())
+            if (this.freeCropping) {
+              Button($r('app.string.image_edit_apply_crop')).layoutWeight(1)
+                .enabled(this.cropSelection !== null && !this.processing).onClick((): void => this.applyFreeCrop())
+            }
+            if (this.maxOutputCount > 1) {
+              Button($r('app.string.image_edit_split')).layoutWeight(1).enabled(!this.processing)
+                .onClick((): void => { void this.splitImage(); })
+            }
+          }.width('100%')
           Row({ space: 8 }) {
             Button($r('app.string.image_edit_rotate_left'), { type: ButtonType.Capsule, stateEffect: true })
               .layoutWeight(1)
@@ -1014,6 +1200,7 @@ export struct ImageEditPage {
         }
         .width('100%');
       } else if (this.activeTool === TOOL_FILTER) {
+        Column({ space: 2 }) {
         Scroll() {
           Row({ space: 7 }) {
             ForEach(IMAGE_EDIT_FILTERS, (preset: ImageEditFilterPreset, index: number) => {
@@ -1025,8 +1212,23 @@ export struct ImageEditPage {
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .width('100%');
+        this.Adjustment($r('app.string.image_edit_brightness'), this.brightnessAmount,
+          (value: number): void => { this.brightnessAmount = value; })
+        this.Adjustment($r('app.string.image_edit_contrast'), this.contrastAmount,
+          (value: number): void => { this.contrastAmount = value; })
+        this.Adjustment($r('app.string.image_edit_saturation'), this.saturationAmount,
+          (value: number): void => { this.saturationAmount = value; })
+        }.width('100%')
       } else if (this.activeTool === TOOL_TEXT) {
         Column({ space: 8 }) {
+          Row({ space: 8 }) {
+            Button($r('app.string.image_edit_sticker')).onClick((): void => { void this.pickSticker(); })
+            if (this.sticker.length > 0) {
+              Button($r('app.string.compose_remove_media')).onClick((): void => {
+                this.recordEditHistory(false); this.sticker = '';
+              })
+            }
+          }.width('100%')
           TextArea({ text: this.overlayText, placeholder: $r('app.string.image_edit_text_placeholder') }).fontFamily(this.appFontFamily)
             .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .height(58)
@@ -1067,9 +1269,12 @@ export struct ImageEditPage {
       } else if (this.activeTool === TOOL_DRAW) {
         Column({ space: 8 }) {
           Row({ space: 6 }) {
-            Text($r('app.string.image_edit_brush_color')).fontFamily(this.appFontFamily)
-              .fontSize($r('sys.float.Caption_M'))
-              .fontColor($r('app.color.text_secondary'));
+            Button($r('app.string.image_edit_tool_draw')).fontSize($r('sys.float.Caption_M'))
+              .onClick((): void => { this.drawMode = 0; })
+            Button($r('app.string.image_edit_eraser')).fontSize($r('sys.float.Caption_M'))
+              .onClick((): void => { this.drawMode = 1; })
+            Button($r('app.string.image_edit_mosaic')).fontSize($r('sys.float.Caption_M'))
+              .onClick((): void => { this.drawMode = 2; })
             Blank();
             Button($r('app.string.image_edit_draw_clear'), { type: ButtonType.Capsule, stateEffect: true })
               .fontSize($r('sys.float.Caption_M'))
@@ -1104,6 +1309,19 @@ export struct ImageEditPage {
     .borderRadius(26)
     .clip(true)
     .attributeModifier(materialModifier(this.controlPanelMaterial()));
+  }
+
+  @Builder
+  private Adjustment(label: Resource, value: number, change: (value: number) => void): void {
+    Row({ space: 6 }) {
+      Text(label).fontFamily(this.appFontFamily).fontSize($r('sys.float.Caption_M')).width(80)
+      Slider({ value: value, min: 0, max: 200, step: 1 }).layoutWeight(1).accessibilityText(label)
+        .onChange((next: number, mode: SliderChangeMode): void => {
+          if (mode === SliderChangeMode.Begin || mode === SliderChangeMode.Click) { this.recordEditHistory(false); }
+          change(next);
+        })
+      Text(value.toString() + '%').fontSize($r('sys.float.Caption_M')).width(40)
+    }.width('100%').height(34)
   }
 
   @Builder

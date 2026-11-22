@@ -15,8 +15,11 @@ import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, Bottom
 import type { DmMessage, UserProfile, TweetAuthor } from '../models/Tweet';
 import { formatCount } from '../models/Tweet';
 import { ChatContact, ChatContactService, chatContactService } from '../services/ChatContactService';
+import { chatFailureMessage } from '../services/XChatFailureMessage';
 import type { UserDetailRouteParam } from './UserDetail';
-import { XChatGroupDisplay, XChatPage, XChatService, xChatService } from '../services/XChatService';
+import { XChatGroupDisplay, XChatPage, XChatService, XChatWebHistorySnapshot, xChatService } from '../services/XChatService';
+import { WebChatMessage, WebChatReply, readXChatWebHistory, reactInXChatWeb } from '../services/XChatWebDraft';
+import { XNotificationParser } from '../services/XNotificationParser';
 import { ProxyAvatar } from '../components/ProxyAvatar';
 import { destinationTitleBarStyle } from '../utils/DestinationTitleBar';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
@@ -72,6 +75,8 @@ import { ChatBackgroundState, chatBackgroundStore } from '../services/ChatBackgr
 import { CHAT_DECORATION_REVISION_KEY, ChatDecorationSelection,
   chatDecorationService } from '../services/ChatDecorationService';
 import { DmWebRouteParam } from './DmWeb';
+import { STORAGE_KEY_REDUCE_MOTION } from '../services/MotionSettingsStore';
+import { ChatTypingIndicator } from '../components/ChatTypingIndicator';
 import { chatMessageTime } from '../utils/ChatTime';
 import { effectiveAppLocale, STORAGE_KEY_APP_LOCALE } from '../utils/AppLocale';
 import { chatInputMaterial, chatPageMaterial, chatTintedControlMaterial } from '../utils/ChatMaterial';
@@ -124,8 +129,9 @@ export struct DmConversationPage {
   @StorageLink('harmonyx.title_bar_style_mode') titleBarStyleMode: number = 0;
   @StorageProp(STORAGE_KEY_REPLY_CAPSULE_MATERIAL_LEVEL) capsuleMaterialLevel: number = DEFAULT_REPLY_CAPSULE_MATERIAL_LEVEL;
   @StorageProp(STORAGE_KEY_TITLE_BAR_GLASS_MATERIAL_LEVEL) inputMaterialLevel: number = DEFAULT_TITLE_BAR_GLASS_MATERIAL_LEVEL;
-  @State private messages: DmMessage[] = [];
-  @State private mediaSends: ChatMediaSend[] = [];
+  @State @Watch('updateVisibleMessages') private messages: DmMessage[] = [];
+  @State @Watch('updateVisibleMessages') private mediaSends: ChatMediaSend[] = [];
+  @State private visibleTimeline: DmMessage[] = [];
   @State private chatBackground: ChatBackgroundState = new ChatBackgroundState();
   @State private chatDecoration: ChatDecorationSelection = new ChatDecorationSelection();
   @State private status: string = '';
@@ -134,6 +140,9 @@ export struct DmConversationPage {
   @State private picking: boolean = false;
   @State private draft: string = '';
   @State private needsUnlock: boolean = false;
+  @State private historyUnavailable: boolean = false;
+  @State private keysUnavailable: boolean = false;
+  @State private sendUnavailable: boolean = false;
   @State private unlocking: boolean = false;
   @State private pin: string = '';
   @State private unlockError: string = '';
@@ -142,6 +151,12 @@ export struct DmConversationPage {
   @State private backupAvailable: boolean = true;
   @State private pinAttemptsRemaining: number = -1;
   @State private pinSheet: boolean = false;
+  @State private webHistoryActive: boolean = false;
+  @State private webPinWaiting: boolean = false;
+  private webOldest: string = '';
+  private webHistoryGeneration: number = 0;
+  private promptedForPin: boolean = false;
+  private reloadAfterUnlock: boolean = false;
   @State private attachments: ChatPickedFile[] = [];
   @State private recentPhotoShown: boolean = false;
   @State private recentPhotoQueryEpoch: number = 0;
@@ -152,7 +167,7 @@ export struct DmConversationPage {
   @State private recordingSamples: number[] = [];
   @State private voiceVisible: boolean = true;
   @State private searchVisible: boolean = false;
-  @State private searchQuery: string = '';
+  @State @Watch('updateVisibleMessages') private searchQuery: string = '';
   @State private composerHeight: number = 80;
   @State private keyboardVisible: boolean = false;
   @StorageProp('harmonyx.window_height') private chatWindowHeight: number =
@@ -175,6 +190,8 @@ export struct DmConversationPage {
   @State private checkingNumber: boolean = false;
   @State private numberGranted: boolean = false;
   private pendingDelete: DmMessage | null = null;
+  private pendingWebReaction: DmMessage | null = null;
+  private pendingWebEmoji: string = '';
   private pendingDeleteAccount: string = '';
   private deleteAfterUnlock: boolean = false;
   private deletingMessages: Set<string> = new Set<string>();
@@ -192,6 +209,7 @@ export struct DmConversationPage {
   private participantIds: string[] = [];
   private latestSequenceId: string = '';
   private maxEntryId: string = '';
+  private historyToken: string = '';
   private minKeyVersion: string = '';
   private active: boolean = true;
   private requestGeneration: number = 0;
@@ -202,6 +220,12 @@ export struct DmConversationPage {
   private disposed: boolean = false;
   private gifSelectionAccount: string = '';
   private pollTimer: number = -1;
+  private typingTimer: number = -1;
+  private typingUntil: number = 0;
+  private submittingMedia: boolean = false;
+  @State private peerTyping: boolean = false;
+  @State private animatedSendIds: string[] = [];
+  @StorageProp(STORAGE_KEY_REDUCE_MOTION) private reduceMotion: boolean = false;
   private fetching: boolean = false;
   private scroller: Scroller = new Scroller();
   private recorder: media.AVRecorder | null = null;
@@ -216,7 +240,9 @@ export struct DmConversationPage {
   private savingImages: boolean = false;
   private mediaActionGeneration: number = 0;
   private keyboardWindow: window.Window | null = null;
-  private outboxListener: () => void = (): void => { if (this.active && !this.disposed) { this.syncOutbox(); } };
+  private outboxListener: () => void = (): void => {
+    if (this.active && !this.disposed && !this.submittingMedia) { this.syncOutbox(); }
+  };
   private replyFocusTimer: number = -1;
   private replyKeyboardRequested: boolean = false;
   private keyboardHeightListener: (height: number) => void = (height: number): void => {
@@ -279,6 +305,7 @@ export struct DmConversationPage {
     this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
     this.observeKeyboard();
     this.readRoute();
+    this.restoreWebHistory();
     chatMediaOutbox.subscribe(this.outboxListener);
     this.syncOutbox();
     this.loadContact();
@@ -309,6 +336,8 @@ export struct DmConversationPage {
     this.active = false;
     this.requestGeneration++;
     this.pin = '';
+    this.pinSheet = false;
+    this.pendingWebReaction = null; this.pendingWebEmoji = '';
     this.contactNumber = '';
     this.pendingDelete = null; this.deleteAfterUnlock = false;
     this.numberSheet = false;
@@ -333,12 +362,19 @@ export struct DmConversationPage {
     this.messages = [];
     this.mediaSends = [];
     this.conversationTransport = 'unknown';
+    this.webHistoryActive = false;
+    this.webPinWaiting = false;
+    this.webOldest = '';
+    this.pendingWebReaction = null; this.pendingWebEmoji = '';
     this.pendingDelete = null; this.deleteAfterUnlock = false;
     this.contact = new ChatContact();
     this.contactNumber = '';
     this.numberGranted = false;
     this.numberSheet = false;
     this.pin = '';
+    this.pinSheet = false;
+    this.promptedForPin = false;
+    this.historyToken = '';
     this.draft = '';
     this.replyTarget = null;
     this.emojiSheet = false;
@@ -352,15 +388,35 @@ export struct DmConversationPage {
 
   private stopPolling(): void {
     if (this.pollTimer >= 0) { clearInterval(this.pollTimer); this.pollTimer = -1; }
+    this.clearTyping();
   }
 
   private startPolling(): void {
-    this.stopPolling();
+    if (this.pollTimer >= 0) { clearInterval(this.pollTimer); }
     this.pollTimer = setInterval((): void => {
-      if (this.active && !this.fetching && !this.sending && !this.unlocking && !this.loadingHistory) {
+      if (this.active && !this.fetching && !this.sending && !this.reacting && !this.unlocking && !this.pinSheet && !this.loadingHistory) {
         this.load(false);
       }
     }, 6000);
+  }
+
+  private clearTyping(): void {
+    if (this.typingTimer >= 0) { clearTimeout(this.typingTimer); this.typingTimer = -1; }
+    this.typingUntil = 0;
+    this.peerTyping = false;
+  }
+
+  private updatePeerTyping(deadline: number): void {
+    if (!Number.isFinite(deadline) || deadline <= this.typingUntil || deadline <= Date.now()) { return; }
+    if (this.typingTimer >= 0) { clearTimeout(this.typingTimer); }
+    this.typingUntil = deadline;
+    this.peerTyping = true;
+    this.typingTimer = setTimeout((): void => this.clearTyping(), Math.max(0, deadline - Date.now()));
+  }
+
+  private animateSentMessage(update: () => void): void {
+    if (this.reduceMotion) { update(); }
+    else { this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, update); }
   }
 
   private readRoute(): void {
@@ -438,8 +494,16 @@ export struct DmConversationPage {
   }
 
   private canContact(): boolean {
-    return this.group || (this.contact.permissionKnown && (this.contact.canSend ||
+    return this.group || (!this.contact.permissionKnown && xPrivateClient.hasChatOAuth()) ||
+      (this.contact.permissionKnown && (this.contact.canSend ||
       (this.numberGranted && this.contact.cannotMessageReason === 'INBOX_CLOSED')));
+  }
+
+  private offerHistoryUnlock(): void {
+    if (this.promptedForPin || this.pinSheet || this.pinAttemptsRemaining === 0 || xChatService.isUnlocked() ||
+      !this.backupAvailable || this.plainConversation()) { return; }
+    this.promptedForPin = true;
+    this.pinSheet = true;
   }
 
   private openContactProfile(): void {
@@ -481,31 +545,58 @@ export struct DmConversationPage {
       return;
     }
     if (history) { this.loadingHistory = true; }
-    else if (reset) { this.loading = true; }
+    else if (reset) { this.loading = this.messages.length === 0; }
     this.fetching = true;
     try {
-      await xChatService.prepare(context, this.participantIds);
-      this.backupAvailable = xChatService.hasBackup();
-      const page: XChatPage = await xChatService.conversation(this.conversationId,
-        history ? this.maxEntryId : '', history ? this.minKeyVersion : '');
+      if (xPrivateClient.isSignedIn() && !xPrivateClient.hasChatOAuth() && (!history || this.webHistoryActive) &&
+        await this.loadWebHistory(context, generation, reset, history)) { return; }
       if (!this.active || generation !== this.requestGeneration) { return; }
-      this.conversationTransport = page.transport;
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
-      this.syncOutbox();
+      try {
+        await xChatService.prepare(context, this.participantIds);
+        if (generation === this.requestGeneration) { this.keysUnavailable = false; }
+      } catch (error) {
+        if (generation === this.requestGeneration) { this.keysUnavailable = true; }
+        hilog.warn(0xFF00, 'HarmonyX-Chat', 'public keys unavailable: %{public}s', (error as Error).message);
+      }
+      if (!this.active || generation !== this.requestGeneration) { return; }
+      const backupAvailable: boolean = xChatService.hasBackup();
+      if (this.backupAvailable !== backupAvailable) { this.backupAvailable = backupAvailable; }
+      if (reset && this.messages.length === 0) {
+        const cached: XChatPage = new XChatPage();
+        cached.messages = xChatService.cachedMessages(this.conversationId);
+        if (cached.messages.length > 0) { this.mergeMessages(cached); }
+      }
+      const page: XChatPage = await xChatService.conversation(this.conversationId,
+        history ? this.maxEntryId : '', history ? this.minKeyVersion : '', history ? this.historyToken : '');
+      if (!this.active || generation !== this.requestGeneration) { return; }
+      const historyRecovered: boolean = this.historyUnavailable && !page.partialHistory;
+      if (!history) { this.historyUnavailable = page.partialHistory; }
+      if (this.conversationTransport !== page.transport) { this.conversationTransport = page.transport; }
+      if (!history) { this.updatePeerTyping(page.typingUntil); }
+      this.mergeMessages(page);
+      this.syncOutbox(false);
       if (this.group && !page.needsUnlock) {
         const display: XChatGroupDisplay = await xChatService.groupDisplay(this.conversationId, context);
         const nickname: string = await xChatService.nickname(context, this.conversationId);
         if (!this.active || generation !== this.requestGeneration) { return; }
-        if (display.name.length > 0) { this.originalTitle = display.name; this.title = nickname.length > 0 ? nickname : display.name; }
-        if (display.avatarUrl.length > 0) { this.avatarUrl = display.avatarUrl; }
+        if (display.name.length > 0) {
+          this.originalTitle = display.name;
+          const title: string = nickname.length > 0 ? nickname : display.name;
+          if (this.title !== title) { this.title = title; }
+        }
+        if (display.avatarUrl.length > 0 && this.avatarUrl !== display.avatarUrl) { this.avatarUrl = display.avatarUrl; }
       }
-      this.needsUnlock = page.needsUnlock;
-      if (history || reset) {
+      if (this.needsUnlock !== page.needsUnlock) { this.needsUnlock = page.needsUnlock; }
+      if (!page.partialHistory && (history || reset || historyRecovered)) {
         this.maxEntryId = page.minSequenceId;
         this.minKeyVersion = page.minKeyVersion;
-        this.hasMore = page.hasMore && page.minSequenceId.length > 0;
+        this.historyToken = page.nextToken;
+        this.hasMore = page.hasMore && (page.nextToken.length > 0 || page.minSequenceId.length > 0);
       }
-      this.status = page.error.length > 0 ? this.text($r('app.string.dm_some_unavailable')) : '';
+      if (page.needsUnlock || page.transport === 'encrypted') { this.offerHistoryUnlock(); }
+      if (reset || history || page.partialHistory || page.error.length === 0 && this.status.length > 0) {
+        this.status = page.error.length > 0 ? this.text($r('app.string.dm_some_unavailable')) : '';
+      }
       if (reset) {
         setTimeout((): void => { if (this.active) { this.scroller.scrollEdge(Edge.Bottom); } }, 60);
       }
@@ -518,17 +609,110 @@ export struct DmConversationPage {
       }
     } catch (error) {
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'load failed: %{public}s', (error as Error).message);
-      if (this.active && generation === this.requestGeneration) {
+      if (this.active && generation === this.requestGeneration && (reset || history || this.messages.length === 0)) {
+        if (!history) { this.historyUnavailable = (error as Error).message !== 'conversation_http_404'; }
         this.status = !this.group && this.messages.length === 0 && (error as Error).message === 'conversation_unavailable' ?
           '' : this.text($r('app.string.dm_load_failed'));
+        if (reset) { this.offerHistoryUnlock(); }
       }
     } finally {
       this.fetching = false;
       if (generation === this.requestGeneration) {
         this.loading = false;
         this.loadingHistory = false;
+        if (this.active && this.reloadAfterUnlock) {
+          this.reloadAfterUnlock = false;
+          void this.load(true);
+        }
       }
     }
+  }
+
+  private restoreWebHistory(): void {
+    if (!xPrivateClient.isSignedIn() || xPrivateClient.hasChatOAuth()) { return; }
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const account: string = xPrivateStore.load(context).cacheIdentity();
+    const cached: XChatWebHistorySnapshot | undefined = xChatService.cachedWebHistory(account, this.conversationId);
+    if (cached === undefined) { return; }
+    this.messages = cached.messages.slice();
+    this.webOldest = cached.oldest;
+    this.hasMore = cached.hasMore;
+    this.webHistoryActive = true;
+    this.webHistoryGeneration = xChatService.webHistoryGeneration();
+    this.loading = false;
+  }
+
+  private saveWebHistory(account: string): void {
+    xChatService.cacheWebHistory(account, this.conversationId,
+      { messages: this.messages.slice(), oldest: this.webOldest, hasMore: this.hasMore });
+  }
+
+  private async loadWebHistory(context: common.UIAbilityContext, generation: number, reset: boolean,
+    earlier: boolean, pin: string = ''): Promise<boolean> {
+    const account: string = xPrivateStore.load(context).cacheIdentity();
+    const historyGeneration: number = xChatService.webHistoryGeneration();
+    const current: () => boolean = (): boolean => this.active && !this.disposed &&
+      generation === this.requestGeneration && account === xPrivateStore.load(context).cacheIdentity() &&
+      historyGeneration === xChatService.webHistoryGeneration() &&
+      (AppStorage.get<boolean>('harmonyx.app_foreground') ?? true);
+    const viewer: string = xPrivateClient.viewerId();
+    const read: Promise<WebChatReply> = readXChatWebHistory(context, this.getUIContext(), viewer, this.conversationId,
+      earlier ? this.webOldest : '', current, pin);
+    pin = '';
+    const result: WebChatReply = await read;
+    if (!current()) { return true; }
+    if (result.status === 'pin_required' || result.status === 'pin_unconfirmed') {
+      if (result.status === 'pin_unconfirmed') { this.unlockError = this.text($r('app.string.dm_unlock_failed')); }
+      this.needsUnlock = true;
+      this.webPinWaiting = true;
+      if (!this.promptedForPin) { this.promptedForPin = true; this.pinSheet = true; }
+      return true;
+    }
+    if (result.status === 'busy') {
+      if (reset || earlier) { this.status = this.text($r('app.string.dm_load_failed')); }
+      return true;
+    }
+    if (result.status !== 'history') {
+      if (!earlier) { return false; }
+      this.status = this.text($r('app.string.dm_load_failed'));
+      return true;
+    }
+    const rows: WebChatMessage[] = result.messages ?? [];
+    const messages: DmMessage[] = rows.map((message: WebChatMessage): DmMessage => {
+      const incoming: boolean = message.outgoing === false && !this.group;
+      const attachments: DmAttachment[] = message.postUrl ? [{ type: 'Post', mediaHash: '', mediaType: 5,
+        filename: '', url: message.postUrl, width: 0, height: 0 }] : [];
+      return { id: message.id, webMessageId: message.id, conversationId: this.conversationId, text: message.text,
+        senderId: message.outgoing ? viewer : incoming ? this.contactId() : '', senderName: incoming ? this.title : '',
+        senderUsername: incoming ? this.username : '', senderAvatarUrl: incoming ? this.avatarUrl : '',
+        timestampMs: message.timestamp, time: message.timestamp > 0 ? XNotificationParser.relativeTime(message.timestamp) : '',
+        outgoing: message.outgoing === true, directionUnknown: message.outgoing === undefined,
+        encrypted: false, attachments: attachments };
+    });
+    const byId: Map<string, DmMessage> = new Map<string, DmMessage>();
+    const ordered: DmMessage[] = earlier ? messages.concat(this.messages) : this.messages.concat(messages);
+    for (const message of ordered) {
+      const previous: DmMessage | undefined = byId.get(message.id);
+      if (previous?.sequenceId !== undefined && message.sequenceId === undefined) { continue; }
+      if (previous !== undefined && !previous.directionUnknown && message.directionUnknown) { continue; }
+      if (previous?.reactions !== undefined && message.reactions === undefined) { message.reactions = previous.reactions; }
+      byId.set(message.id, message);
+    }
+    this.messages = Array.from(byId.values());
+    const firstLoad: boolean = this.messages.length === 0;
+    if (this.webOldest.length === 0 || earlier) {
+      if (rows.length > 0) { this.webOldest = rows[0].id; }
+      this.hasMore = result.hasMore === true;
+    }
+    this.webHistoryActive = true;
+    this.webHistoryGeneration = historyGeneration;
+    this.webPinWaiting = false;
+    this.needsUnlock = false;
+    this.historyUnavailable = false;
+    this.status = '';
+    this.saveWebHistory(account);
+    if (reset && firstLoad) { setTimeout((): void => { if (current()) { this.scroller.scrollEdge(Edge.Bottom); } }, 60); }
+    return true;
   }
 
   private async unlock(): Promise<void> {
@@ -538,12 +722,29 @@ export struct DmConversationPage {
     const pin: string = this.pin;
     this.pin = '';
     try {
+      if (this.webPinWaiting && this.pendingDelete === null) {
+        const restored: boolean = await this.loadWebHistory(getContext(this) as common.UIAbilityContext,
+          this.requestGeneration, true, false, pin);
+        if (restored && !this.webPinWaiting) {
+          const target: DmMessage | null = this.pendingWebReaction;
+          const emoji: string = this.pendingWebEmoji;
+          this.pinSheet = false;
+          if (target !== null) { await this.react(target, emoji); }
+        }
+        else if (!restored) { this.unlockError = this.text($r('app.string.dm_unlock_failed')); }
+        return;
+      }
+      if (!xChatService.hasBackup()) {
+        await xChatService.prepare(getContext(this) as common.UIAbilityContext, []);
+      }
+      if (!this.active || !this.pinSheet) { return; }
       await xChatService.unlock(pin);
       if (!this.active) { return; }
       this.needsUnlock = false;
       this.deleteAfterUnlock = this.pendingDelete !== null;
       this.pinSheet = false;
-      await this.load(true);
+      if (this.fetching) { this.reloadAfterUnlock = true; }
+      else { await this.load(true); }
     } catch (error) {
       if (this.active) {
         const reason: string = (error as Error).message;
@@ -570,9 +771,14 @@ export struct DmConversationPage {
       !this.canContact() || (!this.plainConversation() && !xChatService.isUnlocked())) { return; }
     if (!this.plainConversation() && this.attachments.length > 0 &&
       this.attachments.every((file: ChatPickedFile): boolean => file.type >= 1 && file.type <= 3)) {
+      this.submittingMedia = true;
       try {
-        chatMediaOutbox.enqueue(getContext(this) as common.UIAbilityContext, this.conversationId,
+        const send: ChatMediaSend = chatMediaOutbox.enqueue(getContext(this) as common.UIAbilityContext, this.conversationId,
           this.attachments, text, this.replyTarget ?? undefined);
+        this.animateSentMessage((): void => {
+          this.animatedSendIds = [send.id + ':pending'];
+          this.syncOutbox();
+        });
         // Ownership has moved to the outbox. Clearing the composer must not
         // discard an upload or remove a camera resource it is still reading.
         this.attachments = []; this.draft = ''; this.replyTarget = null; this.cancelReplyFocus();
@@ -580,11 +786,14 @@ export struct DmConversationPage {
       } catch (error) {
         promptAction.showToast({ message: this.text((error as Error).message === 'media_queue_full' ?
           $r('app.string.chat_media_queue_full') : $r('app.string.dm_send_failed')) });
-      }
+      } finally { this.submittingMedia = false; }
       return;
     }
     this.sending = true;
-    const generation: number = this.requestGeneration;
+    this.sendUnavailable = false;
+    const conversation: string = this.conversationId;
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const account: string = xPrivateStore.load(context).cacheIdentity();
     try {
       const reply: XChatReplyTarget | undefined = this.replyTarget === null ? undefined : {
         sequence_id: this.replyTarget.sequenceId ?? '', sender_id: this.replyTarget.senderId,
@@ -593,23 +802,31 @@ export struct DmConversationPage {
       let page: XChatPage;
       if (this.plainConversation()) {
         page = new XChatPage();
-        page.messages = await chatContactService.sendPlaintext(getContext(this) as common.UIAbilityContext,
-          this.contact, this.conversationId, text);
+        page.messages = await chatContactService.sendPlaintext(context, this.contact, conversation, text);
       } else {
-        page = this.attachments.length === 0 ? await xChatService.send(this.conversationId, text, [], '', '', reply) :
-          await xChatMedia.sendMany(getContext(this) as common.UIAbilityContext, this.conversationId, this.attachments, text, reply);
+        page = this.attachments.length === 0 ? await xChatService.send(conversation, text, [], '', '', reply) :
+          await xChatMedia.sendMany(context, conversation, this.attachments, text, reply);
       }
-      if (!this.active || generation !== this.requestGeneration) { return; }
+      if (!this.active || this.disposed || this.conversationId !== conversation ||
+        account !== xPrivateStore.load(context).cacheIdentity()) { return; }
       this.conversationTransport = xChatService.conversationTransport(this.conversationId);
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
+      this.animateSentMessage((): void => {
+        this.animatedSendIds = page.messages.filter((message: DmMessage): boolean => message.outgoing)
+          .map((message: DmMessage): string => message.id + ':sent');
+        this.mergeMessages(page);
+      });
       this.draft = '';
       this.replyTarget = null;
       this.discardAttachment();
       this.scroller.scrollEdge(Edge.Bottom);
     } catch (error) {
-      hilog.warn(0xFF00, 'HarmonyX-Chat', 'send failed: %{public}s', (error as Error).message);
-      if (this.active) {
-        promptAction.showToast({ message: this.text($r('app.string.dm_send_failed')), duration: 2400 });
+      const reason: string = (error as Error).message;
+      hilog.warn(0xFF00, 'HarmonyX-Chat', 'send failed: %{public}s', reason);
+      if (this.active && this.conversationId === conversation && account === xPrivateStore.load(context).cacheIdentity()) {
+        this.sendUnavailable = reason === 'existing_conversation_key_unavailable' ||
+          /^(conversation|keys|send)_(network|dependency|http_(401|402|403|429|50[234])|unconfirmed)$/.test(reason);
+        promptAction.showToast({ message: chatFailureMessage(context, reason, $r('app.string.dm_send_failed')),
+          duration: 2400 });
       }
     } finally { this.sending = false; }
   }
@@ -629,33 +846,48 @@ export struct DmConversationPage {
   }
 
   private call(): void {
-    const param: DmWebRouteParam = { conversationId: this.conversationId, title: this.title };
-    this.pageStack.pushPath({ name: 'DmWeb', param: param });
+    this.openWebChat();
     promptAction.showToast({ message: this.text($r('app.string.chat_call_web_hint')), duration: 3500 });
   }
 
-  private visibleMessages(): DmMessage[] {
+  private openWebChat(): void {
+    const param: DmWebRouteParam = { conversationId: this.conversationId, title: this.title };
+    this.pageStack.pushPath({ name: 'DmWeb', param: param });
+  }
+
+  private updateVisibleMessages(): void {
     const rows: DmMessage[] = ChatMediaOutbox.timeline(this.messages, this.mediaSends);
     const query: string = this.searchQuery.trim().toLowerCase();
-    return query.length === 0 ? rows : rows.filter((message: DmMessage): boolean => message.text.toLowerCase().indexOf(query) >= 0);
+    this.visibleTimeline = query.length === 0 ? rows :
+      rows.filter((message: DmMessage): boolean => message.text.toLowerCase().indexOf(query) >= 0);
   }
 
   private mediaSend(id: string): ChatMediaSend | undefined {
+    const send: ChatMediaSend | undefined = this.mediaSends.find((entry: ChatMediaSend): boolean => entry.id === id);
     // An echoed/confirmed row replaces the local card, including confirmation
     // that arrived through polling after a request timed out.
-    if (this.messages.some((message: DmMessage): boolean => message.id === id)) { return undefined; }
-    return this.mediaSends.find((send: ChatMediaSend): boolean => send.id === id);
+    return send !== undefined && !this.messages.some((message: DmMessage): boolean => message.id === id) ? send : undefined;
   }
 
   private mediaFailed(id: string): boolean { return this.mediaSend(id)?.state === 'failed'; }
 
-  private syncOutbox(): void {
-    this.mediaSends = chatMediaOutbox.pending(getContext(this) as common.UIAbilityContext, this.conversationId);
-    const confirmed: DmMessage[] = xChatService.cachedMessages(this.conversationId)
-      .filter((message: DmMessage): boolean => !this.messages.some((row: DmMessage): boolean => row.id === message.id));
+  private mergeMessages(page: XChatPage): void {
+    const previous: DmMessage[] = this.messages;
+    const merged: DmMessage[] = xChatService.mergeConversation(previous, page, this.conversationId);
+    if (merged !== previous) { this.messages = merged; }
+  }
+
+  private syncOutbox(refreshMedia: boolean = true): void {
+    if (refreshMedia) {
+      this.mediaSends = chatMediaOutbox.pending(getContext(this) as common.UIAbilityContext, this.conversationId);
+    }
+    const cached: DmMessage[] = xChatService.cachedMessages(this.conversationId);
+    if (cached.length === 0) { return; }
+    const shownIds: Set<string> = new Set<string>(this.messages.map((message: DmMessage): string => message.id));
+    const confirmed: DmMessage[] = cached.filter((message: DmMessage): boolean => !shownIds.has(message.id));
     if (confirmed.length > 0) {
       const page: XChatPage = new XChatPage(); page.messages = confirmed;
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
+      this.mergeMessages(page);
     }
   }
 
@@ -664,13 +896,14 @@ export struct DmConversationPage {
   }
 
   private showTime(index: number): boolean {
-    const rows: DmMessage[] = this.visibleMessages();
-    return index === 0 || rows[index].timestampMs - rows[index - 1].timestampMs > 300000;
+    const rows: DmMessage[] = this.visibleTimeline;
+    return index === 0 || (index > 0 && index < rows.length &&
+      rows[index].timestampMs - rows[index - 1].timestampMs > 300000);
   }
 
   private groupEnd(index: number): boolean {
-    const rows: DmMessage[] = this.visibleMessages();
-    return index === rows.length - 1 || !rows[index + 1].outgoing || this.showTime(index + 1);
+    const rows: DmMessage[] = this.visibleTimeline;
+    return index >= rows.length - 1 || !rows[index + 1].outgoing || this.showTime(index + 1);
   }
 
   private acceptsPicker(generation: number, account: string): boolean {
@@ -980,6 +1213,7 @@ export struct DmConversationPage {
 
   private pinClosed(): void {
     this.pin = '';
+    this.pendingWebReaction = null; this.pendingWebEmoji = '';
     const message: DmMessage | null = this.pendingDelete;
     const ready: boolean = this.deleteAfterUnlock && this.active && !this.disposed &&
       this.pendingDeleteAccount === xPrivateStore.load(getContext(this) as common.UIAbilityContext).cacheIdentity();
@@ -989,6 +1223,14 @@ export struct DmConversationPage {
 
   private async shown(): Promise<void> {
     this.active = true;
+    if (this.webHistoryActive && this.webHistoryGeneration !== xChatService.webHistoryGeneration()) {
+      this.messages = [];
+      this.webHistoryActive = false;
+      this.webOldest = '';
+      this.hasMore = false;
+      if (this.fetching) { this.reloadAfterUnlock = true; }
+      else { void this.load(true); }
+    }
     this.syncOutbox();
     this.chatBackground = chatBackgroundStore.load(getContext(this) as common.UIAbilityContext, this.conversationId);
     this.chatDecoration = chatDecorationService.selection(getContext(this) as common.UIAbilityContext);
@@ -1116,6 +1358,7 @@ export struct DmConversationPage {
   }
 
   private senderLabel(message: DmMessage): string {
+    if (message.directionUnknown) { return ''; }
     return message.outgoing ? this.text($r('app.string.chat_message_you')) : !this.group ? this.title : message.senderName;
   }
 
@@ -1144,7 +1387,7 @@ export struct DmConversationPage {
       for (let i: number = 0; i < attachments.length; i++) {
         const attachment: DmAttachment = attachments[i];
         const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash,
-          message.keyVersion ?? '', attachment.mediaType);
+          message.keyVersion ?? '', attachment.mediaType, attachment.rawEvent);
         if (!this.active || this.disposed || generation !== this.mediaActionGeneration ||
           account !== xPrivateStore.load(context).cacheIdentity() || !xChatService.isUnlocked()) { return; }
         paths.push(path);
@@ -1191,8 +1434,7 @@ export struct DmConversationPage {
   }
 
   private reportMessage(message: DmMessage): void {
-    const param: DmWebRouteParam = { conversationId: this.conversationId, title: this.title };
-    this.pageStack.pushPath({ name: 'DmWeb', param: param });
+    this.openWebChat();
   }
 
   private reactionChosen(message: DmMessage, emoji: string): boolean {
@@ -1210,14 +1452,46 @@ export struct DmConversationPage {
   }
 
   private async react(message: DmMessage, emoji: string): Promise<void> {
-    if (this.reacting || message.sequenceId === undefined) { return; }
+    if (this.reacting) { return; }
     this.reacting = true;
-    const generation: number = this.requestGeneration;
+    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const account: string = xPrivateStore.load(context).cacheIdentity();
+    const conversation: string = this.conversationId;
+    const historyGeneration: number = xChatService.webHistoryGeneration();
+    const current: () => boolean = (): boolean => this.active && !this.disposed &&
+      this.conversationId === conversation && account === xPrivateStore.load(context).cacheIdentity() &&
+      historyGeneration === xChatService.webHistoryGeneration() &&
+      (AppStorage.get<boolean>('harmonyx.app_foreground') ?? true);
+    const remove: boolean = this.reactionChosen(message, emoji);
     try {
-      const page: XChatPage = await xChatService.react(this.conversationId, message.sequenceId, emoji, this.reactionChosen(message, emoji));
-      if (!this.active || generation !== this.requestGeneration) { return; }
-      this.messages = xChatService.mergeConversation(this.messages, page, this.conversationId);
-      chatEmojiStore.used(getContext(this) as common.UIAbilityContext, emoji);
+      if (message.webMessageId !== undefined && (message.sequenceId ?? '').length === 0) {
+        const viewer: string = xPrivateClient.viewerId();
+        const result: string = await reactInXChatWeb(context, this.getUIContext(), viewer, conversation, message.webMessageId,
+          emoji, remove, current);
+        if (!current()) { return; }
+        if (result === 'pin_required') {
+          this.pendingWebReaction = message;
+          this.pendingWebEmoji = emoji;
+          this.webPinWaiting = true;
+          this.needsUnlock = true;
+          this.promptedForPin = true;
+          this.pinSheet = true;
+          return;
+        }
+        if (result !== 'reacted') { throw new Error('web_reaction_' + result); }
+        const row: DmMessage | undefined = this.messages.find((entry: DmMessage): boolean => entry.id === message.id);
+        if (row !== undefined) {
+          row.reactions = (row.reactions ?? []).filter(entry => entry.emoji !== emoji || entry.senderId !== viewer);
+          if (!remove) { row.reactions.push({ emoji: emoji, senderId: viewer, sequenceId: '', active: true }); }
+          this.messages = this.messages.slice();
+          this.saveWebHistory(account);
+        }
+      } else {
+        const page: XChatPage = await xChatService.react(conversation, message.sequenceId ?? '', emoji, remove);
+        if (!current()) { return; }
+        this.mergeMessages(page);
+      }
+      chatEmojiStore.used(context, emoji);
       hilog.info(0xFF00, 'HarmonyX-Chat', 'reaction confirmed');
     } catch (error) {
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'reaction failed: %{public}s', (error as Error).message);
@@ -1226,7 +1500,7 @@ export struct DmConversationPage {
   }
 
   private jumpToMessage(sequenceId: string): void {
-    const index: number = this.visibleMessages().findIndex((message: DmMessage): boolean => message.sequenceId === sequenceId || message.id === sequenceId);
+    const index: number = this.visibleTimeline.findIndex((message: DmMessage): boolean => message.sequenceId === sequenceId || message.id === sequenceId);
     if (index >= 0) { this.scroller.scrollToIndex(index + 1 + (this.hasMore ? 1 : 0) + (this.status.length > 0 ? 1 : 0) +
       (this.messages.some((m: DmMessage): boolean => m.id === this.pinnedMessageId) ? 1 : 0), true, ScrollAlign.CENTER); }
     else { promptAction.showToast({ message: this.text($r('app.string.chat_message_load_original')) }); }
@@ -1247,7 +1521,8 @@ export struct DmConversationPage {
       for (let i: number = 0; i < (source.attachments?.length ?? 0); i++) {
         const attachment: DmAttachment = (source.attachments ?? [])[i];
         if (attachment.type === 'Media') {
-          const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash, source.keyVersion ?? '', attachment.mediaType);
+          const path: string = await xChatMedia.receive(context, this.conversationId, attachment.mediaHash,
+            source.keyVersion ?? '', attachment.mediaType, attachment.rawEvent);
           files.push({ uri: path, filename: attachment.filename, type: attachment.mediaType, duration: attachment.durationMs });
         }
       }
@@ -1395,13 +1670,13 @@ export struct DmConversationPage {
           .width('100%').textAlign(TextAlign.Center).margin({ top: 16, bottom: 14 })
       }
       Row({ space: 8 }) {
-        if (this.group && !message.outgoing) {
+        if (this.group && !message.outgoing && !message.directionUnknown) {
           this.DecoratedAvatar(message.senderAvatarUrl, 28, 14, message.senderName.substring(0, 1),
             message.senderVerifiedType ?? '', message.senderAvatarShape ?? '')
         }
         if (this.mediaFailed(message.id)) { this.MediaRetry(message.id); }
         Column({ space: 6 }) {
-          if (this.group && !message.outgoing) {
+          if (this.group && !message.outgoing && !message.directionUnknown) {
             Text(message.senderName).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S')).fontColor($r('app.color.text_secondary'))
           }
           if (message.reply !== undefined) {
@@ -1450,7 +1725,7 @@ export struct DmConversationPage {
         }.alignItems(message.outgoing ? HorizontalAlign.End : HorizontalAlign.Start)
           .width(this.hasVisualMedia(message) || this.hasPostLinks(message) ? '82%' : undefined).constraintSize({ maxWidth: '82%' })
           .layoutWeight(this.mediaFailed(message.id) ? 1 : 0)
-      }.width('100%').justifyContent(message.outgoing ? FlexAlign.End : FlexAlign.Start)
+      }.width('100%').justifyContent(message.directionUnknown ? FlexAlign.Center : message.outgoing ? FlexAlign.End : FlexAlign.Start)
       if (this.mediaSend(message.id) !== undefined) {
         Row({ space: 8 }) {
           Text(this.mediaSend(message.id)?.state === 'failed' ? $r('app.string.dm_send_failed') : $r('app.string.chat_media_sending')).fontFamily(this.appFontFamily)
@@ -1470,12 +1745,12 @@ export struct DmConversationPage {
 
   @Builder
   private Content(): void {
-    if (this.loading && this.visibleMessages().length === 0 && (this.group || this.contact.id.length === 0)) {
+    if (this.loading && this.visibleTimeline.length === 0 && (this.group || this.contact.id.length === 0)) {
       Column({ space: 12 }) {
         LoadingProgress().color(this.accentColor).width(24).height(24)
         Text($r('app.string.dm_loading')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontColor($r('app.color.text_secondary'))
       }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-    } else if (this.visibleMessages().length === 0 && !this.group && this.contact.id.length > 0) {
+    } else if (this.visibleTimeline.length === 0 && !this.group && this.contact.id.length > 0) {
       Scroll() {
         Column() {
           this.ContactIntro();
@@ -1487,7 +1762,7 @@ export struct DmConversationPage {
         }.width('100%')
       }.width('100%').height('100%').padding({ top: this.statusBarHeight + 64,
         bottom: this.composerHeight + 16 }).scrollBar(BarState.Off)
-    } else if (this.visibleMessages().length === 0) {
+    } else if (this.visibleTimeline.length === 0) {
       Column({ space: 16 }) {
         SymbolGlyph($r('sys.symbol.message')).fontSize(36).fontColor([$r('app.color.text_secondary')])
         Text(this.status.length > 0 ? this.status : this.text(this.needsUnlock ?
@@ -1497,6 +1772,7 @@ export struct DmConversationPage {
           Button($r('app.string.common_retry')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
             .onClick((): void => { this.load(true); })
         }
+        if (this.historyUnavailable) { this.WebChatButton() }
       }.width('100%').height('100%').padding(24).justifyContent(FlexAlign.Center)
     } else {
       List({ scroller: this.scroller }) {
@@ -1527,10 +1803,21 @@ export struct DmConversationPage {
               .width('100%').padding(12).textAlign(TextAlign.Center)
           }
         }
-        ForEach(this.visibleMessages(), (message: DmMessage, index: number) => {
+        if (this.historyUnavailable) { ListItem() { this.WebChatButton() } }
+        ForEach(this.visibleTimeline, (message: DmMessage, index: number) => {
           ListItem() { this.MessageBubble(message, index) }
+            .transition(!this.reduceMotion &&
+              this.animatedSendIds.includes(message.id + (this.mediaSend(message.id) === undefined ? ':sent' : ':pending')) ?
+              TransitionEffect.asymmetric(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 20 }))
+                .animation({ duration: 300, curve: Curve.EaseOut }), TransitionEffect.IDENTITY) : TransitionEffect.IDENTITY)
         }, (message: DmMessage, index: number): string =>
           chatMessageRenderKey(message, this.mediaSend(message.id) !== undefined, this.pinnedMessageId, index))
+        if (this.peerTyping && this.searchQuery.length === 0) {
+          ListItem() {
+            Row() { ChatTypingIndicator({ reduceMotion: this.reduceMotion }) }
+              .width('100%').justifyContent(FlexAlign.Start).padding({ left: 16, top: 4, bottom: 4 })
+          }
+        }
         ListItem() { Column().height(this.composerHeight + 16).width('100%') }
       }.width('100%').height('100%')
         // Anchor the timeline at its bottom so keyboard resizing lifts the
@@ -1964,24 +2251,45 @@ export struct DmConversationPage {
   }
 
   @Builder
+  private WebChatButton(): void {
+    if (xPrivateClient.isSignedIn()) {
+      Button($r('app.string.dm_open_x_chat')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
+        .onClick((): void => { this.openWebChat(); })
+    }
+  }
+
+  @Builder
   private Composer(): void {
     Column({ space: 8 }) {
-      if (!this.group && !this.contact.permissionKnown) {
+      if (this.webPinWaiting) {
+        Button($r('app.string.dm_unlock_action')).fontColor($r('app.color.text_on_accent'))
+          .backgroundColor(this.accentColor).width('100%').height(46)
+          .onClick((): void => { this.pinSheet = true; })
+      } else if (this.webHistoryActive && !this.plainConversation() && !xChatService.isUnlocked()) {
+        Column().height(0)
+      } else if (!this.plainConversation() && !xChatService.isUnlocked() && !this.loading) {
+        Button(this.backupAvailable ? $r('app.string.dm_unlock_action') :
+          this.keysUnavailable ? $r('app.string.common_retry') : $r('app.string.dm_no_backup'))
+          .fontColor($r('app.color.text_on_accent')).backgroundColor(this.accentColor).width('100%').height(46)
+          .enabled((this.backupAvailable || this.keysUnavailable) && this.pinAttemptsRemaining !== 0)
+          .onClick((): void => {
+            if (this.backupAvailable) { this.pinSheet = true; }
+            else { this.load(true); }
+          })
+      } else if (!this.group && !this.contact.permissionKnown && !xPrivateClient.hasChatOAuth()) {
         if (this.contactFailed) {
           Button($r('app.string.chat_contact_permission_failed')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
             .onClick((): void => { this.loadContact(); })
         } else { LoadingProgress().width(24).height(24).color(this.accentColor) }
       } else if (!this.canContact()) {
         this.ContactRestriction();
-      } else if (!this.plainConversation() && (this.needsUnlock || !xChatService.isUnlocked())) {
-        Button(this.backupAvailable ? $r('app.string.dm_unlock_action') : $r('app.string.dm_no_backup'))
-          .fontColor($r('app.color.text_on_accent')).backgroundColor(this.accentColor).width('100%').height(46)
-          .enabled(this.backupAvailable && !this.loading && this.pinAttemptsRemaining !== 0)
-          .onClick((): void => { this.pinSheet = true; })
+      } else if (!this.plainConversation() && !xChatService.isUnlocked()) {
+        LoadingProgress().width(24).height(24).color(this.accentColor)
       } else {
         this.ComposerTitleBar()
         if (this.attachmentPanelShown && this.canShowRecentPhoto()) { this.AttachmentPanel(); }
       }
+      if (this.sendUnavailable && !this.historyUnavailable) { this.WebChatButton() }
     }.width('100%').padding({ left: 16, right: 16, top: 8,
       bottom: this.keyboardVisible ? 8 : this.navigationIndicatorHeight + 12 })
       .onAreaChange((_old: Area, area: Area): void => {

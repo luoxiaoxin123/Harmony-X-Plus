@@ -98,7 +98,7 @@ export class XApiClient {
   // ---- OAuth 2.0 -------------------------------------------------------
 
   static buildAuthorizeUrl(clientId: string, challenge: string, state: string): string {
-    const scope = encodeURIComponent('tweet.read tweet.write users.read like.read like.write follows.read dm.read offline.access');
+    const scope = encodeURIComponent('tweet.read tweet.write users.read like.read like.write follows.read dm.read dm.write offline.access');
     return AUTHORIZE_URL + '?response_type=code' +
       '&client_id=' + encodeURIComponent(clientId.trim()) +
       '&redirect_uri=' + encodeURIComponent(REDIRECT_URI) +

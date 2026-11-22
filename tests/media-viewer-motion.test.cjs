@@ -29,6 +29,19 @@ function rect(x, y, width, height) {
 
 function assertNear(actual, expected) { assert.ok(Math.abs(actual - expected) < 1e-7, `${actual} ~= ${expected}`); }
 
+test('photo taps occupy the fitted image instead of the sides of the feed cell', () => {
+  const file = fs.readFileSync('entry/src/main/ets/components/PostMedia.ets', 'utf8');
+  const start = file.indexOf('  private photoResponseRegion()');
+  const end = file.indexOf('  private pickUp()', start);
+  const { Harness } = evaluate(`export class Harness { ${file.slice(start, end)} }`, {},
+    ['fittedMediaViewerRect', 'MediaViewerRect'], [motion.fittedMediaViewerRect, motion.MediaViewerRect]);
+  const cover = Object.assign(new Harness(), { photoContain: true, photoFrameWidth: 360, mediaHeight: 240,
+    photoWidth: 0, photoHeight: 0, media: { width: 900, height: 1600 } });
+  assert.deepEqual(cover.photoResponseRegion(), { x: 112.5, y: 0, width: 135, height: 240 });
+  Object.assign(cover, { photoWidth: 1800, photoHeight: 900 });
+  assert.deepEqual(cover.photoResponseRegion(), { x: 0, y: 30, width: 360, height: 180 });
+});
+
 test('card crop and contain both use a uniform scale with coincident image centers', () => {
   const viewport = rect(16, 30, 390, 844);
   const frame = rect(0, 0, 390, 844);

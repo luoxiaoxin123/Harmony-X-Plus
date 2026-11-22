@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit';
 // Persistent, application-wide display preferences.  Color mode is applied
 // through ApplicationContext so resource-qualified dark colors update too.
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
@@ -89,7 +90,7 @@ export class AppearanceSettings {
   contentFontFamily: string = DEFAULT_CONTENT_FONT_FAMILY;
   autoHideTitleBar: boolean = false;
   autoHideTabBar: boolean = false;
-  homeHeaderCollapseEnabled: boolean = false;
+  homeHeaderCollapseEnabled: boolean = true;
   titleBarLogoEnabled: boolean = true;
   titleBarLogoAutoContrast: boolean = true;
   compactSwitchStyle: string = COMPACT_SWITCH_TABS;
@@ -110,7 +111,7 @@ export class AppearanceSettings {
     autoHideFab: boolean = true, darkSurface: string = DARK_SURFACE_BLACK,
     composeButtonEnabled: boolean = true, titleBarStyleMode: number = TITLE_BAR_STYLE_IMMERSIVE,
     titleBarGlassMaterialLevel: number = DEFAULT_TITLE_BAR_GLASS_MATERIAL_LEVEL,
-    homeHeaderCollapseEnabled: boolean = false,
+    homeHeaderCollapseEnabled: boolean = true,
     contentFontFamily: string = DEFAULT_CONTENT_FONT_FAMILY,
     replyCapsuleMaterialLevel: number = DEFAULT_REPLY_CAPSULE_MATERIAL_LEVEL,
     avatarTintEnabled: boolean = false, titleBarLogoEnabled: boolean = true,
@@ -152,7 +153,7 @@ export class AppearanceStore {
   private static readonly AUTO_HIDE_TITLE_BAR_KEY: string = 'auto_hide_title_bar';
   private static readonly AUTO_HIDE_TAB_BAR_KEY: string = 'auto_hide_tab_bar';
   private static readonly AUTO_HIDE_FAB_KEY: string = 'auto_hide_fab';
-  private static readonly HOME_HEADER_COLLAPSE_KEY: string = 'home_header_collapse';
+  private static readonly HOME_HEADER_COLLAPSE_KEY: string = 'home_header_scroll_collapse';
   private static readonly TITLE_BAR_LOGO_KEY: string = 'title_bar_logo';
   private static readonly TITLE_BAR_LOGO_AUTO_CONTRAST_KEY: string = 'title_bar_logo_auto_contrast';
   private static readonly IMMERSIVE_TITLE_BAR_BLUR_KEY: string = 'immersive_title_bar_blur';
@@ -171,7 +172,9 @@ export class AppearanceStore {
     try {
       const options: preferences.Options = { name: AppearanceStore.STORE_NAME };
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
-      const savedMode: string = store.getSync(AppearanceStore.MODE_KEY, DISPLAY_MODE_SYSTEM) as string;
+      let defaultMode: string = DISPLAY_MODE_SYSTEM;
+      try { if (deviceInfo.deviceType === 'wearable') { defaultMode = DISPLAY_MODE_DARK; } } catch (error) {}
+      const savedMode: string = store.getSync(AppearanceStore.MODE_KEY, defaultMode) as string;
       const savedAccent: string = store.getSync(AppearanceStore.ACCENT_KEY, DEFAULT_ACCENT_COLOR) as string;
       const savedFontMode: string = store.getSync(AppearanceStore.FONT_MODE_KEY, FONT_MODE_SYSTEM) as string;
       const savedFontScale: number = store.getSync(AppearanceStore.FONT_KEY, DEFAULT_FONT_SCALE) as number;
@@ -182,7 +185,7 @@ export class AppearanceStore {
       const savedAutoHideTabBar: boolean =
         store.getSync(AppearanceStore.AUTO_HIDE_TAB_BAR_KEY, false) as boolean;
       const savedHomeHeaderCollapseEnabled: boolean =
-        store.getSync(AppearanceStore.HOME_HEADER_COLLAPSE_KEY, false) as boolean;
+        store.getSync(AppearanceStore.HOME_HEADER_COLLAPSE_KEY, true) as boolean;
       const savedTitleBarLogoEnabled: boolean =
         store.getSync(AppearanceStore.TITLE_BAR_LOGO_KEY, true) as boolean;
       const savedTitleBarLogoAutoContrast: boolean =

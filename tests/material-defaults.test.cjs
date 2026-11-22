@@ -32,6 +32,7 @@ function fixture() {
     new Function('require', 'exports', 'AppStorage', output)(id => {
       if (id === '@kit.AbilityKit') return { ConfigurationConstant: {} };
       if (id === '../utils/AccentPalette') return load('../utils/AccentPalette');
+      if (id === '@kit.BasicServicesKit') return { deviceInfo: { deviceType: 'phone' } };
       assert.equal(id, '@kit.ArkData');
       return { preferences };
     }, exports, { setOrCreate: (key, value) => storage.set(key, value) });

@@ -1,3 +1,22 @@
+import type { Tweet } from '../models/Tweet';
+
+// Feed pages replace their post arrays when a new page arrives. Keep the
+// derived order available to lazy rows until the input or view options change.
+export class PostFeedProjection {
+  private source: Tweet[] | undefined;
+  private variant: string | number = '';
+  private rows: Tweet[] = [];
+
+  get(source: Tweet[], variant: string | number, project: (posts: Tweet[]) => Tweet[]): Tweet[] {
+    if (this.source !== source || this.variant !== variant) {
+      this.rows = project(source);
+      this.source = source;
+      this.variant = variant;
+    }
+    return this.rows;
+  }
+}
+
 export class PostFeedItem {
   key: string;
   index: number;
@@ -31,10 +50,17 @@ export class PostFeedDataSource implements IDataSource {
     }
     next.push(new PostFeedItem('footer', -2));
     const previous: PostFeedItem[] = this.items;
+    const footerIndex: number = previous.length - 1;
+    const appended: boolean = footerIndex >= 1 && next.length > previous.length &&
+      previous.every((item: PostFeedItem, index: number): boolean => index === footerIndex || item.key === next[index].key);
     this.items = next;
     for (const listener of this.listeners) {
-      if (previous.length !== next.length) { listener.onDataReloaded(); }
-      else {
+      if (appended) {
+        // Insert before the existing footer to retain the cards already on screen.
+        for (let index: number = footerIndex; index < next.length - 1; index++) { listener.onDataAdded(index); }
+      } else if (previous.length !== next.length) {
+        listener.onDataReloaded();
+      } else {
         for (let index: number = 0; index < next.length; index++) {
           if (previous[index].key !== next[index].key) { listener.onDataChanged(index); }
         }

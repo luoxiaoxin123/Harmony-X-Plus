@@ -14,6 +14,8 @@ function load(source, modules = {}, globals = {}) {
   return module.exports;
 }
 
+const composerMedia = load(fs.readFileSync('entry/src/main/ets/models/ComposerMedia.ets', 'utf8'));
+
 function methods(file, name, names) {
   const source = fs.readFileSync(file, 'utf8').replace('struct ' + name, 'class ' + name);
   const parsed = ts.createSourceFile(file + '.ts', source, ts.ScriptTarget.Latest, true);
@@ -26,6 +28,7 @@ function methods(file, name, names) {
 
 function delivery() {
   let active = 'account-a', now = 0, fail = false, onAgent = () => {};
+  let previews = false;
   const published = [], storage = new Map(), agents = [];
   const pref = { getSync: (key, fallback) => storage.get(key) ?? fallback,
     putSync: (key, value) => storage.set(key, value), flushSync() {} };
@@ -37,9 +40,15 @@ function delivery() {
     '@kit.NotificationKit': { notificationManager: { isNotificationEnabled: async () => true, setBadgeNumber: async () => {},
       addSlot: async () => {}, SlotType: { SOCIAL_COMMUNICATION: 1 }, ContentType: { NOTIFICATION_CONTENT_BASIC_TEXT: 1 },
       publish: async request => { if (fail) { fail = false; throw new Error('offline'); } published.push({ request, time: now }); } } },
-    '@ohos.hilog': { default: { warn() {} } }, './AccountStore': { accountStore: { activeId: () => active } }
-  }, { Date: { now: () => now }, setTimeout: (fn, delay) => { now += delay; queueMicrotask(fn); } });
-  return { service: new NotificationDeliveryService(), published, agents, storage,
+    '@ohos.hilog': { default: { warn() {} } }, './AccountStore': { accountStore: { activeId: () => active } },
+    './NotificationSettingsStore': { notificationSettingsStore: { loadMessagePreview: () => previews } }
+  }, { Date: { now: () => now }, $r: key => key, setTimeout: (fn, delay) => { now += delay; queueMicrotask(fn); } });
+  const service = new NotificationDeliveryService();
+  const publishMessages = service.publishUnreadMessages.bind(service);
+  service.publishUnreadMessages = (context, ...args) => publishMessages({
+    ...context, resourceManager: { getStringSync: () => 'New message' }
+  }, ...args);
+  return { service, published, agents, storage, preview: () => { previews = true; },
     switch: value => { active = value; }, fail: () => { fail = true; }, agent: fn => { onAgent = fn; } };
 }
 const notice = id => ({ id, unread: true, authorName: 'Author', text: 'body', postText: '', time: '', targetPostId: 'post', authorUsername: 'author' });
@@ -55,6 +64,15 @@ test('social and DM batches share throttling and concurrent refreshes publish ea
   assert.deepEqual(counts, [2, 1, 0]);
   assert.deepEqual(f.published.map(row => row.time), [0, 250, 500]);
   assert.ok(f.agents.every(agent => agent.wants[0].parameters.accountId === 'account-a'));
+});
+
+test('chat notifications omit message text by default and use decrypted previews when opted in', async () => {
+  const f = delivery();
+  await f.service.publishUnreadMessages({}, [message('private')], 1, 1, false);
+  f.preview();
+  await f.service.publishUnreadMessages({}, [message('visible')], 1, 1, false);
+  await f.service.publishUnreadMessages({}, [{ ...message('locked'), preview: '' }], 1, 1, false);
+  assert.deepEqual(f.published.map(row => row.request.content.normal.text), ['New message', 'hello', 'New message']);
 });
 
 test('deduplication and notification identities are separated by account', async () => {
@@ -89,6 +107,171 @@ test('messages read while queued are skipped before the system publish', async (
   assert.equal(f.published.length, 0);
 });
 
+test('the next incoming message in an existing thread gets its own notification', async () => {
+  const f = delivery();
+  const first = { ...message('100-200'), conversationId: '100:200', latestSequenceId: '42' };
+  const second = { ...first, conversationId: '100-200', latestSequenceId: '43' };
+  assert.equal(await f.service.publishUnreadMessages({}, [first], 1, 1, false), 1);
+  assert.equal(await f.service.publishUnreadMessages({}, [first], 1, 1, false), 0);
+  assert.equal(await f.service.publishUnreadMessages({}, [second], 1, 1, false), 1);
+  assert.equal(await f.service.publishUnreadMessages({}, [{ ...second, latestSequenceId: '44', muted: true }], 1, 1, false), 0);
+  assert.deepEqual(f.published.map(row => row.request.appMessageId),
+    ['account-a:dm:100-200:42', 'account-a:dm:100-200:43']);
+});
+
+test('tap-to-share resumes multiple recipients after PIN and retries only the unsuccessful share', async () => {
+  const calls = [];
+  let unlocked = false;
+  let rejectPin = true;
+  let rejectSecond = true;
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer', isSignedIn: () => true, hasChatOAuth: () => true },
+    xChatService: {
+      async prepare(_context, ids) { calls.push(['prepare', ...ids]); },
+      isUnlocked: () => unlocked,
+      hasBackup: () => true,
+      async unlock(pin) {
+        assert.equal(pin, '1234');
+        calls.push('unlock');
+        if (rejectPin) { throw new Error('InvalidPin'); }
+        unlocked = true;
+      },
+      conversationTransport: () => 'encrypted',
+      async sharePost(...args) {
+        calls.push(args);
+        if (args[0] === '100-300' && rejectSecond) { throw new Error('send_http_503'); }
+      }
+    },
+    postShareUrl: () => 'https://x.com/example/status/123',
+    chatFailureMessage: (_context, reason) => reason.replace('_http_', ' HTTP '),
+    $r: name => name
+  });
+  const alice = { conversationId: '100-200', title: 'Alice', participantIds: [], group: false };
+  const bob = { conversationId: '100-300', title: 'Bob', participantIds: [], group: false };
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: [alice, bob], sentIds: [], linkRecipients: [],
+    webUnconfirmed: new Set(),
+    note: ' note ', open: true,
+    context: () => ({ resourceManager: { getStringSync: name => name } }),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast: () => calls.push('sent') }) })
+  });
+  await subject.sendSelected();
+  assert.equal(subject.askingPin, true);
+  assert.equal(subject.sending, false);
+  await subject.sendSelected('1234');
+  assert.equal(subject.sendError, 'app.string.dm_pin_incorrect');
+  assert.equal(subject.open, true);
+  rejectPin = false;
+  await subject.sendSelected('1234');
+  assert.deepEqual(subject.selected, [bob]);
+  assert.deepEqual(subject.sentIds, ['100-200']);
+  assert.match(subject.sendError, /Bob.*HTTP 503/);
+  assert.equal(subject.webRecipient, bob);
+  assert.equal(subject.open, true);
+  rejectSecond = false;
+  await subject.sendSelected();
+  assert.equal(subject.open, false);
+  assert.equal(subject.sending, false);
+  const url = 'https://x.com/example/status/123';
+  assert.deepEqual(calls, [['prepare'], ['prepare'], 'unlock', ['prepare'], 'unlock', ['prepare', '100', '200'],
+    ['100-200', '123', url, 'note'], ['prepare', '100', '300'], ['100-300', '123', url, 'note'],
+    ['prepare', '100', '300'], ['100-300', '123', url, 'note'], 'sent']);
+});
+
+test('a legacy conversation sends a raw link only after that separate action is chosen', async () => {
+  const plaintext = [];
+  const contact = { id: '200' };
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants', 'sendLegacyLink']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100', isSignedIn: () => false },
+    xChatService: { prepare: async () => {}, isUnlocked: () => true, conversationTransport: () => 'plaintext',
+      async sharePost() { throw new Error('recipient_key_unavailable'); } },
+    chatContactService: { async load(_context, id) { assert.equal(id, '200'); return contact; },
+      async sendPlaintext(_context, receiver, id, text) { plaintext.push([receiver, id, text]); } },
+    postShareUrl: () => 'https://x.com/example/status/123',
+    chatFailureMessage: (_context, reason) => reason,
+    $r: name => name
+  });
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: [{ conversationId: '100-200', title: 'Alice', group: false }],
+    note: 'note', open: true, sentIds: [], linkRecipients: [], webUnconfirmed: new Set(),
+    context: () => ({ resourceManager: { getStringSync: name => name } }),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast() {} }) })
+  });
+  await subject.sendSelected();
+  assert.deepEqual(plaintext, []);
+  assert.deepEqual(subject.linkRecipients, ['100-200']);
+  await subject.sendSelected(undefined, true);
+  assert.deepEqual(plaintext, [[contact, '100-200', 'note\nhttps://x.com/example/status/123']]);
+  assert.equal(subject.open, false);
+});
+
+test('the original share button resumes hidden X Chat with one native PIN entry', async () => {
+  const attempts = [];
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected', 'sendWithWebChat', 'canContinueSend']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100', isSignedIn: () => true,
+      hasChatOAuth: () => false },
+    AppStorage: { get: () => true },
+    async sendXChatWebDraft(_context, _ui, viewer, recipient, text, isCurrent, pin) {
+      assert.equal(isCurrent(), true);
+      attempts.push({ viewer, recipient, text, pin });
+      return attempts.length === 1 ? 'pin_required' : 'confirmed';
+    },
+    postShareUrl: () => 'https://x.com/i/status/123',
+    $r: name => name
+  });
+  const recipients = [{ conversationId: '100-200', title: 'Alice' }, { conversationId: '100-300', title: 'Bob' }];
+  let toasts = 0;
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: recipients, open: true,
+    note: 'look', sentIds: [], webUnconfirmed: new Set(), context: () => ({}),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast() { toasts++; } }) })
+  });
+  await subject.sendSelected();
+  assert.equal(subject.askingPin, true);
+  assert.equal(subject.open, true);
+  await subject.sendSelected('1234');
+  assert.equal(subject.askingPin, false);
+  assert.equal(subject.open, false);
+  assert.equal(toasts, 1);
+  assert.deepEqual(attempts.map(item => [item.recipient, item.pin]), [
+    ['100-200', ''], ['100-200', '1234'], ['100-300', '']
+  ]);
+  assert.equal(attempts[1].text, 'look\nhttps://x.com/i/status/123');
+});
+
+test('native pull state still starts refresh and times out cleanly without a second inbox request', async () => {
+  let resolveFetch;
+  let fetches = 0;
+  let indicatorTimeout;
+  const { Subject } = load(methods('entry/src/main/ets/pages/Index.ets', 'Index', ['refreshMessages', 'loadMessages']), {}, {
+    getContext() { return {}; },
+    accountStore: { activeId: () => 'viewer' },
+    CHAT_REFRESH_INDICATOR_MS: 20000,
+    setTimeout(callback) { indicatorTimeout = callback; return 1; },
+    clearTimeout() {}
+  });
+  const subject = Object.assign(new Subject(), {
+    messagesRefreshing: true, messagesRefreshPullOffset: 34,
+    fetchMessages() { fetches++; return new Promise(resolve => { resolveFetch = resolve; }); }
+  });
+  const refresh = subject.refreshMessages();
+  assert.equal(fetches, 1);
+  indicatorTimeout();
+  await refresh;
+  assert.equal(subject.messagesRefreshing, false);
+  assert.equal(subject.messagesRefreshPullOffset, 0);
+  assert.equal(subject.messagesLoading, true);
+  const retry = subject.refreshMessages();
+  assert.equal(fetches, 1);
+  resolveFetch();
+  await retry;
+  assert.equal(subject.messagesLoading, false);
+  assert.equal(subject.messagesRefreshing, false);
+});
+
 function share(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'harmonyx-share-test-')).replace(/\\/g, '/');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -103,6 +286,7 @@ function share(t) {
     rmdirSync: target => { assert.ok(target.startsWith(root + '/share-inbox/')); fs.rmSync(target, { recursive: true }); } };
   const parents = { jpg: ['image'], gif: ['gif', 'image'], mp4: ['video'], heic: ['image'] };
   const { ExternalShareStore } = load(fs.readFileSync('entry/src/main/ets/services/ExternalShareStore.ets', 'utf8'), {
+    '../models/ComposerMedia': composerMedia,
     '@ohos.file.fs': { default: api }, '@ohos.util': { default: { generateRandomUUID: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' } },
     '@ohos.data.uniformTypeDescriptor': { default: { UniformDataType: { IMAGE: 'image', VIDEO: 'video', GIF: 'gif' },
       getTypeDescriptor: type => ({ belongsTo: parent => parents[type]?.includes(parent) ?? false }) } }
@@ -140,13 +324,14 @@ test('incoming IDs cannot escape the share sandbox', t => {
   assert.equal(fs.existsSync(f.root), true);
 });
 
-test('post limits leave larger and mixed albums intact for the DM path', t => {
+test('post imports allow mixed media in order with a 20-item limit and one GIF', t => {
   const f = share(t);
   const payload = types => ({ files: types.map(type => ({ type })) });
   assert.equal(f.store.canPost(payload([1, 1, 1, 2])), true);
-  assert.equal(f.store.canPost(payload([1, 1, 1, 1, 1])), false);
+  assert.equal(f.store.canPost(payload(Array.from({ length: 20 }, () => 1))), true);
+  assert.equal(f.store.canPost(payload(Array.from({ length: 21 }, () => 1))), false);
   assert.equal(f.store.canPost(payload([3])), true);
-  assert.equal(f.store.canPost(payload([1, 3])), false);
+  assert.equal(f.store.canPost(payload([1, 3])), true);
   assert.equal(f.store.canPost(payload([2, 2])), false);
 });
 
@@ -206,14 +391,16 @@ test('shared content does not overwrite an existing composer draft without the e
   const { Subject } = load(methods('entry/src/main/ets/components/ReplyComposer.ets', 'ReplyComposerPage', ['importSharedPayload']), {}, {
     getContext: () => ({}), accountStore: { activeId: () => 'account' }, $r: value => value,
     promptAction: { showDialog: async () => ({ index: choice }) },
+    ComposerMedia: composerMedia.ComposerMedia,
     ComposerOptions: class { hasSettings() { return false; } }
   });
   const page = new Subject();
-  Object.assign(page, { sharedImportId: '', composerPageActive: true, draft: 'existing', imageUris: ['/old.jpg'], gifUri: '', videoUri: '',
+  Object.assign(page, { sharedImportId: '', composerPageActive: true, draft: 'existing', attachments: [new composerMedia.ComposerMedia('/old.jpg', 1)],
     composeOptions: { hasSettings: () => false }, text: value => value, scheduleDraftSave: () => saves++ });
-  const payload = { id: 'share-1', text: 'caption', files: [{ uri: '/new.jpg', type: 1 }] };
+  const payload = { id: 'share-1', text: 'caption',
+    files: [{ uri: '/video.mp4', type: 3 }, { uri: '/new.jpg', type: 1 }, { uri: '/gif.gif', type: 2 }] };
   await page.importSharedPayload(payload);
-  assert.equal(page.draft, 'existing'); assert.deepEqual(page.imageUris, ['/old.jpg']); assert.equal(saves, 0);
+  assert.equal(page.draft, 'existing'); assert.deepEqual(page.attachments.map(item => item.uri), ['/old.jpg']); assert.equal(saves, 0);
   choice = 1; await page.importSharedPayload({ ...payload, id: 'share-2' });
-  assert.equal(page.draft, 'caption'); assert.deepEqual(page.imageUris, ['/new.jpg']); assert.equal(saves, 1);
+  assert.equal(page.draft, 'caption'); assert.deepEqual(page.attachments.map(item => item.uri), ['/video.mp4', '/new.jpg', '/gif.gif']); assert.equal(saves, 1);
 });

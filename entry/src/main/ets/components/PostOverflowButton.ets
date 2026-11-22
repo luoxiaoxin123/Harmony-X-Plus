@@ -1,3 +1,5 @@
+import type { PostShareRoute } from '../pages/PostShare';
+import { copyPostLink } from '../utils/PostLinkCopy';
 import { InputModalScope } from '../utils/InputModalScope';
 import { AppLocalizedResources } from '../utils/AppLocalizedResources';
 import { STORAGE_KEY_APP_LOCALE, effectiveAppLocale } from '../utils/AppLocale';
@@ -32,8 +34,13 @@ export struct PostOverflowButton {
   @StorageProp('harmonyx.compact_window') private compactWindow: boolean = false;
   @Prop tweet: Tweet;
   @Prop @Watch('onInputMenuRequest') inputMenuRequest: number = 0;
+  @Prop @Watch('onFeedbackRequest') feedbackRequest: number = 0;
   @Prop hideTrigger: boolean = false;
   @Prop compactHeader: boolean = false;
+
+  private onFeedbackRequest(): void {
+    if (this.feedbackRequest > 0) { void this.notInterested(); }
+  }
 
   private onInputMenuRequest(): void {
     if (this.inputMenuRequest <= 0) { return; }
@@ -257,6 +264,22 @@ export struct PostOverflowButton {
             .every((option: MenuActionOption): boolean => !this.menuVisible(option.id))) {
             Text($r('app.string.settings_menu_empty')).fontFamily(this.appFontFamily).fontColor($r('app.color.text_secondary')).padding(20)
           }
+          if (this.tweet.text.length > 0) {
+            this.Action($r('sys.symbol.plus_square_on_square'), $r('app.string.post_share_copy_body'), (): void => {
+              this.showing = false;
+              void copyPostLink(this.getUIContext(), this.tweet.text);
+            })
+          }
+          this.Action($r('sys.symbol.link'), $r('app.string.post_share_open_x'), (): void => {
+            this.showing = false;
+            void this.context().startAbility({ action: 'ohos.want.action.viewData', uri: postShareUrl(this.tweet) })
+              .catch((): void => this.toast($r('app.string.share_failed')));
+          })
+          this.Action($r('sys.symbol.picture'), $r('app.string.post_share_screenshot'), (): void => {
+            this.showing = false;
+            const params: PostShareRoute = { post: this.tweet, includeReplies: false };
+            this.pageStack.pushPath({ name: 'PostShare', param: params });
+          })
           if (this.menuVisible('post.report')) {
             this.Action($r('sys.symbol.flag'), $r('app.string.video_feed_report_post'), (): void => {
               this.showing = false;

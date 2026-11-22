@@ -84,7 +84,7 @@ for (const version of ['aes128gcm','aesgcm']) test(`${version}: encrypted push q
   assert.equal((await f.post(route,push.body,false,push.headers)).status,201);
   await f.restart(); await f.flush();
   assert.equal(f.sent.length,2);
-  assert.equal(f.sent[1].notice.title,'Harmony X'); assert.ok(!JSON.stringify(f.sent[1]).includes('private words'));
+  assert.equal(f.sent[1].notice.title,'HarmonyX+'); assert.ok(!JSON.stringify(f.sent[1]).includes('private words'));
   const status=await f.post('/v1/meow/status',{subKey:f.subKey});
   assert.ok(status.body.deliveredAt>0); assert.equal(status.body.queued,0); assert.equal(status.body.testAt,0);
   assert.equal((await f.post(route,push.body,false,push.headers)).status,201); await f.flush();

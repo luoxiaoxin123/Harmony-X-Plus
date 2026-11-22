@@ -27,7 +27,7 @@ class Feed {
     'inlinePreviewHidden', 'setInlinePreviewHidden', 'deactivate', 'isActive', 'isRetainedPlayer', 'retainInlinePlayer'])}
 }
 class Player {
-  ${methods('SurfaceVideoPlayer', ['displayHeight', 'playerContainerHeight', 'publishInlinePreview', 'bindPlayerEvents'])}
+  ${methods('SurfaceVideoPlayer', ['displayHeight', 'playerContainerHeight', 'publishInlinePreview', 'bindPlayerEvents', 'acceptPlaybackProgress'])}
 }`;
 const code = ts.transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 const { Feed, Player } = new Function('isAnimatedGif', 'VIDEO_CONTROL_STYLE_ORIGINAL',
@@ -87,7 +87,7 @@ test('a progress callback before the native first frame keeps the persistent pre
   const native = { on(name, handler) { events[name] = handler; } };
   const p = Object.assign(new Player(), { player: native, media: { id: 'clip' }, ready: false,
     persistentInlinePreview: true, playbackEnabled: false, sourceTransitioning: false, failed: false,
-    positionSec: 0, markFrameReady() { this.ready = true; } });
+    positionSec: 0, latestSeekTarget: -1, markFrameReady() { this.ready = true; } });
   p.bindPlayerEvents(native);
   events.timeUpdate(4000);
   assert.equal(p.ready, false, 'restoring a timestamp is not rendering a frame');
@@ -126,4 +126,11 @@ test('stable previews remain mounted and the search flow uses lazy rendering wit
   assert.match(flow, /layoutMode: WaterFlowLayoutMode\.ALWAYS_TOP_DOWN/);
   const index = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8');
   assert.match(index.slice(index.indexOf('private SearchResultsContent(')), /lazyItems: true/);
+});
+
+test('a seek ignores native progress from the previous position', () => {
+  const player = Object.assign(new Player(), { latestSeekTarget: 34, latestSeekUntil: Date.now() + 2000 });
+  assert.equal(player.acceptPlaybackProgress(102), false);
+  assert.equal(player.acceptPlaybackProgress(33.9), true);
+  assert.equal(player.acceptPlaybackProgress(34.5), true);
 });

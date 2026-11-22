@@ -48,6 +48,7 @@ struct AboutAccountPage {
   private alive: boolean = true;
 
   aboutToAppear(): void {
+    this.alive = true;
     const params: AboutAccountRouteParam[] = this.pageStack.getParamByName('AboutAccount') as AboutAccountRouteParam[];
     if (params.length > 0) {
       this.author = params[params.length - 1].author;
@@ -120,7 +121,8 @@ struct AboutAccountPage {
             Column() {
               this.InfoRow($r('sys.symbol.calendar'), $r('app.string.profile_join_date'), this.joined)
               Divider().color($r('app.color.divider')).opacity(0.5)
-              this.InfoRow($r('sys.symbol.location_up'), $r('app.string.profile_account_country'), this.data?.country ?? '')
+              this.InfoRow($r('sys.symbol.location_up'), $r('app.string.profile_account_country'),
+                this.loading || this.failed ? '—' : this.data?.country ?? '')
               if (this.data?.locationAccurate === false) {
                 Text($r('app.string.profile_location_approximate')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S'))
                   .fontColor(this.foreground(true)).width('100%').padding({ left: 60, bottom: 12 })
@@ -129,7 +131,8 @@ struct AboutAccountPage {
               this.InfoRow($r('sys.symbol.checkmark_circle'), $r('app.string.profile_verified'),
                 this.author?.verified === true ? $r('app.string.profile_verified_yes') : $r('app.string.profile_verified_no'))
               Divider().color($r('app.color.divider')).opacity(0.5)
-              this.InfoRow($r('sys.symbol.globe_badge_message'), $r('app.string.profile_connected_via'), this.data?.source ?? '')
+              this.InfoRow($r('sys.symbol.globe_badge_message'), $r('app.string.profile_connected_via'),
+                this.loading || this.failed ? '—' : this.data?.source ?? '')
             }.width('100%').padding({ left: 20, right: 20 }).borderRadius(24)
               .backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
             if (this.loading) { LoadingProgress().width(28).height(28).color(this.accentColor) }

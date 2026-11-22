@@ -126,7 +126,7 @@ test('main actions use existing navigation, refresh and contextual compose paths
   }
 });
 test('photo navigation respects bounds, zoom and panels and uses the native pager',()=>{
-  const f=methods('pages/PhotoViewer','PhotoViewer',['inputPhoto','photoInputKey']);
+  const f=methods('pages/PhotoViewer','PhotoViewer',['inputPhoto','selectThumbnail','photoInputKey']);
   const moves=[];Object.assign(f,{current:0,items:[1,2,3],inputPager:{changeIndex:(...args)=>moves.push(args)}});
   f.inputPhoto(-1);assert.deepEqual(moves,[]);f.inputPhoto(1);assert.deepEqual(moves.pop(),[1,true]);
   f.current=2;f.inputPhoto(1);assert.equal(moves.length,0);

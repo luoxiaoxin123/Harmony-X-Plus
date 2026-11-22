@@ -1,3 +1,5 @@
+import { photoFilenameStore } from '../services/PhotoFilenameStore';
+import { ProxyMediaImage } from '../components/ProxyMediaImage';
 import { MediaViewerNavigationReturn } from '../utils/MediaViewerNavigation';
 import { mediaViewerTitleBarStyle } from '../utils/MediaViewerTitleBar';
 import { HdsNavigationMenuItemOptions } from '@kit.UIDesignKit';
@@ -804,11 +806,28 @@ export struct PhotoViewer {
       return true;
   }
 
-  private inputPhoto(direction: number): void {
+  private readonly thumbnailScroller: Scroller = new Scroller();
+  private lastThumbnailWheelAt: number = 0;
+
+  private inputPhoto(direction: number): void { this.selectThumbnail(this.current + direction); }
+
+  private selectThumbnail(next: number): void {
     if (this.closing || this.zoomed || this.showMoreSheet || this.showPostSheet || this.ocrVisible || this.subjectVisible) { return; }
-    const next: number = this.current + direction;
-    if (next < 0 || next >= this.items.length) { return; }
+    if (next === this.current || next < 0 || next >= this.items.length) { return; }
     this.inputPager.changeIndex(next, true);
+  }
+
+  private scrollToThumbnail(index: number): void {
+    try { this.thumbnailScroller.scrollToIndex(index, true, ScrollAlign.CENTER); }
+    catch (error) { /* Controls can be detached while returning to the feed. */ }
+  }
+
+  private thumbnailWheel(event: AxisEvent): void {
+    const offset: number = event.getVerticalAxisValue();
+    const now: number = Date.now();
+    if (offset === 0 || now - this.lastThumbnailWheelAt < 170) { return; }
+    this.lastThumbnailWheelAt = now;
+    this.inputPhoto(offset > 0 ? 1 : -1);
   }
 
   private photoInputKey(event: KeyEvent): boolean {
@@ -1591,6 +1610,7 @@ export struct PhotoViewer {
     promptAction.showToast({ message: this.text(all ? $r('app.string.media_download_all_started') :
       $r('app.string.media_download_started')) });
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+    const filenameParts: string[] = photoFilenameStore.load(context);
     const completed: (result: number) => void = (result: number): void => {
       this.downloading = false;
       const message: Resource = result === MEDIA_DOWNLOAD_SAVED_AS_VIDEO ? $r('app.string.gif_save_video_fallback') :
@@ -1607,30 +1627,35 @@ export struct PhotoViewer {
       const items: PhotoViewerPhoto[] = this.items.slice();
       for (let i: number = 0; i < items.length; i++) {
         result = await new Promise<number>((resolve): void => {
-          this.downloadItem(context, items[i], mediaId + '-' + i.toString(), false, resolve);
+          this.downloadItem(context, items[i], mediaId + '-' + i.toString(), false, resolve,
+            photoFilenameStore.title(filenameParts, this.tweet, items[i].sourceIndex, items[i].originalUrl));
         });
         if (result !== MEDIA_DOWNLOAD_SUCCESS) { break; }
       }
       completed(result);
     } else if (all) {
-      mediaDownloadService.downloadImages(context, urls, mediaId, completed);
+      const titles: string[] = this.items.map((item: PhotoViewerPhoto): string =>
+        photoFilenameStore.title(filenameParts, this.tweet, item.sourceIndex, item.originalUrl));
+      mediaDownloadService.downloadImages(context, urls, mediaId, completed, titles);
     } else {
-      this.downloadItem(context, this.items[this.current], mediaId + '-' + this.current, fromSaveButton, completed);
+      const item: PhotoViewerPhoto = this.items[this.current];
+      this.downloadItem(context, item, mediaId + '-' + this.current, fromSaveButton, completed,
+        photoFilenameStore.title(filenameParts, this.tweet, item.sourceIndex, item.originalUrl));
     }
   }
 
   private downloadItem(context: common.UIAbilityContext, item: PhotoViewerPhoto, mediaId: string,
-    fromSaveButton: boolean, completed: (result: number) => void): void {
+    fromSaveButton: boolean, completed: (result: number) => void, titleOverride: string = ''): void {
     const animation: MediaAttachment | null = item.animation ?? null;
     const lower: string = item.originalUrl.toLowerCase();
     const gifImage: boolean = lower.split('?')[0].split('#')[0].endsWith('.gif') || lower.indexOf('format=gif') >= 0;
     if (animation !== null && !gifImage) {
       mediaDownloadService.downloadAnimatedGif(context, item.originalUrl, mediaId,
-        animation.durationMs ?? 0, item.width, item.height, completed);
+        animation.durationMs ?? 0, item.width, item.height, completed, titleOverride);
     } else if (fromSaveButton) {
-      void mediaDownloadService.downloadPhotoWithSaveButton(context, item.originalUrl, mediaId, completed);
+      void mediaDownloadService.downloadPhotoWithSaveButton(context, item.originalUrl, mediaId, completed, false, titleOverride);
     } else {
-      mediaDownloadService.download(context, item.originalUrl, mediaId, false, completed);
+      mediaDownloadService.download(context, item.originalUrl, mediaId, false, completed, titleOverride);
     }
   }
 
@@ -1698,14 +1723,23 @@ export struct PhotoViewer {
   private BottomControls(): void {
     Column({ space: 18 }) {
       if (this.items.length > 1) {
-        Row({ space: 6 }) {
+        List({ scroller: this.thumbnailScroller, space: 6, initialIndex: this.current }) {
           ForEach(this.items, (item: PhotoViewerPhoto, index: number) => {
-            Circle().width(index === this.current ? 8 : 5).height(index === this.current ? 8 : 5)
-              .fill(index === this.current ? Color.White : $r('app.color.media_viewer_dot'))
+            ListItem() {
+              Button({ type: ButtonType.Normal, stateEffect: true }) {
+                ProxyMediaImage({ url: item.previewUrl, fillParent: true })
+              }.type(ButtonType.Normal).width(48).height(48).borderRadius(8).clip(true)
+                .backgroundColor($r('app.color.media_viewer_control'))
+                .border({ width: index === this.current ? 2 : 0, color: Color.White })
+                .opacity(index === this.current ? 1 : 0.65)
+                .accessibilityText(item.altText.length > 0 ? item.altText :
+                  (index + 1).toString() + ' / ' + this.items.length)
+                .onClick((): void => this.selectThumbnail(index))
+            }
           }, (item: PhotoViewerPhoto): string => item.sourceIndex.toString())
-        }
-        .height(14)
-        .accessibilityText((this.current + 1).toString() + ' / ' + this.items.length)
+        }.listDirection(Axis.Horizontal).height(50).width('100%').scrollBar(BarState.Off)
+          .contentStartOffset(4).contentEndOffset(4)
+          .onAxisEvent((event: AxisEvent): void => this.thumbnailWheel(event))
       }
       if (this.tweet !== null) {
         ForEach([this.tweet], (post: Tweet) => {
@@ -1900,6 +1934,7 @@ export struct PhotoViewer {
             this.closeOcrPanel();
             this.closeSubjectPanel();
             this.current = index;
+            this.scrollToThumbnail(index);
             this.zoomed = false;
             this.photoTransformScale = 1;
             this.photoTransformX = 0;

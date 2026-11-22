@@ -84,6 +84,8 @@ export class XUserParser {
       }
       return {
         id: restId,
+        supportsLongPosts: result['can_compose_long_tweet'] === true ||
+          (result['can_compose_long_tweet'] !== false && result['is_blue_verified'] === true),
         name: String(core['name'] ?? legacy['name'] ?? ''),
         username: String(core['screen_name'] ?? legacy['screen_name'] ?? ''),
         description: String(legacy['description'] ?? ''),

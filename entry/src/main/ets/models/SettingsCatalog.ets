@@ -521,6 +521,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     ]),
   new SettingsCategory('photos', 'experience', 'media', $r('app.string.settings_category_photos'),
     $r('app.string.settings_category_photos_desc'), $r('sys.symbol.ohos_photo'), '', [
+      $r('app.string.settings_profile_default_media'),
       $r('app.string.settings_photo_fullscreen'),
       $r('app.string.settings_photo_fullscreen_desc'),
       $r('app.string.settings_menu_photo')
@@ -674,6 +675,8 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
       $r('app.string.settings_system_notifications_desc'),
       $r('app.string.settings_notification_dnd_silent'),
       $r('app.string.settings_notification_dnd_silent_desc'),
+      $r('app.string.settings_message_notification_preview'),
+      $r('app.string.settings_message_notification_preview_desc'),
       $r('app.string.settings_notification_system_settings'),
       $r('app.string.settings_notification_system_settings_desc')
     ])

@@ -18,10 +18,10 @@ export const STORAGE_KEY_VIDEO_DOWNLOAD_BUTTON: string = 'harmonyx.video_downloa
 export const STORAGE_KEY_VIDEO_COMMENT_PROGRESS_RING: string = 'harmonyx.video_comment_progress_ring';
 export const STORAGE_KEY_VIDEO_QUALITY: string = 'harmonyx.video_quality';
 export const STORAGE_KEY_VIDEO_AUTO_BITRATE_CAP: string = 'harmonyx.video_auto_bitrate_cap';
-// Detail pages hand a running video over to the system picture-in-picture
-// window once the reader scrolls past it. Readers who would rather have the
-// video stop turn this off.
+// Readers can opt in to automatic picture-in-picture when a playing video
+// scrolls out of view in a post detail page.
 export const STORAGE_KEY_VIDEO_AUTO_PIP: string = 'harmonyx.video_auto_pip';
+export const DEFAULT_VIDEO_AUTO_PIP: boolean = false;
 export const STORAGE_KEY_VIDEO_IMMERSIVE_FILL: string = 'harmonyx.video_immersive_fill';
 export const STORAGE_KEY_VIDEO_FEED_CONTROLS_ALWAYS_VISIBLE: string = 'harmonyx.video_feed_controls_always_visible';
 export const STORAGE_KEY_VIDEO_CAPTIONS_ENABLED: string = 'harmonyx.video_captions_enabled';
@@ -31,6 +31,9 @@ export const STORAGE_KEY_VIDEO_FEED_TAP_PAUSE: string = 'harmonyx.video_feed_tap
 // shows a glass capsule, in the style of the short-video feeds. Turning this off
 // keeps the original hold-to-seek gesture (left half rewinds, right half
 // forwards).
+export const STORAGE_KEY_VIDEO_REMEMBER_SPEED: string = 'harmonyx.video_remember_speed';
+// AppStorage only. Manual rates are remembered until the process exits.
+export const STORAGE_KEY_VIDEO_SESSION_RATE_INDEX: string = 'harmonyx.video_session_rate_index';
 export const STORAGE_KEY_VIDEO_HOLD_SPEED: string = 'harmonyx.video_hold_speed';
 export const STORAGE_KEY_INLINE_VIDEO_HOLD_PLAY: string = 'harmonyx.inline_video_hold_play';
 export const STORAGE_KEY_INLINE_VIDEO_OVERLAY_CONTROLS: string = 'harmonyx.inline_video_overlay_controls';
@@ -394,9 +397,9 @@ export class MediaSettingsStore {
     try {
       const options: preferences.Options = { name: MediaSettingsStore.STORE_NAME };
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
-      return store.getSync(MediaSettingsStore.VIDEO_AUTO_PIP_KEY, true) as boolean;
+      return store.getSync(MediaSettingsStore.VIDEO_AUTO_PIP_KEY, DEFAULT_VIDEO_AUTO_PIP) as boolean;
     } catch (error) {
-      return true;
+      return DEFAULT_VIDEO_AUTO_PIP;
     }
   }
 
@@ -539,6 +542,21 @@ export class MediaSettingsStore {
       AppStorage.setOrCreate<number>(STORAGE_KEY_VIDEO_DOUBLE_TAP_SEEK_SECONDS, value);
       return true;
     } catch (error) { return false; }
+  }
+
+  loadVideoRememberSpeed(context: common.Context): boolean {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context,
+        { name: MediaSettingsStore.STORE_NAME });
+      return store.getSync('video_remember_speed', true) === true;
+    } catch (error) { return true; }
+  }
+
+  saveVideoRememberSpeed(context: common.Context, enabled: boolean): boolean {
+    const saved: boolean = this.saveInlineOption(context, 'video_remember_speed',
+      STORAGE_KEY_VIDEO_REMEMBER_SPEED, enabled);
+    if (saved && !enabled) { AppStorage.delete(STORAGE_KEY_VIDEO_SESSION_RATE_INDEX); }
+    return saved;
   }
 
   loadVideoHoldSpeed(context: common.Context): boolean {

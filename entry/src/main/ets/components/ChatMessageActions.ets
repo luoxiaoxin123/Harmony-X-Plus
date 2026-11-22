@@ -86,7 +86,7 @@ export struct ChatMessageActions {
       ChatEmojiText({ text: emoji, fontSize: $r('app.float.chat_emoji_quick_size') })
     }
       .width('14.2857%').height(44).padding(0).backgroundColor(this.chosen(emoji) ? $r('app.color.chat_reaction_selected') : Color.Transparent)
-      .accessibilityText(emoji).onClick((): void => { this.menuShown = false; this.onReaction(emoji); })
+      .accessibilityText(emoji).onClick((): void => { this.dismissThen((): void => this.onReaction(emoji)); })
   }
   @Builder
   private QuickPanel(): void {
@@ -97,7 +97,7 @@ export struct ChatMessageActions {
         Button({ type: ButtonType.Circle }) {
           SymbolGlyph($r('sys.symbol.more')).fontSize(22).fontColor([$r('app.color.text_primary')])
         }.width('14.2857%').height(44).padding(0).backgroundColor(Color.Transparent)
-          .accessibilityText($r('app.string.chat_emoji_more')).onClick((): void => { this.menuShown = false; this.onMoreReactions(); })
+          .accessibilityText($r('app.string.chat_emoji_more')).onClick((): void => { this.dismissThen(this.onMoreReactions); })
       }.width('100%')
     }.padding(6).width('100%').height(100).borderRadius(18).clip(true)
       .backgroundColor(SystemMaterialUtil.isApi26OrAbove() ? Color.Transparent : $r('app.color.bg_field'))
@@ -159,7 +159,7 @@ export struct ChatMessageActions {
           this.ActionDivider();
           this.ActionRow($r('app.string.chat_message_info'), $r('sys.symbol.info_circle'),
             'chat-message-action-info', this.onInfo);
-          if (!this.message.outgoing) {
+          if (!this.message.outgoing && !this.message.directionUnknown) {
             this.ActionDivider();
             this.ActionRow($r('app.string.chat_message_report'), $r('sys.symbol.flag'),
               'chat-message-action-report', this.onReport, true);

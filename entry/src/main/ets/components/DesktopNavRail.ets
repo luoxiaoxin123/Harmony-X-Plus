@@ -160,7 +160,7 @@ export struct DesktopNavRail {
             .id('desktop-sidebar-avatar')
           if (!this.compact) {
             Column({ space: 2 }) {
-              Text(this.profile?.name ?? 'Harmony X').fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontWeight(FontWeight.Bold)
+              Text(this.profile?.name ?? 'HarmonyX+').fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.text_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               Text(this.handle).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S')).fontColor($r('app.color.text_secondary'))
                 .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

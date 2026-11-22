@@ -380,6 +380,7 @@ export class XTimelineParser {
           focal = post;
         }
       }
+      if (focal !== null) { ReplyConversation.attach([focal], Array.from(byId.values())); }
       const ancestors: Set<string> = new Set<string>();
       let parentId: string = focal?.replyToTweetId ?? '';
       while (parentId.length > 0 && parentId !== focalId && !ancestors.has(parentId)) {

@@ -11,6 +11,7 @@ import { AvatarTintPalette, avatarTintIsDark, avatarTintSurface } from '../utils
 import { SpaceAwareAvatar } from './SpaceAwareAvatar';
 import { EmojiSpans } from './EmojiSpans';
 import { PostInteractiveContent } from './PostInteractiveContent';
+import { StockQuoteCard, stockTicker } from './StockQuoteCard';
 import { postPollStore, STORAGE_KEY_POST_POLL_REVISION } from '../services/PostPollStore';
 import { formatPostTime, STORAGE_KEY_POST_TIME_NOW } from '../utils/PostTime';
 import { postIsEdited } from '../utils/PostMetadata';
@@ -160,10 +161,13 @@ export struct QuotedPostCard {
           article: this.quoted.article, presentation: this.quoted.presentation,
           accentColor: this.accentColor, showPollMedia: this.firstMedia() === null })
       }
+      if (this.quoted.presentation?.visibility?.hidden !== true && stockTicker(this.quoted.text).length > 0) {
+        StockQuoteCard({ symbol: stockTicker(this.quoted.text) })
+      }
       if (this.firstMedia() !== null && this.quoted.presentation?.visibility?.hidden !== true) {
         PostMedia({ sourceTweet: this.asTweet(), attachments: this.quoted.attachments ?? [],
           onPhotoOpen: this.onPhotoOpen,
-          playbackEnabled: false, showDownloadButton: false, hideInlineControls: true,
+          playbackEnabled: false, hideInlineControls: true,
           naturalVideoSize: true,
           onVideoOpen: (): void => this.onOpen(this.asTweet()) }).width('100%')
       }
@@ -181,7 +185,8 @@ export struct QuotedPostCard {
     .onClick((): void => {
       this.onOpen(this.asTweet());
     })
-    .accessibilityGroup(this.interactivePoll() === undefined && this.quoted.card === undefined)
+    .accessibilityGroup(this.interactivePoll() === undefined && this.quoted.card === undefined &&
+      stockTicker(this.quoted.text).length === 0)
     .accessibilityText($r('app.string.post_quoted'))
   }
 }

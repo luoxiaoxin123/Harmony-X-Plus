@@ -445,7 +445,7 @@ export class XChatMedia {
   }
 
   async receive(context: common.UIAbilityContext, conversationId: string, mediaHash: string,
-    keyVersion: string, type: number): Promise<string> {
+    keyVersion: string, type: number, rawEvent: string = ''): Promise<string> {
     if (!xChatService.isUnlocked()) { throw new Error('locked'); }
     const directory: string = this.directory(context);
     this.prune(context);
@@ -462,7 +462,8 @@ export class XChatMedia {
       if (epoch !== this.epoch || account !== xPrivateStore.load(context).cacheIdentity()) { throw new Error('account_changed'); }
       const file: fs.File = fs.openSync(cipher, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
       try { fs.writeSync(file.fd, bytes); } finally { fs.closeSync(file.fd); }
-      const decrypted: XChatMediaCipher = await xChatService.processMedia(conversationId, cipher, output, keyVersion);
+      const decrypted: XChatMediaCipher = await xChatService.processMedia(conversationId, cipher, output,
+        keyVersion, rawEvent, mediaHash);
       if (epoch !== this.epoch || account !== xPrivateStore.load(context).cacheIdentity()) { fs.unlinkSync(output); throw new Error('account_changed'); }
       this.files.set(key, { path: output, type: type, size: decrypted.size, savedAt: Date.now(), account: account });
       this.persist();

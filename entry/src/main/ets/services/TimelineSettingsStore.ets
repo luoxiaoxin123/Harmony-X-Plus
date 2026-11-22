@@ -3,6 +3,16 @@
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 
+export const STORAGE_KEY_POST_SWIPE_LEFT: string = 'harmonyx.post_swipe_left';
+export const STORAGE_KEY_POST_SWIPE_RIGHT: string = 'harmonyx.post_swipe_right';
+export const POST_SWIPE_OFF: number = 0;
+export const POST_SWIPE_REPLY: number = 1;
+export const POST_SWIPE_LIKE: number = 2;
+export const POST_SWIPE_REPOST: number = 3;
+export const POST_SWIPE_BOOKMARK: number = 4;
+export const POST_SWIPE_SHARE: number = 5;
+export const POST_SWIPE_NOT_INTERESTED: number = 6;
+
 export const STORAGE_KEY_DEFAULT_HOME_FEED: string = 'harmonyx.default_home_feed';
 export const STORAGE_KEY_TIMELINE_COLUMNS: string = 'harmonyx.timeline_columns';
 export const STORAGE_KEY_COVER_SINGLE_COLUMN: string = 'harmonyx.cover_single_column';
@@ -22,6 +32,38 @@ export class TimelineSettingsStore {
   private static readonly STORE_NAME: string = 'harmonyx_timeline';
   private static readonly DEFAULT_HOME_FEED_KEY: string = 'default_home_feed';
   private static readonly TIMELINE_COLUMNS_KEY: string = 'timeline_columns';
+
+  loadPostSwipeSettings(context: common.Context): void {
+    AppStorage.setOrCreate<number>(STORAGE_KEY_POST_SWIPE_LEFT, this.loadPostSwipe(context, STORAGE_KEY_POST_SWIPE_LEFT));
+    AppStorage.setOrCreate<number>(STORAGE_KEY_POST_SWIPE_RIGHT, this.loadPostSwipe(context, STORAGE_KEY_POST_SWIPE_RIGHT));
+  }
+
+  private loadPostSwipe(context: common.Context, key: string): number {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context,
+        { name: TimelineSettingsStore.STORE_NAME });
+      const value: number = store.getSync(key, POST_SWIPE_OFF) as number;
+      return this.validSwipe(value) ? value : POST_SWIPE_OFF;
+    } catch (error) { return POST_SWIPE_OFF; }
+  }
+
+  private validSwipe(value: number): boolean {
+    return Number.isInteger(value) && value >= POST_SWIPE_OFF && value <= POST_SWIPE_NOT_INTERESTED;
+  }
+
+  savePostSwipe(context: common.Context, key: string, value: number): boolean {
+    if ((key !== STORAGE_KEY_POST_SWIPE_LEFT && key !== STORAGE_KEY_POST_SWIPE_RIGHT) || !this.validSwipe(value)) {
+      return false;
+    }
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context,
+        { name: TimelineSettingsStore.STORE_NAME });
+      store.putSync(key, value);
+      store.flushSync();
+      AppStorage.setOrCreate<number>(key, value);
+      return true;
+    } catch (error) { return false; }
+  }
 
   private normalise(mode: number): number {
     return mode === HOME_FEED_FOLLOWING ? HOME_FEED_FOLLOWING : HOME_FEED_FOR_YOU;

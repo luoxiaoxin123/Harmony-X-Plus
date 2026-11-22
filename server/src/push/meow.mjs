@@ -18,13 +18,13 @@ export async function sendMeow(nickname, notice, fetcher = fetch) {
 // preview text is legitimate. Never request chat recovery keys from the phone.
 export function notificationText(payload, previews = false) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('invalid_payload');
-  if (!previews) return { title: 'Harmony X', msg: '你有新的 X 消息，请打开 Harmony X 查看。', url: 'https://x.com/messages' };
+  if (!previews) return { title: 'HarmonyX+', msg: '你有新的 X 消息，请打开 HarmonyX+ 查看。', url: 'https://x.com/messages' };
   const notification = payload.notification && typeof payload.notification === 'object' ? payload.notification : payload;
   const text = typeof notification.body === 'string' ? notification.body :
     typeof notification.text === 'string' ? notification.text : '';
   return {
-    title: typeof notification.title === 'string' ? notification.title.slice(0, 120) : 'Harmony X',
-    msg: text.slice(0, 1500) || '你有新的 X 消息，请打开 Harmony X 查看。',
+    title: typeof notification.title === 'string' ? notification.title.slice(0, 120) : 'HarmonyX+',
+    msg: text.slice(0, 1500) || '你有新的 X 消息，请打开 HarmonyX+ 查看。',
     url: 'https://x.com/messages'
   };
 }

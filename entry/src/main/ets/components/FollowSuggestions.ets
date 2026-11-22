@@ -115,6 +115,7 @@ export struct FollowSuggestions {
       .height($r('app.float.follow_button_height')).padding({ left: 18, right: 18 })
       .enabled(this.pendingIds.indexOf(row.id) < 0)
       .onClick((): void => { this.toggleFollow(row); })
+      .monopolizeEvents(true)
   }
 
   @Builder
@@ -148,7 +149,7 @@ export struct FollowSuggestions {
           ProxyAvatar({verifiedType: row.verifiedType ?? '', avatarShape: row.avatarShape ?? '',  url: row.avatarUrl, avatarSize: 64, radius: 32,
             fallbackText: row.name.substring(0, 1), fallbackColor: row.avatarColor })
             .margin({ left: 12, bottom: -24 }).border({ width: 3, color: $r('app.color.bg_page') })
-            .borderRadius(userAvatarRadius(64, 32, row.verifiedType ?? '', row.avatarShape ?? '')).onClick((): void => this.openUser(row))
+            .borderRadius(userAvatarRadius(64, 32, row.verifiedType ?? '', row.avatarShape ?? ''))
         }.width('100%')
         Row() { Blank(); this.FollowButton(row) }.width('100%').padding({ right: 12, top: 10 })
         Column({ space: 4 }) {
@@ -156,20 +157,19 @@ export struct FollowSuggestions {
           Text(row.bio).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M')).fontColor($r('app.color.text_primary'))
             .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%').margin({ top: 5 })
         }.width('100%').alignItems(HorizontalAlign.Start).padding(12)
-          .onClick((): void => this.openUser(row))
       } else {
         Column({ space: 10 }) {
           ProxyAvatar({verifiedType: row.verifiedType ?? '', avatarShape: row.avatarShape ?? '',  url: row.avatarUrl, avatarSize: 80, radius: 40,
             fallbackText: row.name.substring(0, 1), fallbackColor: row.avatarColor })
           this.Name(row)
         }.width('100%').padding({ left: 12, right: 12, top: 16, bottom: 14 })
-          .onClick((): void => this.openUser(row))
         this.FollowButton(row)
       }
     }
     .width(this.cardWidth).height(this.showBanner ? 300 : 230)
     .border({ width: 1, color: $r('app.color.divider') }).borderRadius(12).clip(true)
     .backgroundColor(pageSurfaceColor(this.themeDisplayMode, this.themeDarkSurface))
+    .onClick((): void => this.openUser(row))
   }
 
   build(): void {

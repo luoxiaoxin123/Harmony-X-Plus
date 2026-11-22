@@ -267,8 +267,11 @@ test('all three comment layouts share native lazy rows, retained scroll controll
   assert.equal((source.match(/\.maintainVisibleContentPosition\(true\)/g) || []).length, 3);
   assert.ok(source.includes('.bindToScrollable([this.scroller, this.primaryScroller, this.repliesScroller])'));
   for (const controller of ['scroller', 'primaryScroller', 'repliesScroller']) {
-    assert.ok(source.includes(`stopScrollOnTouch(event, this.${controller})`));
+    assert.ok(source.includes(`this.detailTouchIntercept(event, this.${controller})`));
+    assert.ok(source.includes(`this.detailScrollFrame(this.${controller}, offset, state)`));
   }
+  assert.ok(source.includes('return stopScrollOnTouch(event, scroller)'));
+  assert.ok(source.includes('return scrollFrame(scroller, offset, state)'));
   assert.ok(source.includes("@Watch('onRepliesChanged') replies"));
   assert.ok(source.includes("@Watch('rebuildCommentRows') private replyQualityEnabled"));
 });

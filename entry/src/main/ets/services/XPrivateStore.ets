@@ -5,6 +5,7 @@
 // The cookies themselves live with the account they belong to, so this store is
 // a view over AccountStore: reads return the active account's session and
 // writes land on the account the capture belongs to.
+import { xChatKeyStore } from './XChatKeyStore';
 import { common } from '@kit.AbilityKit';
 import hilog from '@ohos.hilog';
 import { XAccount, accountStore } from './AccountStore';
@@ -51,6 +52,12 @@ export class XSession {
 }
 
 export class XPrivateStore {
+  chatOAuthToken(context: common.Context, accountId: string, viewerId: string): string {
+    if (accountId.length === 0 || !/^\d+$/.test(viewerId)) { return ''; }
+    const account: XAccount | null = accountStore.active(context);
+    return account !== null && account.id === accountId && account.userId === viewerId ? account.accessToken : '';
+  }
+
   // The cookie session of one account, in the shape the private client uses.
   static sessionOf(account: XAccount): XSession {
     return new XSession(account.id, account.authToken, account.ct0, account.rawCookie,
@@ -182,7 +189,7 @@ export class XPrivateStore {
     active.authToken = '';
     active.ct0 = '';
     active.rawCookie = '';
-    accountStore.upsert(context, active);
+    if (accountStore.upsert(context, active)) { xChatKeyStore.remove(active.userId); }
   }
 }
 

@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
+import { deviceInfo } from '@kit.BasicServicesKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
-import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, TextStyleMode } from '@kit.UIDesignKit';
+import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, TextStyleMode, HdsColorPicker } from '@kit.UIDesignKit';
 import { PageBackgroundLayer, appPageBackground } from '../components/PageBackgroundLayer';
 import { BackgroundPhotoTile, BackgroundSelectionMark } from '../components/BackgroundPhotoTile';
 import { ChatBackgroundPreset, chatBackgroundPresets } from '../services/ChatBackgroundStore';
@@ -44,6 +45,10 @@ struct PageBackgroundPage {
   @State private pageMotion: PageTransitionMotion = new PageTransitionMotion();
   @State private selected: PageBackgroundState = new PageBackgroundState();
   @State private colorInput: string = '';
+  @State private nativeColorAvailable: boolean = false;
+  @State private nativeColorOpen: boolean = false;
+  @State private favoriteColors: string[] = [];
+  @State private nativeInitialColor: string = '';
   @State private picking: boolean = false;
   @State private saving: boolean = false;
   @State private enabledSaving: boolean = false;
@@ -60,6 +65,9 @@ struct PageBackgroundPage {
     this.disposed = false;
     this.selected = pageBackgroundStore.load(this.context());
     this.colorInput = this.selected.color;
+    try {
+      this.nativeColorAvailable = deviceInfo.apiAvailable('26.0.0') && canIUse('SystemCapability.UIDesign.HDSPattern.Standard');
+    } catch (error) { this.nativeColorAvailable = false; }
     this.savedPhotos = backgroundImageStore.photos(this.context());
     this.refreshSelectedTone();
   }
@@ -380,6 +388,27 @@ struct PageBackgroundPage {
               .onClick((): void => { this.selectSwatch(index); })
           }
         }, (_color: Resource, index: number): string => index.toString())
+      }
+      if (this.nativeColorAvailable) {
+        Button($r('app.string.page_background_native_color')).width('100%')
+          .onClick((): void => {
+            this.favoriteColors = pageBackgroundStore.loadFavoriteColors(this.context());
+            this.nativeInitialColor = this.selected.color.length === 7 ? '#FF' + this.selected.color.slice(1) : '';
+            this.nativeColorOpen = !this.nativeColorOpen;
+          })
+        if (this.nativeColorOpen) {
+          HdsColorPicker({
+            initialColor: this.nativeInitialColor.length > 0 ? this.nativeInitialColor : undefined,
+            initialFavoriteColors: this.favoriteColors,
+            onColorSelected: (color: string): void => {
+              if (/^#[0-9A-Fa-f]{8}$/.test(color)) { this.setColor('#' + color.slice(3)); }
+            },
+            onFavoriteColorsUpdate: (colors: string[]): void => {
+              if (pageBackgroundStore.saveFavoriteColors(this.context(), colors)) { this.favoriteColors = colors; }
+              else { this.toast($r('app.string.settings_interaction_save_failed')); }
+            }
+          }).width('100%')
+        }
       }
       TextInput({ text: this.colorInput, placeholder: $r('app.string.page_background_color_placeholder') })
         .maxLength(7).fontFamily(this.appFontFamily).fontColor($r('app.color.text_primary'))

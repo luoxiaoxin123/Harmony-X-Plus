@@ -53,6 +53,114 @@ test('collapsed chrome keeps the HDS status-bar band for immersive gradient blur
   assert.match(titleBar, /ScrollEffectType\.IMMERSIVE_GRADIENT_BLUR/);
 });
 
+function indexHarness(methods, globals) {
+  const source = `class Harness { ${methods.map(indexMethod).join('\n')} }`;
+  const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
+  return new Function(...Object.keys(globals), js + '\nreturn Harness;')(...Object.values(globals));
+}
+
+test('the Home spacer keeps its expanded height while the overlay changes during a scroll', () => {
+  const states = { Idle: 0, Scroll: 1, Fling: 2 };
+  const Harness = indexHarness(['homeContentTopInset', 'homeHeaderCollapseDepth', 'onFeedScroll'], {
+    HOME_TAB_INDEX: 0, HOME_HEADER_COLLAPSE_DEPTH_VP: 36, FAB_SWITCH_DEPTH: 160,
+    RootTitleBarLayout: layout, ScrollState: states
+  });
+  let offset = 0;
+  const root = Object.assign(new Harness(), { currentTab: 0, statusBarHeight: 32, homeHeaderCollapseEnabled: true,
+    homeHeaderCollapsed: false, autoHideFab: true, isDesktopLayout: () => false, supportsHdsNavigation: () => true,
+    useTitleBarLogo: () => true, homeSpaceHeight: () => 0, rootTitleBarContentClearance: () => 0,
+    getHomeScroller: () => ({ currentOffset: () => ({ yOffset: offset }) }), currentHomeOffset: () => offset,
+    rememberHomeVisibleItem: () => {},
+    setHomeHeaderCollapsed: collapsed => { root.homeHeaderCollapsed = collapsed; }, onChromeScroll: () => {} });
+  assert.match(indexMethod('HomeStatusLine'), /height\(this\.homeContentTopInset\(false\)\)/);
+  assert.equal(root.homeContentTopInset(false), 136);
+  assert.equal(root.homeHeaderCollapseDepth(), 96);
+  offset = 180;
+  root.onFeedScroll(180, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, true);
+  assert.equal(root.homeContentTopInset(false), 136);
+  offset = 115;
+  root.onFeedScroll(-65, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, false);
+  root.onFeedScroll(96, states.Idle);
+  assert.equal(root.homeHeaderCollapsed, false);
+  offset = 180;
+  root.onFeedScroll(65, states.Scroll);
+  assert.equal(root.homeHeaderCollapsed, true);
+  offset = 0;
+  root.onFeedScroll(-180, states.Idle);
+  assert.equal(root.homeHeaderCollapsed, false);
+});
+
+test('the Home refresh gesture and spinner use the same threshold', () => {
+  const home = indexMethod('HomeTab');
+  assert.match(home, /\.refreshOffset\(HOME_REFRESH_TRIGGER_OFFSET_VP\)/);
+  assert.match(home, /triggerOffset: HOME_REFRESH_TRIGGER_OFFSET_VP/);
+  const distance = Number(/const HOME_REFRESH_TRIGGER_OFFSET_VP = (\d+)/.exec(indexSource)?.[1]);
+  assert.ok(distance > 64);
+});
+
+test('home chrome finishes fading before the native title slot is hidden', () => {
+  const completions = [];
+  const Harness = indexHarness(['setHomeHeaderCollapsed'], { Curve: { EaseInOut: 'ease' } });
+  const root = Object.assign(new Harness(), { homeHeaderCollapsed: false, homeHeaderParked: false,
+    homeHeaderMotion: 0, reduceMotion: false, preferredMotionDuration: 300,
+    getUIContext: () => ({ animateTo: (options, update) => { update(); completions.push(options.onFinish); } }) });
+  root.setHomeHeaderCollapsed(true);
+  assert.equal(root.homeHeaderCollapsed, true);
+  assert.equal(root.homeHeaderParked, false);
+  root.setHomeHeaderCollapsed(false);
+  completions.shift()();
+  assert.equal(root.homeHeaderParked, false);
+  root.setHomeHeaderCollapsed(true);
+  completions.pop()();
+  assert.equal(root.homeHeaderParked, true);
+  root.setHomeHeaderCollapsed(false);
+  assert.equal(root.homeHeaderParked, false);
+});
+
+test('rightward drags open the drawer from For You in portrait without claiming a photo strip', () => {
+  const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe',
+    'updateHomeDrawerSwipe', 'visibleSideDrawerWidth', 'cancelHomeDrawerSwipe'], {
+    HOME_TAB_INDEX: 0, POST_SWIPE_OFF: 0, SourceType: { TouchScreen: 'touch' },
+    GestureJudgeResult: { REJECT: false, CONTINUE: true }, GestureControl: { GestureType: { PAN_GESTURE: 1 } }
+  });
+  const root = Object.assign(new Harness(), { currentTab: 0, homeFeedMode: 0, activeHomeTopicId: '',
+    windowWidth: 390, windowHeight: 844, showSideDrawer: false, refreshing: false, postSwipeRight: 0,
+    homeDrawerDragWidth: -1, navPathStack: { size: () => 0 }, isDesktopLayout: () => false, sideDrawerWidth: () => 280 });
+  const event = { source: 'touch' };
+  const gesture = { getTag: () => 'home-open-drawer', isBuiltIn: () => false };
+  const pager = { getTag: () => '', isBuiltIn: () => true, getType: () => 1,
+    getEventTargetInfo: () => ({ getId: () => 'home-feed-pager' }) };
+  assert.equal(root.homeDrawerSwipeStarted, undefined);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: 6 }, pager, []), false);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: -6 }, pager, []), true);
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, [{
+    getEventTargetInfo: () => ({ getId: () => 'post-photo-list-0' })
+  }]), false);
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), true);
+  root.homeDrawerSwipeStarted = true;
+  root.updateHomeDrawerSwipe({ offsetX: 65 });
+  assert.equal(root.visibleSideDrawerWidth(), 65);
+  root.updateHomeDrawerSwipe({ offsetX: 28 });
+  assert.equal(root.visibleSideDrawerWidth(), 28);
+  root.finishHomeDrawerSwipe({ offsetX: 28, offsetY: 0, velocityX: 0 });
+  assert.equal(root.visibleSideDrawerWidth(), 0);
+  root.homeDrawerSwipeStarted = true;
+  root.updateHomeDrawerSwipe({ offsetX: 300 });
+  assert.equal(root.visibleSideDrawerWidth(), 280);
+  root.finishHomeDrawerSwipe({ offsetX: 150, offsetY: 20, velocityX: 0 });
+  assert.equal(root.showSideDrawer, true);
+  assert.equal(root.visibleSideDrawerWidth(), 280);
+  root.showSideDrawer = false;
+  root.homeFeedMode = 1;
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
+  assert.equal(root.judgeHomeDrawerSwipe({ ...event, offsetX: 6 }, pager, []), true);
+  root.homeFeedMode = 0;
+  root.windowWidth = 1100;
+  assert.equal(root.judgeHomeDrawerSwipe(event, gesture, []), false);
+});
+
 test('compact header removes the displaced rows while retaining Explore categories', () => {
   for (const [tab, normal, compact] of [[0, 54, 12], [1, 100, 64], [2, 52, 12], [3, 56, 12], [4, 0, 12]]) {
     assert.equal(layout.bottomHeight(tab, true, false, 0, false), normal);
@@ -71,7 +179,7 @@ test('home Space recommendations remain below the compact identity row without a
   assert.equal(layout.bottomHeight(0, false, false, 60, false), 72);
   assert.equal(layout.labelsHeight(0, false, 60, false), 60);
   assert.equal(layout.contentTopInset(0, false, 32, false, 60), 168);
-  assert.equal(layout.bottomHeight(0, true, true, 60, false), 72);
+  assert.equal(layout.bottomHeight(0, true, true, 60, false), 0);
   assert.equal(layout.labelsHeight(0, true, 60, false), 114);
 });
 
@@ -80,7 +188,7 @@ test('feed avoidance follows the visible controls in both settings', () => {
     assert.equal(layout.contentTopInset(tab, false, 32, false, 0), 108);
   }
   assert.equal(layout.contentTopInset(0, true, 32, false, 0), 136);
-  assert.equal(layout.contentTopInset(0, true, 32, true, 0), 108);
+  assert.equal(layout.contentTopInset(0, true, 32, true, 0), 40);
   assert.equal(layout.contentTopInset(2, true, 32, false, 0), 148);
   assert.equal(layout.contentTopInset(3, true, 32, false, 0), 144);
   assert.equal(layout.contentTopInset(1, true, 32, false, 0) -
@@ -96,8 +204,7 @@ test('large-screen content starts below the full page indicator and Space capsul
       assert.ok(layout.contentTopInset(tab, logo, status, false, space, 8) >= edge + 8,
         `Tab ${tab}, logo ${logo}, status ${status}, Space ${space}`);
     }
-    // The translated Home tabs remain compact after scrolling.
-    assert.equal(layout.contentTopInset(0, true, status, true, 0, 8), status + 76);
+    assert.equal(layout.contentTopInset(0, true, status, true, 0, 8), status + 8);
     for (const tab of [0, 2, 3, 4]) {
       assert.equal(layout.contentTopInset(tab, false, status, false, 0, 8), status + 76);
     }
@@ -110,6 +217,7 @@ function appearanceFixture(initial = {}) {
     putSync: (key, value) => values.set(key, value), flushSync() {} };
   const f = load('entry/src/main/ets/services/AppearanceStore.ets', {
     '@kit.AbilityKit': { ConfigurationConstant: {} },
+    '@kit.BasicServicesKit': { deviceInfo: { deviceType: 'phone' } },
     '@kit.ArkData': { preferences: { getPreferencesSync: () => pref } },
     '../utils/AccentPalette': load('entry/src/main/ets/utils/AccentPalette.ets')
   });
@@ -141,7 +249,7 @@ test('existing installations retain the logo and compact choice survives other a
   assert.equal(f.store.load({}).titleBarLogoAutoContrast, true);
 });
 
-test('title-bar logo uses a transparent X-only default and tints only its alpha mask', () => {
+test('title-bar logo uses matching transparent SVG marks for light and dark modes', () => {
   const logoSource = fs.readFileSync('entry/src/main/ets/components/RootTitleBarLogo.ets', 'utf8');
   const iconSource = fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8');
   assert.match(logoSource, /titleBarLogoForeground\(this\.iconName\)/);
@@ -149,9 +257,12 @@ test('title-bar logo uses a transparent X-only default and tints only its alpha 
   assert.match(logoSource, /APP_ICON_X_BLACK/);
   assert.match(logoSource, /APP_ICON_X_WHITE/);
   assert.match(logoSource, /if \(this\.shouldTintX\(\)\)/);
-  assert.match(logoSource, /0, 0, 0, ink\.red \/ 255, 0/);
-  assert.match(iconSource, /if \(name === APP_ICON_DEFAULT\) \{\s*return \$r\('app\.media\.title_bar_logo_foreground'\);/);
-  assert.ok(fs.existsSync('entry/src/main/resources/base/media/title_bar_logo_foreground.png'));
+  assert.match(logoSource, /titleBarLogoForeground\(this\.isDarkMode\(\) \? APP_ICON_X_WHITE : APP_ICON_X_BLACK\)/);
+  assert.match(iconSource, /if \(name === APP_ICON_DEFAULT \|\| name === APP_ICON_X_BLACK\) \{\s*return \$r\('app\.media\.title_bar_logo_foreground'\);/);
+  const dark = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_foreground.svg', 'utf8');
+  const light = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_white.svg', 'utf8');
+  assert.match(dark, /<path d="[^"]+" fill="#000000"/);
+  assert.equal(dark.replace('fill="#000000"', 'fill="white"'), light);
 });
 
 test('special icon foregrounds bypass the X-only monochrome filter', () => {

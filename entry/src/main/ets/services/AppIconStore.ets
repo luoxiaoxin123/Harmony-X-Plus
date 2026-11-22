@@ -137,9 +137,10 @@ export function appIconForeground(name: string): Resource {
 // can carry an icon plate in some resource qualifiers, so use a transparent
 // X-only foreground and let RootTitleBarLogo apply the selected ink color.
 export function titleBarLogoForeground(name: string): Resource {
-  if (name === APP_ICON_DEFAULT) {
+  if (name === APP_ICON_DEFAULT || name === APP_ICON_X_BLACK) {
     return $r('app.media.title_bar_logo_foreground');
   }
+  if (name === APP_ICON_X_WHITE) { return $r('app.media.title_bar_logo_white'); }
   return appIconForeground(name);
 }
 

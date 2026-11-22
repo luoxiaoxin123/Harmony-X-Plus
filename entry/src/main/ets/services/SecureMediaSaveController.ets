@@ -6,13 +6,14 @@ export class SecureMediaSaveRequest {
   context: common.UIAbilityContext;
   url: string;
   mediaId: string;
+  titleOverride: string;
   isVideo: boolean;
   callback: (result: number) => void;
 
   constructor(context: common.UIAbilityContext, url: string, mediaId: string, isVideo: boolean,
-    callback: (result: number) => void) {
+    callback: (result: number) => void, titleOverride: string = '') {
     this.context = context; this.url = url; this.mediaId = mediaId;
-    this.isVideo = isVideo; this.callback = callback;
+    this.isVideo = isVideo; this.callback = callback; this.titleOverride = titleOverride;
   }
 }
 

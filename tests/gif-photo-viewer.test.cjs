@@ -222,15 +222,18 @@ test('mixed save-all keeps media kinds and cancellation stops the remaining down
   const calls = [], messages = [];
   const Viewer = methods('pages/PhotoViewer', 'PhotoViewer', ['downloadPhotos', 'originalUrls', 'currentOriginalUrl'], {
     MEDIA_DOWNLOAD_SUCCESS: 1, MEDIA_DOWNLOAD_CANCELED: 2, MEDIA_DOWNLOAD_SAVED_AS_VIDEO: 3,
-    getContext: () => ({}), $r: value => value, promptAction: { showToast: value => messages.push(value) }
+    getContext: () => ({}), $r: value => value, promptAction: { showToast: value => messages.push(value) },
+    photoFilenameStore: { load: () => ['index'], title: (_parts, _post, index) => 'HarmonyX-' + (index + 1) }
   });
   const viewer = Object.assign(new Viewer(), { downloading: false, current: 0, tweet: { id: 'post' }, text: value => value,
     items: [new PhotoViewerPhoto('p', 'photo.jpg', 1, 1, 0, ''),
       new PhotoViewerPhoto('g', 'loop.mp4', 1, 1, 1, '', '', attachment('gif', 'animated_gif')),
       new PhotoViewerPhoto('p2', 'second.jpg', 1, 1, 2, '')],
-    downloadItem(context, item, id, grant, callback) { calls.push(item.originalUrl); callback(calls.length === 2 ? 2 : 1); } });
+    downloadItem(context, item, id, grant, callback, title) {
+      calls.push([item.originalUrl, title]); callback(calls.length === 2 ? 2 : 1);
+    } });
   await viewer.downloadPhotos(true);
-  assert.deepEqual(calls, ['photo.jpg', 'loop.mp4']);
+  assert.deepEqual(calls, [['photo.jpg', 'HarmonyX-1'], ['loop.mp4', 'HarmonyX-2']]);
   assert.equal(viewer.downloading, false);
   assert.equal(messages.at(-1).message, 'app.string.media_download_canceled');
 });

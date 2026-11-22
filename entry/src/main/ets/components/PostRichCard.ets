@@ -126,7 +126,7 @@ export struct PostRichCard {
         if (presentation.media.media.length > 0 && (presentation.media.media[0].type !== 'photo' ||
           presentation.media.media[0].sensitive === true)) {
           PostMedia({ controlSurface: $r('app.color.poll_option_surface'), attachments: presentation.media.media, naturalVideoSize: true, limitNaturalHeight: false,
-            photoViewportHeight: this.websiteHeight(presentation), showDownloadButton: false, linkCardVideo: true,
+            photoViewportHeight: this.websiteHeight(presentation), linkCardVideo: true,
             onVideoOpen: (): void => this.open(presentation.url) })
         } else {
           ProxyMediaImage({ url: presentation.media.media[0]?.mediaUrl || presentation.media.imageUrl,

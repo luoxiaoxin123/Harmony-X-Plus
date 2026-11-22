@@ -7,6 +7,9 @@ import http from '@ohos.net.http';
 import hilog from '@ohos.hilog';
 import { proxyStore } from './ProxyStore';
 import type { Tweet, UserProfile } from '../models/Tweet';
+import type { TweetPage } from './XApiClient';
+import { XTimelineParser } from './XTimelineParser';
+import { xUserAgent } from './XUserAgent';
 
 const DOMAIN: number = 0xFF00;
 const TAG: string = 'HarmonyX-XWeb';
@@ -100,6 +103,31 @@ export class XWebClient {
     return profile;
   }
 
+  public async fetchPublicProfilePosts(handle: string): Promise<TweetPage | null> {
+    const normalized: string = this.normalizedHandle(handle);
+    if (!this.isValidHandle(normalized)) { return null; }
+    // X renders a small public profile preview in the unauthenticated page.
+    // This request carries no account cookies, so it can only return public posts.
+    const html: string | null = await this.requestText('https://x.com/' + encodeURIComponent(normalized), true);
+    return html === null ? null : XWebClient.parsePublicProfilePosts(html);
+  }
+
+  static parsePublicProfilePosts(html: string): TweetPage | null {
+    const chunks: RegExp = /kind:"Result\.Ok",value:("(?:[^"\\]|\\.)*")\}/g;
+    let match: RegExpExecArray | null = chunks.exec(html);
+    while (match !== null) {
+      if (match[1].includes('profile_user_originals_timeline')) {
+        try {
+          const raw: string = JSON.parse(match[1]) as string;
+          const page: TweetPage | null = XTimelineParser.parse(raw);
+          if (page !== null && page.tweets.length > 0) { return page; }
+        } catch (error) { }
+      }
+      match = chunks.exec(html);
+    }
+    return null;
+  }
+
   private starterReferences(): WebPostReference[] {
     return [
       new WebPostReference('elonmusk', '1518623997054918657'),
@@ -135,13 +163,14 @@ export class XWebClient {
     return tweet;
   }
 
-  private async requestText(url: string): Promise<string | null> {
+  private async requestText(url: string, html: boolean = false): Promise<string | null> {
     let request: DohHttpRequest | undefined = undefined;
     try {
       request = createDohHttpRequest();
       const options: http.HttpRequestOptions = {
         method: http.RequestMethod.GET,
-        header: { 'User-Agent': 'HarmonyX public web adapter' },
+        header: { 'User-Agent': html ? xUserAgent.value() : 'HarmonyX public web adapter',
+          'accept': html ? 'text/html' : 'application/json' },
         connectTimeout: REQUEST_TIMEOUT_MS,
         readTimeout: REQUEST_TIMEOUT_MS
       };
