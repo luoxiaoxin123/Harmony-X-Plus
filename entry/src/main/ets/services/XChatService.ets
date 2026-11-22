@@ -12,7 +12,7 @@ import { xChatActions } from './XChatActions';
 import { ChatMediaItem, ChatMovingPhotoProtocol } from '../utils/ChatMovingPhotoProtocol';
 import { xChatGroupAvatar } from './XChatGroupAvatar';
 import { xChatKeyStore } from './XChatKeyStore';
-import { XChatReceipt, XChatWire } from './XChatWire';
+import { XChatHistory, XChatReceipt, XChatWire } from './XChatWire';
 
 interface XChatPublicKey {
   public_key: string;
@@ -23,10 +23,17 @@ interface XChatKeyMetadata { public_key: XChatPublicKey; version: string; }
 interface XChatRealmValue { token: string; address: string; public_key?: string; }
 interface XChatRealmToken { key: string; value: XChatRealmValue; }
 interface XChatBackupConfig {
-  key_store_token_map_json: string;
-  token_map: XChatRealmToken[];
+  key_store_token_map_json?: string;
+  token_map?: XChatRealmToken[];
+  sdk_config?: string;
   max_guess_count?: number;
 }
+interface XChatRestKey extends XChatPublicKey {
+  user_id?: string;
+  public_key_version: string;
+  juicebox_config?: XChatBackupConfig;
+}
+interface XChatRestKeys { data?: XChatRestKey[]; errors?: Object[]; }
 interface XChatKeyRecord {
   public_key_with_metadata: XChatKeyMetadata;
   token_map?: XChatBackupConfig;
@@ -41,6 +48,11 @@ interface XChatUser {
 interface XChatUserCore { name: string; screen_name: string; }
 interface XChatUserAvatar { image_url: string; }
 interface XChatUserResult { rest_id: string; result?: XChatUser; }
+export interface XChatWebHistorySnapshot {
+  messages: DmMessage[];
+  oldest: string;
+  hasMore: boolean;
+}
 interface XChatInboxDetail {
   conversation_id?: string;
   participants_results?: XChatUserResult[];
@@ -59,6 +71,7 @@ interface XChatGroupMetadata {
 export interface XChatGroupDisplay { name: string; avatarUrl: string; }
 interface XChatInboxRead { latest_mark_conversation_read_event?: Object; }
 interface XChatInboxItem {
+  conversation_id?: string;
   conversation_detail?: XChatInboxDetail;
   latest_message_events?: Object;
   latest_conversation_key_change_events?: Object;
@@ -230,9 +243,11 @@ export class XChatPage {
   hasMore: boolean = false;
   minSequenceId: string = '';
   minKeyVersion: string = '';
+  nextToken: string = '';
   needsUnlock: boolean = false;
   typingUntil: number = 0;
   error: string = '';
+  partialHistory: boolean = false;
   transport: string = 'unknown';
 }
 
@@ -249,7 +264,8 @@ export class XChatService {
   private accountId: string = '';
   private generation: number = 0;
   private unlocked: boolean = false;
-  private ownRecord: XChatKeyRecord | null = null;
+  private ownRecords: XChatKeyRecord[] = [];
+  private recoveryRecord: XChatKeyRecord | null = null;
   private restoring: Promise<void> | undefined;
   private signingKeys: XChatSigningKey[] = [];
   private users: Map<string, XChatUser> = new Map<string, XChatUser>();
@@ -260,23 +276,31 @@ export class XChatService {
   private pendingDirectKeys: Map<string, XChatNativeData> = new Map<string, XChatNativeData>();
   private directKeyTasks: Map<string, Promise<void>> = new Map<string, Promise<void>>();
   private routing: Map<string, XChatRouting> = new Map<string, XChatRouting>();
-  private keyUsers: string[] = [];
-  private keysFetchedAt: number = 0;
+  private keyUsers: Map<string, number> = new Map<string, number>();
   private info: Map<string, XChatConversationInfo> = new Map<string, XChatConversationInfo>();
   private messageCache: Map<string, DmMessage[]> = new Map<string, DmMessage[]>();
+  private webHistoryCache: Map<string, XChatWebHistorySnapshot> = new Map<string, XChatWebHistorySnapshot>();
+  private webHistoryRevision: number = 0;
+  private inboxEvents: Map<string, string[]> = new Map<string, string[]>();
   private effectCache: Map<string, XChatNativeMessage> = new Map<string, XChatNativeMessage>();
   private legacyCheckedAt: Map<string, number> = new Map<string, number>();
   private transports: Map<string, string> = new Map<string, string>();
 
   constructor() {
-    xPrivateClient.onSessionChange((): void => { this.clear(); });
+    xPrivateClient.onSessionChange((): void => { this.clearWebHistory(); this.clear(); });
+  }
+
+  private clearWebHistory(): void {
+    this.webHistoryRevision++;
+    this.webHistoryCache.clear();
   }
 
   private clear(): void {
     this.generation++;
     this.accountId = '';
     this.unlocked = false;
-    this.ownRecord = null;
+    this.ownRecords = [];
+    this.recoveryRecord = null;
     this.restoring = undefined;
     this.signingKeys = [];
     this.users.clear();
@@ -284,6 +308,7 @@ export class XChatService {
     xChatGroupAvatar.clear();
     this.info.clear();
     this.messageCache.clear();
+    this.inboxEvents.clear();
     this.effectCache.clear();
     this.legacyCheckedAt.clear();
     this.transports.clear();
@@ -292,8 +317,7 @@ export class XChatService {
     this.pendingDirectKeys.clear();
     this.directKeyTasks.clear();
     this.routing.clear();
-    this.keyUsers = [];
-    this.keysFetchedAt = 0;
+    this.keyUsers.clear();
     this.callNative('reset', '{}').catch((): void => {});
     this.notifyChanged();
   }
@@ -375,12 +399,33 @@ export class XChatService {
     const data: XChatNativeData = await this.groupNative('encryptGroupMedia', JSON.stringify(args));
     return { size: data.media_bytes ?? 0, keyVersion: data.key_version ?? '' };
   }
-  hasBackup(): boolean { return this.ownRecord?.token_map !== undefined; }
+  hasBackup(): boolean { return this.recoveryRecord !== null; }
 
   conversationInfo(id: string): XChatConversationInfo {
     return this.info.get(id.replace(':', '-')) ?? { ttl: '0', screenBlocked: false, muted: false };
   }
   cachedMessages(id: string): DmMessage[] { return this.messageCache.get(id.replace(':', '-')) ?? []; }
+  webHistoryGeneration(): number { return this.webHistoryRevision; }
+  cachedWebHistory(account: string, id: string): XChatWebHistorySnapshot | undefined {
+    if (account !== xPrivateClient.sessionIdentity()) { return undefined; }
+    const key: string = XChatService.pathId(id);
+    const history: XChatWebHistorySnapshot | undefined = this.webHistoryCache.get(key);
+    if (history !== undefined) {
+      this.webHistoryCache.delete(key);
+      this.webHistoryCache.set(key, history);
+    }
+    return history;
+  }
+  cacheWebHistory(account: string, id: string, history: XChatWebHistorySnapshot): void {
+    if (account !== xPrivateClient.sessionIdentity() || id.length === 0) { return; }
+    const key: string = XChatService.pathId(id);
+    this.webHistoryCache.delete(key);
+    if (history.messages.length === 0) { return; }
+    this.webHistoryCache.set(key, history);
+    if (this.webHistoryCache.size > 24) {
+      this.webHistoryCache.delete(this.webHistoryCache.keys().next().value as string);
+    }
+  }
   conversationTransport(id: string): string { return this.transports.get(id.replace(':', '-')) ?? 'unknown'; }
   cachePlaintextMessages(id: string, messages: DmMessage[]): void {
     const key: string = id.replace(':', '-');
@@ -423,6 +468,7 @@ export class XChatService {
 
   lock(): boolean {
     if (!xChatKeyStore.remove(xPrivateClient.viewerId())) { return false; }
+    this.clearWebHistory();
     this.clear();
     return true;
   }
@@ -430,8 +476,8 @@ export class XChatService {
   async changePin(context: common.UIAbilityContext, oldPin: string, newPin: string): Promise<void> {
     if (!this.unlocked) { throw new Error('locked'); }
     const generation: number = this.generation;
-    this.keysFetchedAt = 0;
-    await this.prepare(context, this.keyUsers);
+    this.keyUsers.delete(xPrivateClient.viewerId());
+    await this.prepare(context, []);
     const vpn: boolean = await proxyStore.refreshSystemVpnState();
     const settings: ProxySettings = proxyStore.snapshot();
     const proxy: ProxyEntry | null = !vpn && settings.enabled ? settings.activeProxy() : null;
@@ -439,8 +485,10 @@ export class XChatService {
       encodeURIComponent(proxy.username) + ':' + encodeURIComponent(proxy.password) + '@' : '';
     const url: string = proxy === null ? '' : (proxy.isSocks5() ? 'socks5h://' : 'http://') +
       credentials + proxy.host + ':' + proxy.port;
-    if (generation !== this.generation || this.ownRecord?.token_map === undefined) { throw new Error('account_changed'); }
-    const configured: XChatNativeResult = await this.callNative('recoveryConfig', JSON.stringify({ config: this.ownRecord.token_map, proxy: url }));
+    this.requireGeneration(generation);
+    const config: XChatBackupConfig | undefined = this.recoveryRecord?.token_map;
+    if (config === undefined) { throw new Error('keys_not_registered'); }
+    const configured: XChatNativeResult = await this.callNative('recoveryConfig', JSON.stringify({ config: config, proxy: url }));
     if (generation !== this.generation || !configured.ok) { throw new Error('recovery_config_failed'); }
     const args: XChatPinChange = { old_pin: oldPin, new_pin: newPin };
     let result: XChatNativeResult;
@@ -507,6 +555,7 @@ export class XChatService {
     if (generation !== this.generation) { throw new Error('account_changed'); }
     const key: string = conversationId.replace(':', '-');
     this.messageCache.delete(key);
+    this.webHistoryCache.delete(XChatService.pathId(conversationId));
     this.transports.delete(key);
     this.legacyCheckedAt.delete(key);
     this.pendingSends.forEach((_pending: XChatPendingSend, draft: string): void => {
@@ -539,6 +588,13 @@ export class XChatService {
     this.rememberEffects([deleted]);
     const page: XChatPage = new XChatPage(); page.events = [deleted];
     this.messageCache.set(conversationId.replace(':', '-'), this.mergeConversation(this.cachedMessages(conversationId), page, conversationId));
+    const webKey: string = XChatService.pathId(conversationId);
+    const webHistory: XChatWebHistorySnapshot | undefined = this.webHistoryCache.get(webKey);
+    if (webHistory !== undefined) {
+      webHistory.messages = webHistory.messages.filter((message: DmMessage): boolean =>
+        !sequenceIds.includes(message.sequenceId ?? '') && !sequenceIds.includes(message.id));
+      if (sequenceIds.includes(webHistory.oldest)) { this.webHistoryCache.delete(webKey); }
+    }
     this.notifyChanged();
     return page;
   }
@@ -645,6 +701,31 @@ export class XChatService {
     }
     const wire: Record<string, Object> = { 'conversation_id': id, 'conversation_key_version': version,
       'conversation_participant_keys': participants, 'action_signatures': signatures };
+    if (xPrivateClient.hasChatOAuth()) {
+      const viewer: string = xPrivateClient.viewerId();
+      const recipient: string = id.split('-').find((member: string): boolean => member !== viewer) ?? viewer;
+      const restSignatures: Record<string, Object>[] = (payload.action_signatures ?? [])
+        .map((action: XChatActionSignature): Record<string, Object> => {
+          const signingKey: XChatSigningKey | undefined = this.signingKeys.find((key: XChatSigningKey): boolean =>
+            key.user_id === viewer && key.public_key_version === action.public_key_version);
+          const signature: Record<string, Object> = { 'signature': action.signature,
+            'signature_version': action.signature_version, 'public_key_version': action.public_key_version };
+          if (signingKey !== undefined) { signature['signing_public_key'] = signingKey.public_key; }
+          const result: Record<string, Object> = { 'message_id': action.message_id,
+            'encoded_message_event_detail': action.encoded_message_event_detail, 'message_event_signature': signature };
+          if (action.signature_payload) { result['signature_payload'] = action.signature_payload; }
+          return result;
+        });
+      const body: Record<string, Object> = { 'conversation_key_version': version,
+        'conversation_participant_keys': participants, 'action_signatures': restSignatures };
+      const result: XPrivateResult = await xPrivateClient.chatOAuthRequest(XChatWire.conversationPath(recipient) + '/keys',
+        'ChatAddConversationKeys', body);
+      this.requireGeneration(generation);
+      const receipt: XChatReceipt = XChatWire.restReceipt(result, id, true);
+      if (receipt.acknowledged) { await this.commitDirectKey(id, version, generation); return; }
+      if ((result.ok || XChatWire.transient(result.status)) && await this.confirmDirectKey(id, version, generation)) { return; }
+      throw new Error(XChatWire.issue('keys', result, receipt));
+    }
     let result: XPrivateResult = await xPrivateClient.graphql('AddEncryptedConversationKeysMutation', wire);
     this.requireGeneration(generation);
     let receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_add_encrypted_conversation_key');
@@ -652,7 +733,7 @@ export class XChatService {
       await this.commitDirectKey(id, version, generation);
       return;
     }
-    if (receipt.acknowledged || XChatWire.transient(result.status)) {
+    if (receipt.acknowledged || XChatWire.uncertain(result, receipt)) {
       if (await this.confirmDirectKey(id, version, generation)) { return; }
     }
     if (XChatWire.alternate(result, receipt)) {
@@ -664,7 +745,7 @@ export class XChatService {
         return;
       }
       if (recovered.acknowledged && await this.confirmDirectKey(id, version, generation)) { return; }
-      if (receipt.acknowledged || recovered.acknowledged || !XChatWire.transient(result.status)) {
+      if (receipt.acknowledged || recovered.acknowledged || !XChatWire.uncertain(result, receipt)) {
         result = fallback; receipt = recovered;
       }
     }
@@ -718,9 +799,14 @@ export class XChatService {
     const items: XChatInboxItem[] = (data?.get_initial_chat_page ?? data?.get_inbox_page ?? data?.get_inbox_page_conversation_data)?.items ?? [];
     for (let i: number = 0; i < items.length; i++) {
       const detail: XChatInboxDetail | undefined = items[i].conversation_detail;
-      if (detail?.conversation_id !== undefined) {
-        if (detail.group_metadata !== undefined) { this.groups.set(detail.conversation_id.replace(':', '-'), detail.group_metadata); }
-        this.info.set(detail.conversation_id.replace(':', '-'), {
+      const id: string = XChatService.pathId(detail?.conversation_id ?? items[i].conversation_id ?? '');
+      if (id.length > 0) {
+        const events: string[] = XChatService.inboxItemEvents(items[i]);
+        if (events.length > 0) { this.inboxEvents.set(id, events); }
+      }
+      if (detail !== undefined && id.length > 0) {
+        if (detail.group_metadata !== undefined) { this.groups.set(id, detail.group_metadata); }
+        this.info.set(id, {
           ttl: detail.group_metadata?.message_ttl_msec ?? detail.message_ttl_msec ?? '0',
           screenBlocked: detail.group_metadata?.screen_capture_blocking_enabled ?? detail.screen_capture_blocking_enabled ?? false,
           muted: detail.is_muted ?? false
@@ -733,6 +819,28 @@ export class XChatService {
         if (profile !== undefined) { this.users.set(participants[n].rest_id, profile); }
       }
     }
+  }
+
+  private static inboxItemEvents(item: XChatInboxItem): string[] {
+    const events: string[] = XChatService.encodedEvents(item.latest_conversation_key_change_events)
+      .concat(XChatService.encodedEvents(item.latest_message_events),
+        XChatService.encodedEvents(item.latest_notifiable_message_create_event),
+        XChatService.encodedEvents(item.latest_non_notifiable_message_create_event));
+    for (const read of item.latest_read_events_per_participant ?? []) {
+      events.push(...XChatService.encodedEvents(read.latest_mark_conversation_read_event));
+    }
+    return Array.from(new Set(events));
+  }
+
+  private async decodeInboxConversation(id: string, generation: number): Promise<XChatPage | null> {
+    const events: string[] | undefined = this.inboxEvents.get(id);
+    if (events === undefined) { return null; }
+    const page: XChatPage = await this.decode(events, id);
+    this.requireGeneration(generation);
+    page.partialHistory = true;
+    page.error = 'partial_history';
+    this.messageCache.set(id, this.mergeConversation(this.cachedMessages(id), page, id));
+    return page;
   }
 
   async applyInboxMetadata(body: string, rows: DirectMessage[], viewerId: string): Promise<void> {
@@ -808,15 +916,7 @@ export class XChatService {
     const items: XChatInboxItem[] = inbox?.items ?? [];
     let events: string[] = XChatService.encodedEvents(inbox?.encoded_message_events);
     for (let i: number = 0; i < items.length; i++) {
-      const item: XChatInboxItem = items[i];
-      events = events.concat(XChatService.encodedEvents(item.latest_conversation_key_change_events),
-        XChatService.encodedEvents(item.latest_message_events),
-        XChatService.encodedEvents(item.latest_notifiable_message_create_event),
-        XChatService.encodedEvents(item.latest_non_notifiable_message_create_event));
-      const readEvents: XChatInboxRead[] = item.latest_read_events_per_participant ?? [];
-      for (let n: number = 0; n < readEvents.length; n++) {
-        events = events.concat(XChatService.encodedEvents(readEvents[n].latest_mark_conversation_read_event));
-      }
+      events = events.concat(XChatService.inboxItemEvents(items[i]));
     }
     const decoded: XChatPage = await this.decode(events, '');
     const messages: DmMessage[] = XChatService.merge([], decoded);
@@ -954,27 +1054,74 @@ export class XChatService {
       if (ids.indexOf(participantIds[i]) < 0) { ids.push(participantIds[i]); }
     }
     if (ids[0].length === 0) { throw new Error('no_session'); }
-    if (Date.now() - this.keysFetchedAt < 60000 &&
-      ids.every((id: string): boolean => this.keyUsers.indexOf(id) >= 0)) {
-      await this.restoreSavedKey(generation);
-      return;
+    await this.loadPublicKeys(ids, generation);
+    await this.restoreSavedKey(generation);
+  }
+
+  private async publicKeyUsers(ids: string[], generation: number): Promise<XChatUserResult[]> {
+    if (xPrivateClient.hasChatOAuth()) {
+      const viewer: string = xPrivateClient.viewerId();
+      const users: XChatUserResult[] = [];
+      const participants: string[] = ids.filter((id: string): boolean => id !== viewer);
+      if (ids.includes(viewer)) {
+        const own: XChatRestKey[] = await this.restPublicKeys('users/' + encodeURIComponent(viewer) + '/public_keys', generation);
+        users.push(XChatService.keyUser(viewer, own, true));
+        this.applyPublicKeys([users[0]], [viewer]);
+        await this.restoreSavedKey(generation);
+      }
+      for (let i: number = 0; i < participants.length; i += 100) {
+        const batch: string[] = participants.slice(i, i + 100);
+        const keys: XChatRestKey[] = await this.restPublicKeys('users/public_keys?ids=' + encodeURIComponent(batch.join(',')), generation);
+        for (const id of batch) {
+          users.push(XChatService.keyUser(id, keys.filter((key: XChatRestKey): boolean => key.user_id === id), false));
+        }
+      }
+      return users;
     }
-    // The private client reads participant keys through GetPublicKeysQuery; the
-    // legacy GetPublicKeys operation reports identity keys the server no longer
-    // accepts for group key material.
     const result: XPrivateResult = await xPrivateClient.graphql('GetPublicKeysQuery', {
       'ids': ids, 'include_juicebox_tokens': true
     });
-    if (generation !== this.generation) { throw new Error('account_changed'); }
+    this.requireGeneration(generation);
     if (!result.ok) { throw new Error(XChatWire.issue('public_keys', result,
       XChatWire.receipt(result, 'user_results_by_rest_ids'))); }
     const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;
-    const users: XChatUserResult[] = envelope.data?.user_results_by_rest_ids ?? [];
+    return envelope.data?.user_results_by_rest_ids ?? [];
+  }
+
+  private async restPublicKeys(path: string, generation: number): Promise<XChatRestKey[]> {
+    const result: XPrivateResult = await xPrivateClient.chatOAuthRequest(path, 'ChatPublicKeys');
+    this.requireGeneration(generation);
+    if (!result.ok) { throw new Error(XChatWire.issue('public_keys', result, new XChatReceipt())); }
+    const keys: XChatRestKeys = JSON.parse(result.body) as XChatRestKeys;
+    if (Array.isArray(keys.data)) { return keys.data; }
+    if (keys.errors?.length) { throw new Error('public_keys_unavailable'); }
+    return [];
+  }
+
+  private static keyUser(id: string, keys: XChatRestKey[], includeBackup: boolean): XChatUserResult {
+    const records: XChatKeyRecord[] = keys.map((key: XChatRestKey): XChatKeyRecord => ({
+      public_key_with_metadata: { version: key.public_key_version, public_key: key },
+      token_map: includeBackup ? key.juicebox_config : undefined
+    }));
+    return { rest_id: id, result: { get_public_keys: { public_keys_with_token_map: records } } };
+  }
+
+  private async loadPublicKeys(ids: string[], generation: number): Promise<void> {
+    const now: number = Date.now();
+    const missing: string[] = ids.filter((id: string): boolean => now - (this.keyUsers.get(id) ?? 0) >= 60000);
+    if (missing.length === 0) { return; }
+    const users: XChatUserResult[] = await this.publicKeyUsers(missing, generation);
+    this.requireGeneration(generation);
     if (users.length === 0) { throw new Error('public_keys_unavailable'); }
+    this.applyPublicKeys(users, missing);
+  }
+
+  private applyPublicKeys(users: XChatUserResult[], ids: string[]): void {
     const keys: XChatSigningKey[] = [];
+    const viewer: string = xPrivateClient.viewerId();
     for (let i: number = 0; i < users.length; i++) {
       const user: XChatUser | undefined = users[i].result;
-      if (user === undefined) { continue; }
+      if (user === undefined || !ids.includes(users[i].rest_id)) { continue; }
       const profile: XChatUser | undefined = this.users.get(users[i].rest_id);
       if (user.core === undefined) { user.core = profile?.core; }
       if (user.avatar === undefined) { user.avatar = profile?.avatar; }
@@ -990,55 +1137,60 @@ export class XChatService {
           identity_public_key: metadata.public_key.public_key,
           identity_public_key_signature: metadata.public_key.identity_public_key_signature
         });
-        if (users[i].rest_id === xPrivateClient.viewerId() && record.token_map !== undefined &&
-          (this.ownRecord === null || XChatService.compareIds(metadata.version,
-            this.ownRecord.public_key_with_metadata.version) >= 0)) {
-          this.ownRecord = record;
-        }
+      }
+      if (users[i].rest_id === viewer && user.get_public_keys !== undefined && !user.get_public_keys.error) {
+        this.ownRecords = records.slice().sort((left: XChatKeyRecord, right: XChatKeyRecord): number =>
+          XChatService.compareIds(right.public_key_with_metadata.version, left.public_key_with_metadata.version));
+        this.recoveryRecord = this.ownRecords.find((record: XChatKeyRecord): boolean => {
+          const backup: XChatBackupConfig | undefined = record.token_map;
+          return !!backup && (backup.token_map !== undefined || backup.sdk_config !== undefined);
+        }) ?? null;
       }
     }
     // The inbox and the share panel fetch different participants concurrently.
     // Keep the other users' verification keys for messages already in flight.
     this.signingKeys = this.signingKeys.filter((key: XChatSigningKey): boolean => !ids.includes(key.user_id)).concat(keys);
-    this.keyUsers = ids;
-    this.keysFetchedAt = Date.now();
+    const fetchedAt: number = Date.now();
+    ids.forEach((id: string): void => { this.keyUsers.set(id, fetchedAt); });
     hilog.info(0xFF00, 'HarmonyX-Chat', 'keys users=%{public}d versions=%{public}d recovery=%{public}s',
-      users.length, keys.length, this.ownRecord === null ? 'unavailable' : 'available');
-    if (!this.unlocked) { await this.restoreSavedKey(generation); }
+      users.length, keys.length, this.hasBackup() ? 'available' : 'unavailable');
   }
 
   private async restoreSavedKey(generation: number): Promise<void> {
     if (this.unlocked) { return; }
     if (this.restoring !== undefined) { return this.restoring; }
-    const metadata: XChatKeyMetadata | undefined = this.ownRecord?.public_key_with_metadata;
     const viewerId: string = xPrivateClient.viewerId();
-    if (metadata === undefined) { return; }
+    if (this.ownRecords.length === 0) { return; }
     const blob: string = xChatKeyStore.load(viewerId);
     if (blob.length === 0) { return; }
-    const args: XChatRestoreArgs = { key_blob: blob, user_id: viewerId, version: metadata.version,
-      public_key: metadata.public_key.public_key };
-    const restore: Promise<void> = this.restoreIdentity(args, generation);
+    const restore: Promise<void> = this.restoreIdentity(blob, viewerId, this.ownRecords, generation);
     this.restoring = restore;
     try { await restore; } finally {
       if (this.restoring === restore) { this.restoring = undefined; }
     }
   }
 
-  private async restoreIdentity(args: XChatRestoreArgs, generation: number): Promise<void> {
-    let result: XChatNativeResult;
-    try { result = await this.callNative('restoreIdentity', JSON.stringify(args)); }
-    finally { args.key_blob = ''; }
-    if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (result.ok && result.data?.unlocked === true) {
-      this.unlocked = true;
-      this.notifyChanged();
-    } else if (result.error === 'registered_key_mismatch') {
-      xChatKeyStore.remove(args.user_id);
+  private async restoreIdentity(blob: string, viewerId: string, records: XChatKeyRecord[], generation: number): Promise<void> {
+    for (const record of records) {
+      const metadata: XChatKeyMetadata = record.public_key_with_metadata;
+      const args: XChatRestoreArgs = { key_blob: blob, user_id: viewerId, version: metadata.version,
+        public_key: metadata.public_key.public_key };
+      let result: XChatNativeResult;
+      try { result = await this.callNative('restoreIdentity', JSON.stringify(args)); }
+      finally { args.key_blob = ''; }
+      this.requireGeneration(generation);
+      if (result.ok && result.data?.unlocked === true) {
+        this.unlocked = true;
+        this.notifyChanged();
+        return;
+      }
+      if (result.error !== 'registered_key_mismatch') { return; }
     }
+    xChatKeyStore.remove(viewerId);
   }
 
   async unlock(pin: string): Promise<void> {
-    const record: XChatKeyRecord | null = this.ownRecord;
+    const record: XChatKeyRecord | null = this.recoveryRecord;
     if (record === null || record.token_map === undefined) { throw new Error('keys_not_registered'); }
     const generation: number = this.generation;
     const metadata: XChatKeyMetadata = record.public_key_with_metadata;
@@ -1062,7 +1214,7 @@ export class XChatService {
     try { result = await this.callNative('unlock', JSON.stringify(args)); }
     finally { args.pin = ''; }
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!result.ok) {
+    if (!result.ok || result.data?.unlocked !== true) {
       // SDK recovery errors contain categories and attempt counts, never PINs or keys.
       hilog.warn(0xFF00, 'HarmonyX-Chat', 'unlock failed: %{public}s', result.error ?? 'unlock_failed');
       const diagnostic: XChatNativeResult = await this.callNative('diagnostics', '{}');
@@ -1080,9 +1232,13 @@ export class XChatService {
     this.notifyChanged();
   }
 
-  async conversation(conversationId: string, sequenceId: string = '', keyVersion: string = ''): Promise<XChatPage> {
+  async conversation(conversationId: string, sequenceId: string = '', keyVersion: string = '',
+    nextToken: string = ''): Promise<XChatPage> {
     conversationId = XChatService.pathId(conversationId);
     const generation: number = this.generation;
+    if (xPrivateClient.hasChatOAuth()) {
+      return this.restConversation(conversationId, nextToken, generation);
+    }
     const querySettings: Record<string, Object> = { 'conversation_event_limit': 50 };
     const result: XPrivateResult = await xPrivateClient.graphql('GetConversationPageQuery', {
       'conversation_id': conversationId,
@@ -1091,11 +1247,16 @@ export class XChatService {
       'query_settings': querySettings
     });
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    if (!result.ok) {
-      const legacy: DmMessage[] = await this.legacyConversation(conversationId);
-      if (legacy.length === 0) { throw new Error(XChatWire.issue('conversation', result,
-        XChatWire.receipt(result, 'get_conversation_page'))); }
+    const receipt: XChatReceipt = XChatWire.receipt(result, 'get_conversation_page');
+    if (!result.ok || receipt.code === 'DEPENDENCY') {
+      if (sequenceId.length === 0 && XChatWire.uncertain(result, receipt)) {
+        const inbox: XChatPage | null = await this.decodeInboxConversation(conversationId, generation);
+        if (inbox !== null && (inbox.messages.length > 0 || inbox.needsUnlock)) { return inbox; }
+      }
+      const legacy: DmMessage[] = sequenceId.length === 0 ? await this.legacyConversation(conversationId) : [];
+      if (legacy.length === 0) { throw new Error(XChatWire.issue('conversation', result, receipt)); }
       const fallback: XChatPage = new XChatPage(); fallback.messages = legacy;
+      if (XChatWire.uncertain(result, receipt)) { fallback.partialHistory = true; fallback.error = 'partial_history'; }
       fallback.transport = this.conversationTransport(conversationId); return fallback;
     }
     const envelope: XChatEnvelope = JSON.parse(result.body) as XChatEnvelope;
@@ -1110,6 +1271,7 @@ export class XChatService {
     const messages: string[] = XChatService.encodedEvents(page.encoded_message_events);
     const all: string[] = events.concat(messages);
     const decoded: XChatPage = await this.decode(all, conversationId);
+    this.requireGeneration(generation);
     hilog.info(0xFF00, 'HarmonyX-Chat', 'events=%{public}d messages=%{public}d locked=%{public}s',
       all.length, decoded.messages.length, this.unlocked ? 'false' : 'true');
     decoded.hasMore = page.has_more ?? false;
@@ -1123,6 +1285,32 @@ export class XChatService {
     decoded.transport = this.conversationTransport(conversationId);
     this.messageCache.set(conversationId.replace(':', '-'), this.mergeConversation(this.cachedMessages(conversationId), decoded, conversationId));
     return decoded;
+  }
+
+  private async restConversation(id: string, token: string, generation: number): Promise<XChatPage> {
+    const path: string = XChatWire.conversationPath(id) + '/events?max_results=50' +
+      '&chat_message_event.fields=id,encoded_event,conversation_id,sender_id' +
+      (token.length > 0 ? '&pagination_token=' + encodeURIComponent(token) : '');
+    const result: XPrivateResult = await xPrivateClient.chatOAuthRequest(path, 'ChatConversationEvents');
+    this.requireGeneration(generation);
+    if (!result.ok) { throw new Error(XChatWire.issue('conversation', result, new XChatReceipt())); }
+    const history: XChatHistory | null = XChatWire.history(result.body, id);
+    if (history === null) { throw new Error('conversation_unavailable'); }
+    try {
+      await this.loadPublicKeys(history.senders.filter((sender: string): boolean => /^\d+$/.test(sender)), generation);
+    } catch (_error) {
+      this.requireGeneration(generation);
+    }
+    const page: XChatPage = await this.decode(Array.from(new Set(history.events)), id);
+    this.requireGeneration(generation);
+    if (history.events.length === 0 && token.length === 0 && history.nextToken.length === 0) {
+      this.rememberTransport(id, 'empty');
+    }
+    page.transport = this.conversationTransport(id);
+    page.nextToken = history.nextToken === token ? '' : history.nextToken;
+    page.hasMore = page.nextToken.length > 0;
+    this.messageCache.set(id, this.mergeConversation(this.cachedMessages(id), page, id));
+    return page;
   }
 
   private rememberEffects(events: XChatNativeMessage[]): void {
@@ -1281,24 +1469,37 @@ export class XChatService {
       error.includes('no usable cached conversation key');
   }
 
-  private async loadKeysForSend(id: string, generation: number): Promise<void> {
-    try { await this.conversation(id); } catch (error) {
+  private async loadKeysForSend(id: string, generation: number): Promise<boolean> {
+    let partialHistory: boolean = false;
+    try { partialHistory = (await this.conversation(id)).partialHistory; } catch (error) {
       this.requireGeneration(generation);
       const reason: string = (error as Error).message;
-      if (reason !== 'conversation_unavailable' && reason !== 'conversation_http_404') { throw error as Error; }
+      if (reason !== 'conversation_http_404' && (reason !== 'conversation_unavailable' || xPrivateClient.hasChatOAuth())) {
+        throw error as Error;
+      }
+      if (reason === 'conversation_http_404' && xPrivateClient.hasChatOAuth()) { this.rememberTransport(id, 'empty'); }
     }
     this.requireGeneration(generation);
+    return partialHistory;
   }
 
   private async prepareDelivery(id: string, args: XChatEncryptArgs, generation: number): Promise<XChatPendingSend> {
     const input: string = JSON.stringify(args);
     let result: XChatNativeResult = await this.callNative('encrypt', input);
     this.requireGeneration(generation);
+    if (!result.ok && XChatService.missingKey(result) && this.inboxEvents.has(id)) {
+      await this.decodeInboxConversation(id, generation);
+      result = await this.callNative('encrypt', input);
+      this.requireGeneration(generation);
+    }
     if (!result.ok && XChatService.missingKey(result)) {
-      await this.loadKeysForSend(id, generation);
+      const partialHistory: boolean = await this.loadKeysForSend(id, generation);
       result = await this.callNative('encrypt', input);
       this.requireGeneration(generation);
       if (!result.ok && XChatService.missingKey(result) && !args.media_key_version) {
+        if (partialHistory || (xPrivateClient.hasChatOAuth() && this.conversationTransport(id) !== 'empty')) {
+          throw new Error('existing_conversation_key_unavailable');
+        }
         await this.initializeDirect(id);
         this.requireGeneration(generation);
         result = await this.callNative('encrypt', input);
@@ -1354,6 +1555,14 @@ export class XChatService {
     return receipt.event.length > 0 ? this.verifyDelivery(await this.decode([receipt.event], id), id, messageId) : null;
   }
 
+  private async writeOAuthMessage(id: string, wire: Record<string, Object>): Promise<XPrivateResult> {
+    const payload: Record<string, Object> = { 'message_id': wire['message_id'],
+      'encoded_message_create_event': wire['encoded_message_create_event'],
+      'encoded_message_event_signature': wire['encoded_message_event_signature'] };
+    if (wire['conversation_token'] !== undefined) { payload['conversation_token'] = wire['conversation_token']; }
+    return xPrivateClient.chatOAuthRequest(XChatWire.conversationPath(id) + '/messages', 'ChatSendMessage', payload);
+  }
+
   private async deliver(id: string, draft: string, args: XChatEncryptArgs, generation: number): Promise<XChatPage> {
     let pending: XChatPendingSend | undefined = this.pendingSends.get(draft);
     if (pending === undefined) {
@@ -1369,26 +1578,31 @@ export class XChatService {
       this.requireGeneration(generation);
       pending.attempted = true;
       const wire: Record<string, Object> = this.messageWire(id, pending.payload);
-      let result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', wire);
+      const oauth: boolean = xPrivateClient.hasChatOAuth();
+      let result: XPrivateResult = oauth ? await this.writeOAuthMessage(id, wire) :
+        await xPrivateClient.graphql('SendMessageCreateMutation', wire);
       this.requireGeneration(generation);
-      let receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_send_create_message_event');
+      let receipt: XChatReceipt = oauth ? XChatWire.restReceipt(result, id, false) :
+        XChatWire.receipt(result, 'xchat_send_create_message_event');
       let confirmed: XChatPage | null = await this.readDelivery(receipt, id, messageId);
-      if (confirmed === null && (XChatWire.transient(result.status) || (result.ok && receipt.code.length === 0))) {
+      if (confirmed === null && (XChatWire.uncertain(result, receipt) || (result.ok && receipt.code.length === 0))) {
         confirmed = this.verifyDelivery(await this.refreshDeliveryHistory(id, generation), id, messageId);
       }
       this.requireGeneration(generation);
-      if (confirmed === null && XChatWire.alternate(result, receipt)) {
+      if (confirmed === null && (oauth ? XChatWire.transient(result.status) : XChatWire.alternate(result, receipt))) {
         const updatedWire: Record<string, Object> = this.messageWire(id, pending.payload);
-        const fallback: XPrivateResult = updatedWire['conversation_token'] !== wire['conversation_token'] ?
+        const fallback: XPrivateResult = oauth ? await this.writeOAuthMessage(id, updatedWire) :
+          updatedWire['conversation_token'] !== wire['conversation_token'] ?
           await xPrivateClient.graphql('SendMessageCreateMutation', updatedWire) :
           await xPrivateClient.xChatWebWrite(false, updatedWire);
         this.requireGeneration(generation);
-        const alternate: XChatReceipt = XChatWire.receipt(fallback, 'xchat_send_create_message_event');
+        const alternate: XChatReceipt = oauth ? XChatWire.restReceipt(fallback, id, false) :
+          XChatWire.receipt(fallback, 'xchat_send_create_message_event');
         confirmed = await this.readDelivery(alternate, id, messageId);
         if (fallback.ok && alternate.code.length === 0 && confirmed === null) {
           confirmed = this.verifyDelivery(await this.refreshDeliveryHistory(id, generation), id, messageId);
         }
-        if (fallback.ok || !XChatWire.transient(result.status)) { result = fallback; receipt = alternate; }
+        if (fallback.ok || !XChatWire.uncertain(result, receipt)) { result = fallback; receipt = alternate; }
       }
       this.requireGeneration(generation);
       if (confirmed === null) {
@@ -1420,9 +1634,13 @@ export class XChatService {
     if (generation !== this.generation) { throw new Error('account_changed'); }
     if (!encrypted.ok || encrypted.data === undefined) { throw new Error(encrypted.error ?? 'reaction_encrypt_failed'); }
     const payload: XChatNativeData = encrypted.data;
-    const result: XPrivateResult = await xPrivateClient.graphql('SendMessageCreateMutation', this.messageWire(conversationId, payload));
+    const wire: Record<string, Object> = this.messageWire(conversationId, payload);
+    const oauth: boolean = xPrivateClient.hasChatOAuth();
+    const result: XPrivateResult = oauth ? await this.writeOAuthMessage(conversationId, wire) :
+      await xPrivateClient.graphql('SendMessageCreateMutation', wire);
     if (generation !== this.generation) { throw new Error('account_changed'); }
-    const receipt: XChatReceipt = XChatWire.receipt(result, 'xchat_send_create_message_event');
+    const receipt: XChatReceipt = oauth ? XChatWire.restReceipt(result, conversationId, false) :
+      XChatWire.receipt(result, 'xchat_send_create_message_event');
     if (!receipt.acknowledged) { throw new Error(XChatWire.issue('reaction', result, receipt)); }
     const page: XChatPage = await this.decode([receipt.event], conversationId);
     if (!page.events.some((e: XChatNativeMessage): boolean => e.verified === true && e.id === payload.message_id &&
@@ -1440,11 +1658,12 @@ export class XChatService {
 
   private static copyMessage(message: DmMessage): DmMessage {
     return {
-      id: message.id, sequenceId: message.sequenceId, conversationId: message.conversationId,
+      id: message.id, sequenceId: message.sequenceId, webMessageId: message.webMessageId, conversationId: message.conversationId,
       senderId: message.senderId, senderName: message.senderName, senderUsername: message.senderUsername,
       senderAvatarUrl: message.senderAvatarUrl, senderVerifiedType: message.senderVerifiedType,
       senderAvatarShape: message.senderAvatarShape, text: message.text, time: message.time, timestampMs: message.timestampMs,
-      outgoing: message.outgoing, encrypted: message.encrypted, read: message.read, attachments: message.attachments,
+      outgoing: message.outgoing, directionUnknown: message.directionUnknown, encrypted: message.encrypted,
+      read: message.read, attachments: message.attachments,
       keyVersion: message.keyVersion, rawEvent: message.rawEvent, reply: message.reply, reactions: message.reactions
     };
   }

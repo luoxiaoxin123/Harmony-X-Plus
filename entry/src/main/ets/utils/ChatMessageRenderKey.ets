@@ -7,6 +7,8 @@ export function chatMessageRenderKey(message: DmMessage, pending: boolean, pinne
   const fields: string[] = [message.id, pending ? 'pending' : 'confirmed', message.text,
     String(message.read ?? false), JSON.stringify(message.attachments ?? []), message.keyVersion ?? '',
     JSON.stringify(message.reply ?? null), JSON.stringify(message.reactions ?? []),
-    message.senderName, message.senderAvatarUrl, String(message.timestampMs), pinnedMessageId, String(index)];
+    message.senderId, message.senderName, message.senderAvatarUrl, String(message.outgoing),
+    String(message.directionUnknown ?? false), message.sequenceId ?? '', message.webMessageId ?? '',
+    String(message.timestampMs), pinnedMessageId, String(index)];
   return JSON.stringify(fields);
 }

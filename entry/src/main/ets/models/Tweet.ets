@@ -207,6 +207,7 @@ export interface DirectMessage {
 export interface DmMessage {
   id: string;
   sequenceId?: string;
+  webMessageId?: string;
   conversationId: string;
   senderId: string;
   senderName: string;
@@ -218,6 +219,7 @@ export interface DmMessage {
   time: string;
   timestampMs: number;
   outgoing: boolean;
+  directionUnknown?: boolean;
   encrypted: boolean;
   read?: boolean;
   attachments?: DmAttachment[];

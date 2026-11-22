@@ -2,6 +2,7 @@ import { bundleManager, common } from '@kit.AbilityKit';
 import { LengthMetrics } from '@kit.ArkUI';
 import type { DirectMessage } from '../models/Tweet';
 import type { DmConversationRouteParam } from '../pages/DmConversation';
+import type { DmWebRouteParam } from '../pages/DmWeb';
 import type { PostShareRoute } from '../pages/PostShare';
 import { APP_FONT_FAMILY_KEY, DEFAULT_APP_FONT_FAMILY } from '../services/AppFontStore';
 import { STORAGE_KEY_ACCOUNTS_CHANGED } from '../services/AccountStore';
@@ -12,6 +13,7 @@ import { ChatPerson, xChatActions } from '../services/XChatActions';
 import { ChatContact, chatContactService } from '../services/ChatContactService';
 import { xChatService } from '../services/XChatService';
 import { xPrivateClient } from '../services/XPrivateClient';
+import { sendXChatWebDraft } from '../services/XChatWebDraft';
 import { InputModalScope } from '../utils/InputModalScope';
 import { copyPostLink } from '../utils/PostLinkCopy';
 import { ResponsiveLayout } from '../utils/ResponsiveLayout';
@@ -52,6 +54,9 @@ export struct PostShareSheetHost {
   @State private sending: boolean = false;
   @State private askingPin: boolean = false;
   @State private sendError: string = '';
+  @State private webRecipient: DmConversationRouteParam | undefined = undefined;
+  @State private webSendRecipient: DmConversationRouteParam | undefined = undefined;
+  private webUnconfirmed: Set<string> = new Set<string>();
   private current: PostShareRequest | undefined;
   private afterClose: (() => void) | undefined;
   private readonly modalScope: InputModalScope = new InputModalScope();
@@ -84,9 +89,12 @@ export struct PostShareSheetHost {
     this.sending = false;
     this.askingPin = false;
     this.sendError = '';
+    this.webRecipient = undefined;
+    this.webSendRecipient = undefined;
+    this.webUnconfirmed.clear();
     xPrivateClient.load(this.context());
     this.account = xPrivateClient.sessionIdentity();
-    this.signedIn = xPrivateClient.isSignedIn() && xPrivateClient.viewerId().length > 0;
+    this.signedIn = (xPrivateClient.isSignedIn() || xPrivateClient.hasChatOAuth()) && xPrivateClient.viewerId().length > 0;
     this.telegramAvailable = this.canOpenLink('tg://msg_url');
     this.emailAvailable = this.canOpenLink('mailto:');
     this.modalScope.setActive(true);
@@ -235,6 +243,10 @@ export struct PostShareSheetHost {
   }
 
   private async sendSelected(pin?: string, links: boolean = false): Promise<void> {
+    if (!links && xPrivateClient.isSignedIn() && !xPrivateClient.hasChatOAuth()) {
+      await this.sendWithWebChat(pin ?? '', true);
+      return;
+    }
     const request: PostShareRequest | undefined = this.current;
     const recipients: DmConversationRouteParam[] = links ? this.selected.filter((recipient: DmConversationRouteParam): boolean =>
       this.linkRecipients.includes(recipient.conversationId)) : this.selected.slice();
@@ -244,8 +256,12 @@ export struct PostShareSheetHost {
     }
     this.sending = true;
     this.sendError = '';
+    this.webRecipient = undefined;
+    this.webSendRecipient = undefined;
     try {
       if (pin !== undefined && !xChatService.isUnlocked()) {
+        await xChatService.prepare(this.context(), []);
+        if (!this.canContinueSend(request, account)) { return; }
         await xChatService.unlock(pin);
       }
       this.askingPin = false;
@@ -256,12 +272,21 @@ export struct PostShareSheetHost {
         if (!this.canContinueSend(request, account)) { return; }
         const id: string = recipient.conversationId;
         try {
+          if (this.webUnconfirmed.has(id)) { throw new Error('web_share_unconfirmed'); }
           if (links) {
             await this.sendLegacyLink(recipient, url, note, account);
           } else {
+            if (!xChatService.isUnlocked()) {
+              await xChatService.prepare(this.context(), []);
+              if (!this.canContinueSend(request, account)) { return; }
+              if (!xChatService.isUnlocked()) {
+                if (!xChatService.hasBackup()) { throw new Error('keys_not_registered'); }
+                this.askingPin = true;
+                return;
+              }
+            }
             await xChatService.prepare(this.context(), this.recipientParticipants(recipient));
             if (!this.canContinueSend(request, account)) { return; }
-            if (!xChatService.isUnlocked()) { this.askingPin = true; return; }
             await xChatService.sharePost(id, request.post.id, url, note);
           }
           if (!this.canContinueSend(request, account)) { return; }
@@ -271,6 +296,16 @@ export struct PostShareSheetHost {
         } catch (error) {
           if (!this.canContinueSend(request, account)) { return; }
           const reason: string = (error as Error).message;
+          const sendNeverStarted: boolean = reason === 'existing_conversation_key_unavailable' ||
+            /^conversation_(network|dependency|http_50[234])$/.test(reason);
+          if (sendNeverStarted && this.webSendRecipient === undefined &&
+            xPrivateClient.isSignedIn()) { this.webSendRecipient = recipient; }
+          if (this.webRecipient === undefined && (reason === 'keys_not_registered' || reason === 'existing_conversation_key_unavailable' ||
+            reason === 'web_share_unconfirmed' ||
+            /^(conversation|public_keys|keys|send)_(network|dependency|http_(401|402|403|429|50[234])|unconfirmed)$/.test(reason)) &&
+            xPrivateClient.isSignedIn()) {
+            this.webRecipient = recipient;
+          }
           const transport: string = xChatService.conversationTransport(id);
           if (!recipient.group && reason === 'recipient_key_unavailable' &&
             (transport === 'plaintext' || transport === 'empty') && !this.linkRecipients.includes(id)) {
@@ -301,6 +336,88 @@ export struct PostShareSheetHost {
 
   private canContinueSend(request: PostShareRequest, account: string): boolean {
     return this.open && this.current === request && account === xPrivateClient.sessionIdentity();
+  }
+
+  private async sendWithWebChat(pin: string = '', direct: boolean = false): Promise<void> {
+    const request: PostShareRequest | undefined = this.current;
+    const recipients: DmConversationRouteParam[] = direct ? this.selected.slice() : this.selected.filter(
+      (row: DmConversationRouteParam): boolean => row.conversationId === this.webSendRecipient?.conversationId);
+    const account: string = this.account;
+    if (this.sending || request === undefined || recipients.length === 0 || !xPrivateClient.isSignedIn() ||
+      !this.canContinueSend(request, account)) { return; }
+
+    this.sending = true;
+    this.sendError = '';
+    if (direct) { this.webSendRecipient = undefined; }
+    const text: string = (this.note.trim() + '\n' + postShareUrl(request.post)).trim();
+    try {
+      const errors: string[] = [];
+      for (const recipient of recipients) {
+        if (!this.canContinueSend(request, account)) { return; }
+        const id: string = recipient.conversationId;
+        let result: string = 'unconfirmed';
+        if (!this.webUnconfirmed.has(id)) {
+          const delivery: Promise<string> = sendXChatWebDraft(this.context(), this.getUIContext(), xPrivateClient.viewerId(),
+            id, text, (): boolean => this.canContinueSend(request, account) &&
+              (AppStorage.get<boolean>('harmonyx.app_foreground') ?? true), pin);
+          pin = '';
+          result = await delivery;
+        }
+        if (!this.canContinueSend(request, account)) { return; }
+        if (result === 'pin_required' || result === 'pin_unconfirmed') {
+          this.askingPin = true;
+          this.sendError = result === 'pin_unconfirmed' ?
+            this.context().resourceManager.getStringSync($r('app.string.dm_unlock_failed')) : '';
+          return;
+        }
+        this.askingPin = false;
+        if (result !== 'confirmed') {
+          if (result === 'unconfirmed') {
+            this.webUnconfirmed.add(id);
+            this.webSendRecipient = undefined;
+          }
+          this.webRecipient = recipient;
+          const resource: Resource = result === 'unconfirmed' ? $r('app.string.dm_web_send_unconfirmed') :
+            result === 'occupied' ? $r('app.string.dm_web_draft_occupied') : $r('app.string.dm_web_send_unavailable');
+          errors.push(recipient.title + ' · ' + this.context().resourceManager.getStringSync(resource));
+          continue;
+        }
+        if (this.webSendRecipient?.conversationId === id) { this.webSendRecipient = undefined; }
+        if (this.webRecipient?.conversationId === id) { this.webRecipient = undefined; }
+        this.sentIds = [...this.sentIds, id];
+        this.selected = this.selected.filter((row: DmConversationRouteParam): boolean => row.conversationId !== id);
+      }
+      this.sendError = errors.join('\n');
+      if (this.selected.length === 0) {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.chat_sent') });
+        this.sending = false;
+        this.open = false;
+      }
+    } catch (_error) {
+      if (this.canContinueSend(request, account)) {
+        this.sendError = this.context().resourceManager.getStringSync($r('app.string.dm_web_send_unavailable'));
+      }
+    } finally {
+      pin = '';
+      if (this.current === request) { this.sending = false; }
+    }
+  }
+
+  private openWebChat(): void {
+    const request: PostShareRequest | undefined = this.current;
+    const recipient: DmConversationRouteParam | undefined = this.webRecipient;
+    if (request === undefined || recipient === undefined || !xPrivateClient.isSignedIn() ||
+      !this.canContinueSend(request, this.account)) { return; }
+    const message: string = (this.note.trim() + '\n' + postShareUrl(request.post)).trim();
+    const copy: boolean = !this.webUnconfirmed.has(recipient.conversationId);
+    const param: DmWebRouteParam = { conversationId: recipient.conversationId, title: recipient.title };
+    const account: string = this.account;
+    this.closeWith((): void => {
+      if (account !== xPrivateClient.sessionIdentity()) { return; }
+      request.beforeNavigate?.();
+      request.pageStack.pushPath({ name: 'DmWeb', param: param });
+      if (copy) { void copyPostLink(this.getUIContext(), message); }
+    });
   }
 
   private async sendLegacyLink(recipient: DmConversationRouteParam, url: string, note: string,
@@ -480,6 +597,19 @@ export struct PostShareSheetHost {
             .width('100%').padding({ left: 16, right: 16 })
         }.width('100%').constraintSize({ maxHeight: 96 }).align(Alignment.Start)
       }
+      if (this.webSendRecipient !== undefined && this.selected.some((row: DmConversationRouteParam): boolean =>
+        row.conversationId === this.webSendRecipient?.conversationId)) {
+        Button(this.context().resourceManager.getStringSync($r('app.string.dm_send')) + ' · X Chat · ' + this.webSendRecipient.title)
+          .fontFamily(this.appFontFamily).fontColor(this.accent)
+          .backgroundColor(Color.Transparent).enabled(!this.sending)
+          .onClick((): void => { void this.sendWithWebChat(); })
+      }
+      if (this.webRecipient !== undefined) {
+        Button(this.webUnconfirmed.has(this.webRecipient.conversationId) ?
+          $r('app.string.dm_open_x_chat') : $r('app.string.dm_share_in_web_chat')).fontFamily(this.appFontFamily).fontColor(this.accent)
+          .backgroundColor(Color.Transparent).enabled(!this.sending)
+          .onClick((): void => { this.openWebChat(); })
+      }
       if (this.selected.some((recipient: DmConversationRouteParam): boolean =>
         this.linkRecipients.includes(recipient.conversationId))) {
         Button($r('app.string.post_share_send_as_link')).fontFamily(this.appFontFamily).fontColor(this.accent)
@@ -509,7 +639,10 @@ export struct PostShareSheetHost {
     if (this.askingPin) {
       Scroll() {
         ChatPinPad({ busy: this.sending, error: this.sendError,
-          onSubmit: (pin: string): void => { void this.sendSelected(pin); },
+          onSubmit: (pin: string): void => {
+            if (this.webSendRecipient !== undefined) { void this.sendWithWebChat(pin); }
+            else { void this.sendSelected(pin); }
+          },
           onClose: (): void => { this.askingPin = false; this.sendError = ''; } })
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Auto)
         .padding({ bottom: this.centered() ? 0 : this.bottomInset })

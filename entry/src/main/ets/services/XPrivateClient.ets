@@ -2624,6 +2624,43 @@ export class XPrivateClient {
 
   // ---- Direct messages ----------------------------------------------------
 
+  private chatOAuthToken(): string {
+    const context: common.Context | undefined = this.context;
+    return context === undefined ? '' : xPrivateStore.chatOAuthToken(context, this.session.accountId, this.viewerId());
+  }
+
+  hasChatOAuth(): boolean { return this.chatOAuthToken().length > 0; }
+
+  async chatOAuthRequest(path: string, operation: string, payload?: Record<string, Object>): Promise<XPrivateResult> {
+    const token: string = this.chatOAuthToken();
+    const generation: number = this.sessionGeneration();
+    if (token.length === 0) { return new XPrivateResult(false, 0, '', 'no_chat_oauth', operation); }
+    const request: DohHttpRequest = createDohHttpRequest();
+    try {
+      const options: http.HttpRequestOptions = {
+        method: payload === undefined ? http.RequestMethod.GET : http.RequestMethod.POST,
+        header: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        connectTimeout: REQUEST_TIMEOUT_MS, readTimeout: REQUEST_TIMEOUT_MS
+      };
+      if (payload !== undefined) { options.extraData = JSON.stringify(payload); }
+      await proxyStore.apply(options);
+      if (generation !== this.sessionGeneration() || token !== this.chatOAuthToken()) {
+        return new XPrivateResult(false, 0, '', 'account_changed', operation);
+      }
+      const response: http.HttpResponse = await request.request('https://api.x.com/2/' + path, options);
+      if (generation !== this.sessionGeneration() || token !== this.chatOAuthToken()) {
+        return new XPrivateResult(false, 0, '', 'account_changed', operation);
+      }
+      const status: number = response.responseCode;
+      const body: string = typeof response.result === 'string' ? response.result : JSON.stringify(response.result);
+      return this.finish(operation, false, '', new XPrivateResult(status >= 200 && status < 300, status, body, '', operation));
+    } catch (_error) {
+      return this.finish(operation, false, '', new XPrivateResult(false, -1, '', 'network', operation));
+    } finally {
+      request.destroy();
+    }
+  }
+
   // XChat supplies the current inbox. Legacy compatibility must not mask a
   // rate-limit, authentication or transport failure from the current route.
   async dmInbox(cursor: string): Promise<XPrivateResult> {

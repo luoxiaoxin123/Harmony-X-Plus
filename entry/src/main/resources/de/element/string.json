@@ -3981,6 +3981,26 @@
       "value": "XChat-Unterhaltung: Diese Version liest Verlauf und Nachrichtenanzahl. Senden und Entschlüsseln benötigen den Schlüsselaustausch."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "X Chat im Web öffnen"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Text zum Teilen kopieren und X Chat öffnen"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat ist noch nicht bereit. Entsperre es im Web und versuche es erneut."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Dieser Chat enthält bereits einen Web-Entwurf. Prüfe ihn zuerst."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Der Versand im Web ist unbestätigt. Öffne den Chat zur Prüfung."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Nachrichten konnten nicht geladen werden. Prüfe Netzwerk oder Proxy und versuche es erneut."
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "Der Schlüssel für diese Unterhaltung ist nicht verfügbar. Öffne die Unterhaltung in X und versuche es erneut."
+      "value": "Der Schlüssel für diese Unterhaltung ist nicht verfügbar."
     },
     {
       "name": "xchat_delivery_unconfirmed",

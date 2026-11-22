@@ -3912,12 +3912,26 @@ struct Index {
         }
         return;
       }
-      if (!authStore.isSignedIn() || privateResult.status === 429) {
+      if (!this.xPrivate.hasChatOAuth() && (!authStore.isSignedIn() || privateResult.status === 429)) {
         this.messagesStatus = privateResult.status === 429 ?
           this.text($r('app.string.dm_rate_limited')) : privateResult.status === 401 || privateResult.status === 403 ?
           this.text($r('app.string.private_session_expired')) :
           this.text($r('app.string.dm_private_unavailable')) + ' HTTP ' + privateResult.status +
           XPrivateClient.explain(privateResult).substring(0, 160);
+        return;
+      }
+    }
+
+    if (this.xPrivate.hasChatOAuth()) {
+      const result: XPrivateResult = await this.xPrivate.chatOAuthRequest('chat/conversations?max_results=100' +
+        '&expansions=participant_ids,member_ids&user.fields=profile_image_url,verified_type' +
+        '&chat_conversation.fields=updated_at,unread,newest_event_id,is_muted,group_name,group_avatar_url', 'ChatInbox');
+      if (accountStore.activeId(context) !== accountId) { return; }
+      const page: DmInboxPage | null = result.ok ? XDmParser.parseRestInbox(result.body, this.xPrivate.viewerId()) : null;
+      if (page !== null) {
+        this.publishInbox(context, page.messages);
+        this.messagesFetchedAt = Date.now();
+        this.messagesStatus = '';
         return;
       }
     }
@@ -6457,6 +6471,10 @@ struct Index {
   private openChatComposer(): void {
     if (!this.xPrivate.isSignedIn()) { this.openLoginSheet(); return; }
     this.navPathStack.pushPath({ name: 'DmCompose' });
+  }
+
+  private openWebChatInbox(): void {
+    this.navPathStack.pushPath({ name: 'DmWeb' });
   }
 
   private chatFilterTitle(): Resource {
@@ -11363,6 +11381,10 @@ struct Index {
                 .textAlign(TextAlign.Center)
               Button($r('app.string.common_retry')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
                 .onClick((): void => { void this.refreshMessages(); })
+              if (this.xPrivate.isSignedIn()) {
+                Button($r('app.string.dm_open_x_chat')).fontColor(this.accentColor).backgroundColor(Color.Transparent)
+                  .onClick((): void => { this.openWebChatInbox(); })
+              }
             }.width('100%').padding(24)
           }
         } else if (this.visibleChats().length === 0 && !this.messagesLoading) {

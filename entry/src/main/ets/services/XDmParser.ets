@@ -16,6 +16,33 @@ import { XNotificationParser } from './XNotificationParser';
 const DOMAIN = 0xFF00;
 const TAG = 'HarmonyX-DM';
 
+interface RestChatUser {
+  id: string;
+  name?: string;
+  username?: string;
+  profile_image_url?: string;
+  verified_type?: string;
+}
+interface RestChatConversation {
+  id: string;
+  participant_ids?: string[];
+  member_ids?: string[];
+  updated_at?: string;
+  newest_event_id?: string;
+  unread?: boolean;
+  is_muted?: boolean;
+  group_name?: string;
+  group_avatar_url?: string;
+}
+interface RestChatIncludes { users?: RestChatUser[]; }
+interface RestChatInboxMeta { result_count?: number; next_token?: string; }
+interface RestChatInbox {
+  data?: RestChatConversation[];
+  includes?: RestChatIncludes;
+  meta?: RestChatInboxMeta;
+  errors?: Object[];
+}
+
 class DmUserRecord {
   id: string = '';
   name: string = '';
@@ -33,6 +60,32 @@ class DmUserRecord {
 }
 
 export class XDmParser {
+  static parseRestInbox(body: string, viewerId: string): DmInboxPage | null {
+    try {
+      const root: RestChatInbox = JSON.parse(body) as RestChatInbox;
+      if (!Array.isArray(root.data) && (root.meta?.result_count !== 0 || root.errors?.length)) { return null; }
+      const users: Map<string, RestChatUser> = new Map<string, RestChatUser>();
+      for (const user of root.includes?.users ?? []) { users.set(user.id, user); }
+      const rows: DirectMessage[] = [];
+      for (const chat of root.data ?? []) {
+        if (!/^(g\d+|\d+[-:]\d+)$/.test(chat.id)) { continue; }
+        const id: string = chat.id.replace(':', '-');
+        const group: boolean = id.startsWith('g');
+        const participants: string[] = chat.participant_ids ?? chat.member_ids ?? (group ? [] : id.split('-'));
+        const peer: string = participants.find((userId: string): boolean => userId !== viewerId) ?? viewerId;
+        const user: RestChatUser | undefined = group ? undefined : users.get(peer);
+        const timestamp: number = Date.parse(chat.updated_at ?? '');
+        rows.push({ id: id, conversationId: id, from: user?.name || user?.username || (group ? '' : peer),
+          username: user?.username, avatarUrl: user?.profile_image_url, verifiedType: user?.verified_type,
+          preview: '', time: timestamp > 0 ? XNotificationParser.relativeTime(timestamp) : '',
+          timestampMs: timestamp > 0 ? timestamp : 0, unread: chat.unread === true ? 1 : 0,
+          participantIds: participants, latestSequenceId: chat.newest_event_id, group: group, muted: chat.is_muted,
+          groupNameCipher: chat.group_name, groupAvatarCipher: chat.group_avatar_url });
+      }
+      return { messages: rows, nextToken: root.meta?.next_token ?? '' };
+    } catch (_error) { return null; }
+  }
+
   static parseInbox(body: string, viewerId: string): DmInboxPage | null {
     try {
       const root: Record<string, Object> = JSON.parse(body) as Record<string, Object>;

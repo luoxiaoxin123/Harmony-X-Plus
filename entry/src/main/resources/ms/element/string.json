@@ -3981,6 +3981,26 @@
       "value": "Perbualan XChat: versi ini boleh membaca utas dan bilangan mesej. Penghantaran dan penyahsulitan memerlukan pertukaran kunci."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Buka X Chat di web"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Salin teks untuk dikongsi dan buka X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat belum sedia. Pastikan ia dibuka kunci di web dan cuba lagi."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Perbualan ini sudah mempunyai draf web. Semak draf itu dahulu."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Penghantaran web belum disahkan. Buka perbualan untuk menyemak."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Mesej gagal dimuatkan. Semak rangkaian atau proksi, kemudian cuba lagi."
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "Kunci perbualan ini tidak tersedia. Buka perbualan dalam aplikasi X dan cuba lagi."
+      "value": "Kunci perbualan ini tidak tersedia."
     },
     {
       "name": "xchat_delivery_unconfirmed",

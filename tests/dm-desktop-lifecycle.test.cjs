@@ -31,6 +31,50 @@ const nav = compile(fs.readFileSync('entry/src/main/ets/utils/NavigationGuard.et
 const branch = compile(fs.readFileSync('entry/src/main/ets/utils/RootContentNavigation.ets', 'utf8')
   .replace(/^import .*;\s*/m, ''), { NavigationGuard: nav }).RootContentNavigation;
 
+test('reopening a conversation renders the cached messages before starting the network refresh', () => {
+  const cached = { messages: [{ id: 'old' }, { id: 'new' }], oldest: 'old', hasMore: true };
+  const Conversation = compile(`export class Conversation {
+    ${extract('pages/DmConversation', 'DmConversationPage', ['aboutToAppear', 'restoreWebHistory'])}
+  }`, {
+    photoAccessHelper: { PhotoViewMIMETypes: { IMAGE_TYPE: 'image' } }, PhotoSource: { ALL: 'all' }, RECENT_PHOTO_MAX_AGE: 1000,
+    KeyboardAvoidMode: { RESIZE: 1 }, getContext: () => ({}), chatMediaOutbox: { subscribe() {} },
+    chatBackgroundStore: { load() {} }, chatDecorationService: { selection() {} },
+    xPrivateClient: { isSignedIn: () => true, hasChatOAuth: () => false },
+    xPrivateStore: { load: () => ({ cacheIdentity: () => 'account-a' }) },
+    xChatService: { cachedWebHistory: () => cached, webHistoryGeneration: () => 3 }
+  }).Conversation;
+  const page = new Conversation();
+  let loaded = false;
+  Object.assign(page, {
+    recentPhotoOptions: {}, loading: true, observeKeyboard() {}, readRoute() { this.conversationId = '100-200'; },
+    getUIContext: () => ({ setKeyboardAvoidMode() {} }), syncOutbox() {}, loadContact() {},
+    load(reset) {
+      assert.equal(reset, true);
+      assert.deepEqual(this.messages, cached.messages);
+      assert.notEqual(this.messages, cached.messages);
+      assert.equal(this.webOldest, 'old');
+      assert.equal(this.hasMore, true);
+      assert.equal(this.loading, false);
+      loaded = true;
+    }
+  });
+  page.aboutToAppear();
+  assert.equal(loaded, true);
+});
+
+test('repost attribution opens the person who reposted and leaves the original post author intact', () => {
+  const Card = compile(`export class Card { ${extract('components/TweetCard', 'TweetCard', ['openRepostAuthor'])} }`, {}).Card;
+  const card = new Card();
+  const original = { id: '100', username: 'author' };
+  const reposter = { id: '200', username: 'reposter' };
+  card.tweet = { id: 'post', author: original, repostAuthor: reposter };
+  const opened = [];
+  card.onAuthorTapped = post => opened.push(post.author);
+  card.openRepostAuthor();
+  assert.deepEqual(opened, [reposter]);
+  assert.equal(card.tweet.author, original);
+});
+
 test('desktop conversation selection replaces one detail branch and never empties the roster', () => {
   const Root = compile(`export class Root { ${extract('pages/Index', 'Index', ['openConversation'])} }`, {
     RootContentNavigation: branch, promptAction: {}, $r: v => v

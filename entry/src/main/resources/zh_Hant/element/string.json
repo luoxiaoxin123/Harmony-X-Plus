@@ -3981,6 +3981,26 @@
       "value": "XChat 加密對話：目前可讀取對話與訊息數量，傳送和解密需要完成金鑰交換。"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "開啟 X Chat 網頁版"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "複製分享內容並開啟 X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "背景 X Chat 尚未就緒。請確認網頁版已解鎖後重試。"
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "此對話已有網頁草稿。請先處理原草稿。"
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "網頁傳送結果未確認。請先開啟對話查看。"
+    },
+    {
       "name": "dm_web_failed",
       "value": "私人訊息載入失敗，請檢查網路或代理後重試"
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "目前裝置缺少此對話的金鑰。請先在 X 用戶端開啟該對話，再試一次。"
+      "value": "目前裝置缺少此對話的金鑰。"
     },
     {
       "name": "xchat_delivery_unconfirmed",

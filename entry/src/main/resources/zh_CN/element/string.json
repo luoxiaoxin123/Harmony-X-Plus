@@ -3981,6 +3981,26 @@
       "value": "XChat 加密会话：当前版本可读取会话和消息数量，发送与解密需要接入密钥交换"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "打开 X Chat 网页版"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "复制分享内容并打开 X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "后台 X Chat 未就绪。请确认网页版已解锁后重试。"
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "此会话已有网页草稿。请先处理原草稿。"
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "网页发送结果未确认。请先打开会话查看。"
+    },
+    {
       "name": "dm_web_failed",
       "value": "私信加载失败，请检查网络或代理后重试"
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "当前设备缺少此会话的密钥。请先在 X 客户端打开该会话，再试一次。"
+      "value": "当前设备缺少此会话的密钥。"
     },
     {
       "name": "xchat_delivery_unconfirmed",

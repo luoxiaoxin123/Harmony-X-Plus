@@ -126,10 +126,11 @@ test('tap-to-share resumes multiple recipients after PIN and retries only the un
   let rejectSecond = true;
   const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
     'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants']), {}, {
-    xPrivateClient: { sessionIdentity: () => 'viewer' },
+    xPrivateClient: { sessionIdentity: () => 'viewer', isSignedIn: () => true, hasChatOAuth: () => true },
     xChatService: {
       async prepare(_context, ids) { calls.push(['prepare', ...ids]); },
       isUnlocked: () => unlocked,
+      hasBackup: () => true,
       async unlock(pin) {
         assert.equal(pin, '1234');
         calls.push('unlock');
@@ -150,6 +151,7 @@ test('tap-to-share resumes multiple recipients after PIN and retries only the un
   const bob = { conversationId: '100-300', title: 'Bob', participantIds: [], group: false };
   const subject = Object.assign(new Subject(), {
     account: 'viewer', current: { post: { id: '123' } }, selected: [alice, bob], sentIds: [], linkRecipients: [],
+    webUnconfirmed: new Set(),
     note: ' note ', open: true,
     context: () => ({ resourceManager: { getStringSync: name => name } }),
     getUIContext: () => ({ getPromptAction: () => ({ showToast: () => calls.push('sent') }) })
@@ -165,13 +167,14 @@ test('tap-to-share resumes multiple recipients after PIN and retries only the un
   assert.deepEqual(subject.selected, [bob]);
   assert.deepEqual(subject.sentIds, ['100-200']);
   assert.match(subject.sendError, /Bob.*HTTP 503/);
+  assert.equal(subject.webRecipient, bob);
   assert.equal(subject.open, true);
   rejectSecond = false;
   await subject.sendSelected();
   assert.equal(subject.open, false);
   assert.equal(subject.sending, false);
   const url = 'https://x.com/example/status/123';
-  assert.deepEqual(calls, [['prepare', '100', '200'], 'unlock', 'unlock', ['prepare', '100', '200'],
+  assert.deepEqual(calls, [['prepare'], ['prepare'], 'unlock', ['prepare'], 'unlock', ['prepare', '100', '200'],
     ['100-200', '123', url, 'note'], ['prepare', '100', '300'], ['100-300', '123', url, 'note'],
     ['prepare', '100', '300'], ['100-300', '123', url, 'note'], 'sent']);
 });
@@ -181,7 +184,7 @@ test('a legacy conversation sends a raw link only after that separate action is 
   const contact = { id: '200' };
   const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
     'PostShareSheetHost', ['sendSelected', 'canContinueSend', 'recipientParticipants', 'sendLegacyLink']), {}, {
-    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100' },
+    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100', isSignedIn: () => false },
     xChatService: { prepare: async () => {}, isUnlocked: () => true, conversationTransport: () => 'plaintext',
       async sharePost() { throw new Error('recipient_key_unavailable'); } },
     chatContactService: { async load(_context, id) { assert.equal(id, '200'); return contact; },
@@ -192,7 +195,7 @@ test('a legacy conversation sends a raw link only after that separate action is 
   });
   const subject = Object.assign(new Subject(), {
     account: 'viewer', current: { post: { id: '123' } }, selected: [{ conversationId: '100-200', title: 'Alice', group: false }],
-    note: 'note', open: true, sentIds: [], linkRecipients: [],
+    note: 'note', open: true, sentIds: [], linkRecipients: [], webUnconfirmed: new Set(),
     context: () => ({ resourceManager: { getStringSync: name => name } }),
     getUIContext: () => ({ getPromptAction: () => ({ showToast() {} }) })
   });
@@ -202,6 +205,41 @@ test('a legacy conversation sends a raw link only after that separate action is 
   await subject.sendSelected(undefined, true);
   assert.deepEqual(plaintext, [[contact, '100-200', 'note\nhttps://x.com/example/status/123']]);
   assert.equal(subject.open, false);
+});
+
+test('the original share button resumes hidden X Chat with one native PIN entry', async () => {
+  const attempts = [];
+  const { Subject } = load(methods('entry/src/main/ets/components/PostShareSheetHost.ets',
+    'PostShareSheetHost', ['sendSelected', 'sendWithWebChat', 'canContinueSend']), {}, {
+    xPrivateClient: { sessionIdentity: () => 'viewer', viewerId: () => '100', isSignedIn: () => true,
+      hasChatOAuth: () => false },
+    AppStorage: { get: () => true },
+    async sendXChatWebDraft(_context, _ui, viewer, recipient, text, isCurrent, pin) {
+      assert.equal(isCurrent(), true);
+      attempts.push({ viewer, recipient, text, pin });
+      return attempts.length === 1 ? 'pin_required' : 'confirmed';
+    },
+    postShareUrl: () => 'https://x.com/i/status/123',
+    $r: name => name
+  });
+  const recipients = [{ conversationId: '100-200', title: 'Alice' }, { conversationId: '100-300', title: 'Bob' }];
+  let toasts = 0;
+  const subject = Object.assign(new Subject(), {
+    account: 'viewer', current: { post: { id: '123' } }, selected: recipients, open: true,
+    note: 'look', sentIds: [], webUnconfirmed: new Set(), context: () => ({}),
+    getUIContext: () => ({ getPromptAction: () => ({ showToast() { toasts++; } }) })
+  });
+  await subject.sendSelected();
+  assert.equal(subject.askingPin, true);
+  assert.equal(subject.open, true);
+  await subject.sendSelected('1234');
+  assert.equal(subject.askingPin, false);
+  assert.equal(subject.open, false);
+  assert.equal(toasts, 1);
+  assert.deepEqual(attempts.map(item => [item.recipient, item.pin]), [
+    ['100-200', ''], ['100-200', '1234'], ['100-300', '']
+  ]);
+  assert.equal(attempts[1].text, 'look\nhttps://x.com/i/status/123');
 });
 
 test('native pull state still starts refresh and times out cleanly without a second inbox request', async () => {
