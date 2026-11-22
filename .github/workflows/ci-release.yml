@@ -74,6 +74,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARTIFACT_NAME: ${{ needs.build.outputs.artifact }}
         run: |
           sha256sum --check SHA256SUMS
-          gh release upload --clobber -- "$RELEASE_TAG" ./*.hap ./*.zip SHA256SUMS
+          label="HarmonyX+ ${RELEASE_TAG#v}"
+          gh release upload --clobber -- "$RELEASE_TAG" \
+            "./$ARTIFACT_NAME.hap#$label.hap" "./$ARTIFACT_NAME.zip#$label.zip" SHA256SUMS

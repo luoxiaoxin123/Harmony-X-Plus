@@ -17,8 +17,11 @@ interface GithubRelease {
 }
 
 function versionParts(version: string): string[] {
-  return /^v?(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})(?:-([\w.-]+))?(?:\+[\w.-]+)?$/
-    .exec(version)?.slice(1, 5) ?? [];
+  const parts: string[] =
+    /^v?(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})(?:\.(0|[1-9]\d{0,8}))?(?:-([\w.-]+))?(?:\+[\w.-]+)?$/
+      .exec(version)?.slice(1, 5) ?? [];
+  if (parts.length > 0) { parts[2] = parts[2] ?? '0'; }
+  return parts;
 }
 
 function compareVersion(left: string[], right: string[]): number {

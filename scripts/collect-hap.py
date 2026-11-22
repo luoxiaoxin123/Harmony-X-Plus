@@ -34,12 +34,14 @@ def main():
 
     output = Path("build/release")
     output.mkdir(parents=True, exist_ok=True)
-    stem = f"HarmonyXPlus-v{version.replace('+', '-')}-no-ads-unsigned"
+    safe_version = version.replace("+", "-")
+    published = os.environ.get("GITHUB_EVENT_NAME") == "release"
+    stem = f"HarmonyXPlus-{safe_version}" if published else f"HarmonyXPlus-v{safe_version}-no-ads-unsigned"
     target = output / f"{stem}.hap"
     zip_target = output / f"{stem}.zip"
     shutil.copyfile(source, target)
     with ZipFile(zip_target, "w", compression=ZIP_DEFLATED) as archive:
-        archive.write(target, target.name)
+        archive.write(target, f"HarmonyX+ {version}.hap" if published else target.name)
         archive.write("LICENSE", "LICENSE")
     checksums = []
     for asset in (target, zip_target):
