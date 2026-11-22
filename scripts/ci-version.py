@@ -22,8 +22,8 @@ def main():
         version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
     else:
         version = f"{base_version[1]}-beta.{run}.{attempt}.g{commit}"
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", version):
-        raise SystemExit("Use a semantic release tag such as v4.0.0 or v4.0.0-rc.1")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", version):
+        raise SystemExit("Use a release tag such as v0.1, v0.1.0 or v0.1.0-rc.1")
     code = int(base_code[1]) + run * 100 + attempt
     if code > 2_147_483_647:
         raise SystemExit("Computed versionCode exceeds the supported range")

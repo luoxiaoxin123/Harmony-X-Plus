@@ -24,6 +24,15 @@ test('the notice only links to a newer release published in this repository', ()
   assert.equal(newerProjectRelease(body, '4.0.1').url, '');
 });
 
+test('two-part releases and three-part equivalents use the same version ordering', () => {
+  const body = JSON.stringify([release('v0.1'), release('v0.2-beta.1', { prerelease: true })]);
+  assert.equal(newerProjectRelease(body, '0.1-beta.30.1.g0123456').version, '0.2-beta.1');
+  assert.equal(newerProjectRelease(body, '0.1.0-beta.30.1.g0123456').version, '0.2-beta.1');
+  assert.equal(newerProjectRelease(JSON.stringify([release('v0.1')]), '0.1-beta.30.1.g0123456').version, '0.1');
+  assert.equal(newerProjectRelease(JSON.stringify([release('v0.1.0')]), '0.1').version, '');
+  assert.equal(newerProjectRelease(JSON.stringify([release('v0.2')]), '0.1.0').version, '0.2');
+});
+
 test('foreground release lookup sends a public GET without cookies or identifiers', async () => {
   const storage = new Map();
   const requests = [];
