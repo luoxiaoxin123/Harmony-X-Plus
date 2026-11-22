@@ -92,6 +92,26 @@ function detailPost(id, parent = '', conversation = 'root') {
   } };
 }
 
+test('a logged-out X profile preview decodes the original-post timeline without executing page scripts', () => {
+  const webSource = fs.readFileSync(path.resolve(__dirname, '../entry/src/main/ets/services/XWebClient.ets'), 'utf8');
+  const start = webSource.indexOf('  static parsePublicProfilePosts');
+  const end = webSource.indexOf('  private starterReferences', start);
+  const js = ts.transpileModule(`class XWebClient { ${webSource.slice(start, end)} }`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 }
+  }).outputText;
+  const { parsePublicProfilePosts } = new Function('XTimelineParser', js + '\nreturn XWebClient;')(XTimelineParser);
+  const entries = [tweetEntry('tweet-100', detailPost('100')), cursor('next', 'Bottom')];
+  const body = JSON.stringify({ data: { user_result_by_screen_name: { result: {
+    profile_user_originals_timeline: { timeline: { instructions: [{ entries }] } }
+  } } } });
+  const chunk = `kind:"Result.Ok",value:${JSON.stringify(body)}}`;
+  const html = `<script>throw new Error('must not run');[${chunk}]</script>`;
+  const result = parsePublicProfilePosts(html);
+  assert.deepEqual(result.tweets.map(post => post.id), ['100']);
+  assert.equal(result.nextToken, 'next');
+  assert.equal(parsePublicProfilePosts('<html>Protected account</html>'), null);
+});
+
 function detailModule(entryId, posts) {
   return { entryId, content: { entryType: 'TimelineTimelineModule',
     items: posts.map(result => ({ item: { itemContent: { tweet_results: { result } } } }))

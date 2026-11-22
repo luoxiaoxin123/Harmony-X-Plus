@@ -176,6 +176,18 @@ export class TranslationStore {
     }
   }
 
+  saveReplaceOriginal(context: common.Context, value: boolean): boolean {
+    try {
+      const store: preferences.Preferences = preferences.getPreferencesSync(context, { name: TranslationStore.STORE_NAME });
+      store.putSync(TranslationStore.REPLACE_ORIGINAL_KEY, value);
+      store.flushSync();
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_TRANSLATION_REPLACE_ORIGINAL, value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   save(context: common.Context, settings: TranslationSettings): boolean {
     try {
       const options: preferences.Options = { name: TranslationStore.STORE_NAME };

@@ -113,7 +113,7 @@ test('Home double tap sends the saved choice and ignores other tabs and a single
   home.onRootTabBarClick(1); assert.equal(home.lastHomeTabClickAt, 0);
 });
 
-test('inline video taps stay with the current player, while viewer, GIF and card actions keep their behavior', () => {
+test('inline video taps open the viewer, while viewer, GIF and card actions keep their behavior', () => {
   const Player = harness('components/PostMedia', 'SurfaceVideoPlayer', ['onVideoSurfaceTap']);
   const events = [];
   const player = Object.assign(new Player(), { holdSeekDirection: 0, suppressVideoTapUntil: 0, positionSec: 21,
@@ -121,7 +121,7 @@ test('inline video taps stay with the current player, while viewer, GIF and card
     isAnimatedGif: () => false, usesInlineOverlayControls: () => false, hideVideoChrome: () => false, onFullscreenIntent: sec => { events.push(['viewer', sec]); return true; },
     onLinkCardOpen: () => events.push('card'), toggleControls: () => events.push('controls'), togglePlay: () => events.push('play'),
     onViewerCommentDismiss: () => events.push('dismiss'), onViewerVideoTap() {} });
-  player.onVideoSurfaceTap(); assert.deepEqual(events, ['controls']);
+  player.onVideoSurfaceTap(); assert.deepEqual(events, [['viewer', 21]]);
   player.mediaViewerLayout = true; player.onVideoSurfaceTap(); assert.equal(events.at(-1), 'controls');
   player.retainViewerPlayback = true; player.onVideoSurfaceTap(); assert.equal(events.at(-1), 'dismiss');
   player.retainViewerPlayback = false; player.mediaViewerLayout = false;

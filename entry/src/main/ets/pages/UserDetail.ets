@@ -6,6 +6,7 @@ import { AboutAccountRouteParam } from './AboutAccount';
 import { scrollFrame, scrollStarted, scrollStopped, stopScrollOnTouch } from '../utils/ScrollInteraction';
 import { ProfileBioTranslation } from '../components/ProfileBioTranslation';
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { PostFeedProjection } from '../utils/PostFeedDataSource';
 import { pageTextColor } from '../utils/ThemeColors';
 import { appPageBackground } from '../components/PageBackgroundLayer';
 import { pageCanvasColor, pageReadingSurfaceColor } from '../utils/ThemeColors';
@@ -73,7 +74,7 @@ import {
 } from '../services/TimelineSettingsStore';
 import { ProfileTabMotion } from '../utils/ProfileTabMotion';
 import { ProfileHeaderAnchor, ProfileHeaderMotion } from '../utils/ProfileHeaderMotion';
-import { STORAGE_KEY_HOME_FLOATING_ACTION, HOME_FLOATING_COMPOSE, HOME_FLOATING_HIDDEN,
+import { STORAGE_KEY_HOME_FLOATING_ACTION, STORAGE_KEY_PROFILE_PHOTOS_FIRST, HOME_FLOATING_COMPOSE, HOME_FLOATING_HIDDEN,
   HOME_FLOATING_TOP } from '../services/InteractionSettingsStore';
 import { destinationTitleBarFullStyleEnabled } from '../utils/DestinationTitleBar';
 import { SystemMaterialUtil } from '../utils/SystemMaterial';
@@ -117,6 +118,7 @@ export struct UserDetail {
   @StorageProp(STORAGE_KEY_PAGE_TRANSITION_MODE) private pageTransitionMode: string = DEFAULT_PAGE_TRANSITION_MODE;
   @StorageProp('harmonyx.compact_window') private sheetCompactWindow: boolean = false;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
+  @StorageProp('harmonyx.profile_reply_button') private profileReplyButton: boolean = true;
   @StorageProp(STORAGE_KEY_HOME_FLOATING_ACTION) private homeFloatingAction: string = HOME_FLOATING_COMPOSE;
   @StorageProp(STORAGE_KEY_SYSTEM_EMOJI_ENABLED) private systemEmojiEnabled: boolean = false;
   @StorageProp('harmonyx.breakpoint') private sheetWindowBreakpoint: string = 'sm';
@@ -155,6 +157,7 @@ export struct UserDetail {
   @State followPending: boolean = false;
   @State followerAdjust: number = 0;
   @State blocking: boolean = false;
+  @State private showBlockedPosts: boolean = false;
   @State blockPending: boolean = false;
   @State replyPosts: Tweet[] = [];
   @State mediaPosts: Tweet[] = [];
@@ -186,7 +189,10 @@ export struct UserDetail {
   @State private activityPages: ProfileActivityPage[] = [new ProfileActivityPage(),
     new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(), new ProfileActivityPage(),
     new ProfileActivityPage(), new ProfileActivityPage()];
+  private readonly activityPostProjections: PostFeedProjection[] =
+    this.activityPages.map((): PostFeedProjection => new PostFeedProjection());
   @State private mediaFilter: string = 'video';
+  @StorageProp(STORAGE_KEY_PROFILE_PHOTOS_FIRST) private profilePhotosFirst: boolean = false;
   @State private postsFilter: string = 'posts';
   @State private notificationOpen: boolean = false;
   @State private notificationMode: number = -1;
@@ -201,6 +207,8 @@ export struct UserDetail {
   @State private listStatus: string = '';
   private listCursor: string = '';
   private alive: boolean = true;
+  private visible: boolean = false;
+  private webUnblockViewerId: string = '';
   @State private suggestionGroups: FollowSuggestionGroup[] = [];
   @State private headerScrollOffset: number = 0;
   @State private headerPullOffset: number = 0;
@@ -217,6 +225,7 @@ export struct UserDetail {
   private webClient: XWebClient = new XWebClient();
 
   aboutToAppear(): void {
+    this.mediaFilter = this.profilePhotosFirst ? 'photo' : 'video';
     setTimeout((): void => {
       this.loadRoute();
       const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -240,6 +249,7 @@ export struct UserDetail {
       (param.author.id === xPrivateClient.viewerId() || param.author.id === authStore.getUserId());
     if (param.profile !== undefined && param.profile !== null && param.profile.id === param.author.id) {
       this.profile = param.profile;
+      this.blocking = param.profile.blocking === true;
     }
   }
 
@@ -326,10 +336,6 @@ export struct UserDetail {
     return result;
   }
 
-  private displayPosts(): Tweet[] {
-    return this.activityPages[0].loaded ? this.activityPages[0].posts : this.postsForAuthor();
-  }
-
   private contentFilterSettings(tab: number = 0): ContentFilterSettings {
     return new ContentFilterSettings(
       tab === 0 ? this.filterOnlyMedia : false,
@@ -343,10 +349,6 @@ export struct UserDetail {
 
   private filteredPosts(posts: Tweet[], tab: number = 0): Tweet[] {
     return contentFilterStore.filter(posts, this.contentFilterSettings(tab));
-  }
-
-  private visibleDisplayPosts(): Tweet[] {
-    return this.filteredPosts(this.displayPosts());
   }
 
   private authorName(): string {
@@ -401,7 +403,7 @@ export struct UserDetail {
   }
 
   private actionAnchorsReady(): boolean {
-    return !this.isSelfProfile && this.heroActionsAnchor.width > 0 && this.titleActionsAnchor.width > 0;
+    return !this.isSelfProfile && !this.blocking && this.heroActionsAnchor.width > 0 && this.titleActionsAnchor.width > 0;
   }
 
   private headerActionsProgress(): number {
@@ -426,6 +428,11 @@ export struct UserDetail {
     this.loadProfilePage(this.activitySource(this.selectedTab), true).then((): void => {
       this.refreshing = false;
     });
+  }
+
+  private scrollProfileToTop(): void {
+    this.activityScrollers[this.selectedTab].scrollEdge(Edge.Top);
+    this.scroller.scrollTo({ xOffset: 0, yOffset: 0, animation: { duration: 260, curve: Curve.EaseOut } });
   }
 
   private bannerUrl(): string {
@@ -466,7 +473,7 @@ export struct UserDetail {
 
   private async toggleFollow(): Promise<void> {
     const current: TweetAuthor | null = this.author;
-    if (this.followPending || this.isSelfProfile || current === null) {
+    if (this.followPending || this.blocking || this.isSelfProfile || current === null) {
       return;
     }
     // A profile opened from a mention starts without an id; the loaded profile
@@ -615,22 +622,25 @@ export struct UserDetail {
   }
 
   private tabPosts(tab: number): Tweet[] {
-    const source: Tweet[] = tab === 0 && this.postsFilter === 'posts' ? this.displayPosts() :
-      this.activityPages[this.activitySource(tab)].posts;
-    const filtered: Tweet[] = this.filteredPosts(source, tab);
-    const out: Tweet[] = [];
-    for (let i: number = 0; i < filtered.length; i++) {
-      const post: Tweet = filtered[i];
-      if (tab === 2 && this.mediaFilter === 'video' && ProfileAccountData.video(post) === null) {
-        continue;
+    if (this.blocking && !this.showBlockedPosts) { return []; }
+    const page: ProfileActivityPage = this.activityPages[this.activitySource(tab)];
+    const preview: boolean = tab === 0 && this.postsFilter === 'posts' && !page.loaded;
+    if (preview && this.author === null) { return []; }
+    const authorId: string | undefined = preview ? this.author?.id : undefined;
+    const source: Tweet[] = preview ? this.posts : page.posts;
+    const media: string = tab === 2 ? this.mediaFilter : '';
+    const variant: string = JSON.stringify([this.filterRevision.toString(), authorId ?? '', media, preview.toString()]);
+    return this.activityPostProjections[tab].get(source, variant, (posts: Tweet[]): Tweet[] => {
+      const authored: Tweet[] = authorId === undefined ? posts :
+        posts.filter((post: Tweet): boolean => post.author.id === authorId);
+      const filtered: Tweet[] = this.filteredPosts(authored, tab);
+      if (media === 'video') { return filtered.filter((post: Tweet): boolean => ProfileAccountData.video(post) !== null); }
+      if (media === 'photo') {
+        return filtered.filter((post: Tweet): boolean =>
+          (post.attachments ?? []).some((attachment: MediaAttachment): boolean => attachment.type === 'photo'));
       }
-      if (tab === 2 && this.mediaFilter === 'photo' &&
-        !(post.attachments ?? []).some((m: MediaAttachment): boolean => m.type === 'photo')) {
-        continue;
-      }
-      out.push(post);
-    }
-    return out;
+      return filtered;
+    });
   }
 
   private tabMoreCursor(tab: number): string {
@@ -655,6 +665,7 @@ export struct UserDetail {
   }
 
   private async loadProfilePage(tab: number, replace: boolean): Promise<void> {
+    if (this.blocking && !this.showBlockedPosts) { return; }
     if (tab === 6 && !this.isSelfProfile) { return; }
     const userId: string = this.resolvedUserId();
     const state: ProfileActivityPage = this.activityPages[tab];
@@ -662,13 +673,32 @@ export struct UserDetail {
       return;
     }
     const cursor: string = replace ? '' : state.cursor;
+    const generation: number = xPrivateClient.sessionGeneration();
+    const revealBlocked: boolean = tab === 0 && this.blocking && this.showBlockedPosts;
+    if (replace) { state.publicPosts = false; }
     state.loading = true;
     state.status = '';
     this.notifyActivityChanged();
     let page: TweetPage | null = null;
     let result: XPrivateResult | null = null;
     try {
-      if (this.privateProfileAvailable) {
+      if (revealBlocked && (replace || state.webPosts)) {
+        result = await xPrivateClient.userOriginalsWeb(this.authorHandle().substring(1), cursor, 20);
+        page = result.ok ? XTimelineParser.parse(result.body) : null;
+        if (replace) {
+          state.webPosts = page !== null && (page.tweets.length > 0 || page.nextToken.length > 0);
+          if (!state.webPosts) { page = null; }
+        }
+      }
+      if (revealBlocked && replace && (page === null || page.tweets.length === 0)) {
+        const publicPage: TweetPage | null = await this.webClient.fetchPublicProfilePosts(this.authorHandle().substring(1));
+        if (publicPage !== null) {
+          page = publicPage;
+          state.publicPosts = true;
+          state.webPosts = false;
+        }
+      }
+      if (page === null && this.privateProfileAvailable && (!revealBlocked || replace || !state.webPosts)) {
         if (tab === 0) {
           result = await xPrivateClient.userTweets(userId, cursor, 20);
         } else if (tab === 1) {
@@ -705,7 +735,7 @@ export struct UserDetail {
     } catch (error) {
       page = null;
     }
-    if (!this.alive) {
+    if (!this.alive || generation !== xPrivateClient.sessionGeneration() || state !== this.activityPages[tab]) {
       return;
     }
     state.loading = false;
@@ -714,7 +744,7 @@ export struct UserDetail {
         (result !== null && result.status > 0 ? ' · HTTP ' + result.status : '');
     } else {
       state.posts = ProfileTweetPage.merge(tab, state.posts, page.tweets, replace);
-      state.cursor = page.nextToken === cursor ? '' : page.nextToken;
+      state.cursor = state.publicPosts || page.nextToken === cursor ? '' : page.nextToken;
       state.loaded = true;
     }
     this.notifyActivityChanged();
@@ -747,8 +777,8 @@ export struct UserDetail {
     return 'https://x.com/' + encodeURIComponent(this.authorHandle().substring(1));
   }
 
-  private openWeb(url: string, title: string): void {
-    const param: ProfileWebRouteParam = { url: url, title: title };
+  private openWeb(url: string, title: string, accountSettings: boolean = false): void {
+    const param: ProfileWebRouteParam = { url: url, title: title, accountSettings: accountSettings };
     this.pageStack.pushPath({ name: 'ProfileWeb', param: param });
   }
 
@@ -982,6 +1012,7 @@ export struct UserDetail {
   }
 
   private openMessages(): void {
+    if (this.blocking) { return; }
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     xPrivateClient.load(context);
     const userId: string = this.resolvedUserId();
@@ -1103,37 +1134,88 @@ export struct UserDetail {
       return;
     }
     const next: boolean = !this.blocking;
-    if (next) {
+    const action: Resource = next ? $r('app.string.menu_block_user') : $r('app.string.menu_unblock_user');
+    const generation: number = xPrivateClient.sessionGeneration();
+    this.blockPending = true;
+    try {
       const dialog: promptAction.ShowDialogSuccessResponse = await promptAction.showDialog({
-        title: this.text($r('app.string.menu_block_user')),
-        message: this.text($r('app.string.block_confirm')),
+        title: this.text(action),
+        message: next ? this.text($r('app.string.block_confirm')) : this.authorName() + ' · ' + this.authorHandle(),
         buttons: [
           { text: this.text($r('app.string.compose_cancel')), color: '#666666' },
-          { text: this.text($r('app.string.menu_block_user')), color: '#E0245E' }
+          { text: this.text(action), color: '#E0245E' }
         ]
       });
-      if (dialog.index !== 1) {
+      if (dialog.index !== 1 || !this.alive || generation !== xPrivateClient.sessionGeneration()) {
         return;
       }
+      const result: XPrivateResult = await xPrivateClient.block(userId, next);
+      if (!this.alive || generation !== xPrivateClient.sessionGeneration()) { return; }
+      if (!result.ok) {
+        if (!next && (result.status === 403 || result.status === 404 || result.status === 405)) {
+          this.webUnblockViewerId = xPrivateClient.viewerId();
+          this.openWeb(this.profileUrl(), this.text(action), true);
+          return;
+        }
+        promptAction.showToast({
+          message: this.text($r('app.string.block_failed')) + ' · HTTP ' + result.status,
+          duration: 2000
+        });
+        return;
+      }
+      this.blocking = next;
+      this.showBlockedPosts = false;
+      void this.syncReaderModeration();
+      if (next) {
+        this.following = false;
+        this.notificationMode = 3;
+      } else {
+        void this.loadProfilePage(this.activitySource(this.selectedTab), true);
+      }
+      const done: Resource = next ? $r('app.string.block_done') : $r('app.string.unblock_done');
+      promptAction.showToast({ message: this.text(done), duration: 1500 });
+    } catch (error) {
+      // A dismissed confirmation rejects without submitting the change.
+    } finally {
+      this.blockPending = false;
     }
-    this.blockPending = true;
-    const result: XPrivateResult = await xPrivateClient.block(userId, next);
-    this.blockPending = false;
-    if (!result.ok) {
-      promptAction.showToast({
-        message: this.text($r('app.string.block_failed')) + ' · HTTP ' + result.status,
-        duration: 2000
-      });
+  }
+
+  private async refreshBlockAfterWeb(): Promise<void> {
+    const viewer: string = this.webUnblockViewerId;
+    this.webUnblockViewerId = '';
+    if (viewer.length === 0 || viewer !== xPrivateClient.viewerId()) { return; }
+    const generation: number = xPrivateClient.sessionGeneration();
+    const userId: string = this.resolvedUserId();
+    const result: XPrivateResult = await xPrivateClient.userByRestId(userId, true);
+    if (!this.alive || !result.ok || userId !== this.resolvedUserId() || generation !== xPrivateClient.sessionGeneration()) {
       return;
     }
-    this.blocking = next;
+    const profile: UserProfile | null = XUserParser.parse(result.body);
+    if (profile === null || profile.blocking !== false) { return; }
+    this.profile = profile;
+    this.blocking = false;
+    this.showBlockedPosts = false;
+    this.following = profile.following === true;
     void this.syncReaderModeration();
-    if (next) {
-      this.following = false;
-      this.notificationMode = 3;
+    const tab: number = this.activitySource(this.selectedTab);
+    this.activityPages[tab] = new ProfileActivityPage();
+    void this.loadProfilePage(tab, true);
+  }
+
+  private async revealBlockedProfile(): Promise<void> {
+    this.showBlockedPosts = true;
+    this.postsFilter = 'posts';
+    const state: ProfileActivityPage = new ProfileActivityPage();
+    this.activityPages[0] = state;
+    const generation: number = xPrivateClient.sessionGeneration();
+    const loading: Promise<void> = this.loadProfilePage(0, true);
+    this.selectTab(0);
+    await loading;
+    if (this.alive && this.visible && this.blocking && this.showBlockedPosts && state === this.activityPages[0] &&
+      generation === xPrivateClient.sessionGeneration() && state.posts.length === 0) {
+      this.openWeb(this.profileUrl(), this.authorName(), true);
     }
-    const done: Resource = next ? $r('app.string.block_done') : $r('app.string.unblock_done');
-    promptAction.showToast({ message: this.text(done), duration: 1500 });
   }
 
   private startEditing(): void {
@@ -1257,6 +1339,8 @@ export struct UserDetail {
         }
         .alignItems(HorizontalAlign.Start).layoutWeight(1).opacity(this.headerProgress())
         .accessibilityLevel(this.headerProgress() >= 0.5 ? 'auto' : 'no-hide-descendants')
+        .hitTestBehavior(this.headerProgress() >= 0.5 ? HitTestMode.Default : HitTestMode.None)
+        .onClick((): void => { if (this.headerProgress() >= 0.5) { this.scrollProfileToTop(); } })
         if (!this.isSelfProfile) {
           Stack({ alignContent: Alignment.End }) {
             Row().width(PROFILE_COMPACT_ACTIONS_WIDTH).height(36).hitTestBehavior(HitTestMode.None)
@@ -1307,7 +1391,7 @@ export struct UserDetail {
     // Only the action buttons travel into the toolbar. Profile identity stays
     // in the List so scrolling and Refresh move it with the rest of the hero.
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.actionAnchorsReady() && this.headerActionsProgress() > 0) {
+      if (!this.blocking && this.actionAnchorsReady() && this.headerActionsProgress() > 0) {
         ProfileActionButtons({ expandedWidth: this.heroActionsAnchor.width,
           progress: this.headerActionsProgress(), following: this.following, followLabel: this.followLabel(),
           followEnabled: !this.followPending && !this.blockPending && !this.blocking,
@@ -1429,6 +1513,13 @@ export struct UserDetail {
             Text($r('app.string.profile_detail_edit')).fontFamily(this.appFontFamily).fontSize(16)
               .fontWeight(FontWeight.Bold).fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent))
           }
+        } else if (this.blocking) {
+          Button($r('app.string.block_done')).fontFamily(this.appFontFamily)
+            .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('app.color.text_on_accent'))
+            .height(42).width('100%').borderRadius(22)
+            .backgroundColor($r('app.color.danger'))
+            .enabled(!this.blockPending)
+            .onClick((): void => { void this.toggleBlock(); })
         } else {
           Stack() {
             ProfileActionButtons({ expandedWidth: this.heroActionsAnchor.width > 0 ? this.heroActionsAnchor.width : 312,
@@ -1652,7 +1743,7 @@ export struct UserDetail {
 
   @Builder
   private ActivityHeader(tab: number): void {
-    if (tab === 0) {
+    if (tab === 0 && !this.blocking) {
       ForEach(this.suggestionGroups.filter((group: FollowSuggestionGroup): boolean => group.afterTweetId.length === 0),
         (group: FollowSuggestionGroup) => {
           Column() { FollowSuggestions({ group: group, contextualUserId: this.resolvedUserId(), showBanner: true }) }
@@ -1666,13 +1757,6 @@ export struct UserDetail {
     // same vertical container so the recommendation strip takes layout space.
     Column() {
       Column() {
-        if (post.pinned && tab === 0 && this.postsFilter === 'posts') {
-          Row({ space: 8 }) {
-            SymbolGlyph($r('sys.symbol.pin')).fontSize(13).fontColor([pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)])
-            Text($r('app.string.profile_pinned')).fontFamily(this.appFontFamily).fontSize(13).fontWeight(FontWeight.Bold)
-              .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-          }.width('100%').padding({ left: 58, top: 10 })
-        }
         if (tab === 2 && this.mediaFilter === 'video') {
           this.VideoRow(post)
         } else {
@@ -1707,7 +1791,11 @@ export struct UserDetail {
   private ActivityFooter(tab: number): void {
     Column() {
       Column({ space: 12 }) {
-        if (this.currentTabLoading(tab)) {
+        if (this.blocking && !this.showBlockedPosts) {
+          Button($r('app.string.profile_show_blocked_posts')).fontFamily(this.appFontFamily).fontColor(this.accentColor)
+            .backgroundColor(Color.Transparent)
+            .onClick((): void => { void this.revealBlockedProfile(); })
+        } else if (this.currentTabLoading(tab)) {
           LoadingProgress().width(26).height(26).color(this.accentColor)
         } else if (this.currentTabStatus(tab).length > 0) {
           Text(this.currentTabStatus(tab)).fontFamily(this.appFontFamily).fontSize(14).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent)).textAlign(TextAlign.Center)
@@ -1718,6 +1806,12 @@ export struct UserDetail {
             .onClick((): void => { this.loadProfilePage(this.activitySource(tab), false); })
         } else if (this.tabPosts(tab).length === 0) {
           Text($r('app.string.profile_activity_empty')).fontFamily(this.appFontFamily).fontSize(15).fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
+        }
+        if (this.blocking && this.showBlockedPosts && !this.currentTabLoading(tab) &&
+          (this.activityPages[this.activitySource(tab)].publicPosts || this.tabPosts(tab).length === 0)) {
+          Button($r('app.string.post_share_open_x')).fontFamily(this.appFontFamily).fontColor(this.accentColor)
+            .backgroundColor(Color.Transparent)
+            .onClick((): void => this.openWeb(this.profileUrl(), this.authorName(), true))
         }
       }
       .width('100%').padding({ top: 24, bottom: 100, left: 20, right: 20 }).constraintSize({ minHeight: 180 })
@@ -1865,10 +1959,10 @@ export struct UserDetail {
         }
         FloatingComposeButton({ bottomInset: this.navigationIndicatorHeight,
           mode: this.homeFloatingAction === HOME_FLOATING_TOP ? 'top' : 'reply',
-          hidden: this.homeFloatingAction === HOME_FLOATING_HIDDEN,
+          hidden: !this.profileReplyButton || this.homeFloatingAction === HOME_FLOATING_HIDDEN,
           accessibilityLabel: this.text(this.homeFloatingAction === HOME_FLOATING_TOP ?
             $r('app.string.action_scroll_top') : $r('app.string.action_reply')),
-          onTop: (): void => { this.scroller.scrollEdge(Edge.Top); this.headerScrollOffset = 0; },
+          onTop: (): void => this.scrollProfileToTop(),
           onReply: (): void => this.replyToAuthor() })
 
       }.width('100%').height('100%')
@@ -1883,6 +1977,8 @@ export struct UserDetail {
     .scale({ x: this.pageMotion.scale, y: this.pageMotion.scale })
     .opacity(this.pageMotion.opacity)
     .onReady((context: NavDestinationContext): void => { this.pageMotion.attach(context); })
+    .onShown((): void => { this.visible = true; void this.refreshBlockAfterWeb(); })
+    .onHidden((): void => { this.visible = false; })
     .systemTransition(pageSystemTransition(this.pageTransitionMode))
     .hideTitleBar(true).hideBackButton(true)
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

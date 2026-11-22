@@ -20,7 +20,7 @@ const source = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8').rep
 const tree = ts.createSourceFile('Index.ts', source, ts.ScriptTarget.Latest, true);
 const cls = tree.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'Index');
 const names = ['openRootContent', 'openSettings', 'openHelpCenter', 'openAccounts',
-  'showDrawerFeature', 'openOwnUserList', 'openOwnProfile', 'goNotifications'];
+  'showDrawerFeature', 'openOwnUserList', 'openOwnProfile', 'goNotifications', 'usesOverlaySideDrawer'];
 const body = names.map(name => cls.members.find(node => node.name?.getText(tree) === name).getText(tree)).join('\n');
 const js = ts.transpileModule(`class Root { ${body} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2020 }
@@ -141,7 +141,7 @@ for (const [wide, desktop] of [[false, false], [true, false], [true, true]]) {
     assert.equal(f.loads(), loads);
     assert.equal(f.pages.length, 1);
     assert.equal(f.pages[0].name, 'UserDetail');
-    assert.equal(f.root.showSideDrawer, false);
+    assert.equal(f.root.showSideDrawer, wide || desktop);
     assert.equal(f.root.selectedTab, undefined);
   });
 }

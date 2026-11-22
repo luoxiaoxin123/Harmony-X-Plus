@@ -1,0 +1,395 @@
+diff --git a/crates/core/src/chat.rs b/crates/core/src/chat.rs
+index 6fd694ce45c64ddb65e677f614224695e3dfd6a8..15963f904cf0899bcfbe95d7c169f785c48b2a78 100644
+--- a/crates/core/src/chat.rs
++++ b/crates/core/src/chat.rs
+@@ -1811,2 +1811,33 @@ mod tests {
+     }
+ }
++
++impl Chat {
++    pub fn prepare_conversation_delete(&self, id: &str) -> Result<crate::signatures::ActionSignature, SdkError> {
++        self.inner.prepare_conversation_delete(id)
++    }
++
++    pub fn prepare_plain_read_receipt(&self, id: &str, seen_until: &str) -> Result<(String, String), SdkError> {
++        self.inner.prepare_plain_read_receipt(id, seen_until)
++    }
++
++    pub fn encrypt_read_receipt(&self, id: &str, seen_until: &str) -> Result<SendPayload, SdkError> {
++        self.inner.encrypt_read_receipt(id, seen_until)
++    }
++
++    pub fn prepare_key_rotation(&self, params: &ConversationKeyChangeParams, rotation: bool) -> Result<PreparedConversationChange, SdkError> {
++        self.inner.prepare_key_rotation(params, rotation)
++    }
++
++    pub fn commit_prepared_direct_key(&self, change: &PreparedConversationChange) -> Result<(), SdkError> {
++        self.inner.commit_prepared_direct_key(change)
++    }
++
++    pub fn finish_group_members_change(&self, params: &GroupMembersChangeParams, pending: PreparedConversationChange,
++        snapshot: crate::GroupMemberSnapshot) -> Result<PreparedConversationChange, SdkError> {
++        self.inner.finish_group_members_change(params, pending, snapshot)
++    }
++
++    pub fn prepare_group_action(&self, params: crate::GroupActionParams) -> Result<crate::signatures::ActionSignature, SdkError> {
++        self.inner.prepare_group_action(params)
++    }
++}
+diff --git a/crates/core/src/core.rs b/crates/core/src/core.rs
+index 971ba01b653a69dcc25b540be9de1eb8796f6dc7..d47a2f844ab01ef2503cd5ba3a36e34d39d4a61c 100644
+--- a/crates/core/src/core.rs
++++ b/crates/core/src/core.rs
+@@ -1243,6 +1243,12 @@ pub fn build_event_signature_payload(
+                     )
+                 }
+-                // Not part of the signed payload.
+-                GenGC::GroupAdminSettingsChange(_) => None,
++                // Private transport signs each tri-state permission as its own component.
++                GenGC::GroupAdminSettingsChange(c) => {
++                    let components = [c.add_member, c.edit_group_info, c.send_message, c.start_call,
++                        c.edit_message_ttl, c.block_screen_capture]
++                        .map(|value| match value { Some(true) => "true", Some(false) => "false", None => "null" });
++                    build_component_payload("GroupChangeEvent.GroupAdminSettingsChange",
++                        msg_id, sender_id, conv_id, &components)
++                }
+                 // Key version, then the description, as a title change signs
+                 // its title.
+@@ -1993,4 +1999,5 @@ mod encrypt;
+ mod files;
+ mod group_actions;
++pub(crate) mod harmonyx;
+ mod key_cache;
+ mod media;
+diff --git a/crates/core/src/core/encrypt.rs b/crates/core/src/core/encrypt.rs
+index a0da1992fd3e2611896a8c4e8e701b205f79d373..a6ed4a2f0e23322f0ee175756f89eb7b71572b96 100644
+--- a/crates/core/src/core/encrypt.rs
++++ b/crates/core/src/core/encrypt.rs
+@@ -37,12 +37,11 @@ impl ChatCore {
+         }
+         let send_version = self.send_version();
+-        let message_id = Self::outgoing_message_id(
+-            send_version,
+-            &ckey,
+-            &conversation_key_version,
+-            &sender_id,
+-            &params.conversation_id,
+-            params.attachments.as_deref(),
+-        )?;
++        let message_id = if let Some(id) = params.message_id.as_deref().filter(|_| send_version == crate::pipeline::SendVersion::V0) {
++            uuid::Uuid::parse_str(id).map_err(|_| SdkError::InvalidInput("invalid reserved message id".into()))?;
++            id.to_string()
++        } else {
++            Self::outgoing_message_id(send_version, &ckey, &conversation_key_version, &sender_id,
++                &params.conversation_id, params.attachments.as_deref())?
++        };
+         let thrift_attachments = params
+             .attachments
+@@ -105,12 +104,11 @@ impl ChatCore {
+         }
+         let send_version = self.send_version();
+-        let message_id = Self::outgoing_message_id(
+-            send_version,
+-            &ckey,
+-            &conversation_key_version,
+-            &sender_id,
+-            &params.conversation_id,
+-            params.attachments.as_deref(),
+-        )?;
++        let message_id = if let Some(id) = params.message_id.as_deref().filter(|_| send_version == crate::pipeline::SendVersion::V0) {
++            uuid::Uuid::parse_str(id).map_err(|_| SdkError::InvalidInput("invalid reserved message id".into()))?;
++            id.to_string()
++        } else {
++            Self::outgoing_message_id(send_version, &ckey, &conversation_key_version, &sender_id,
++                &params.conversation_id, params.attachments.as_deref())?
++        };
+         let thrift_attachments = params
+             .attachments
+diff --git a/crates/core/src/core/harmonyx.rs b/crates/core/src/core/harmonyx.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..6bc8f4d121adde9e382677d4731f98baf58d775d
+--- /dev/null
++++ b/crates/core/src/core/harmonyx.rs
+@@ -0,0 +1,229 @@
++use super::ChatCore;
++use crate::protocol::serialization::base64_encode;
++use crate::error::SdkError;
++use crate::pipeline::{self, EncryptAndSignParams};
++use crate::signatures::{ActionSignature, CURRENT_SIGNATURE_VERSION, MEMBER_ADD_DESCRIPTION_SIGNATURE_VERSION};
++use crate::thrift::{event::*, product};
++use crate::{
++    ConversationKeyChangeParams, GroupMembersChangeParams, KeyChangeCall, MessageTtlChangeParams,
++    MessageTtlRemoveParams, PreparedConversationChange, ScreenCaptureChange, ScreenCaptureParams, SendPayload,
++};
++use serde::Deserialize;
++
++#[derive(Deserialize)]
++pub struct GroupActionPermissions {
++    edit_group_info: Option<bool>,
++    edit_message_ttl: Option<bool>,
++    block_screen_capture: Option<bool>,
++    add_member: Option<bool>,
++    send_message: Option<bool>,
++    start_call: Option<bool>,
++}
++
++impl GroupActionPermissions {
++    fn into_snapshot(self) -> GroupMemberAdminSettings {
++        GroupMemberAdminSettings::new(self.edit_group_info, self.edit_message_ttl, self.block_screen_capture,
++            self.add_member, self.send_message, self.start_call)
++    }
++}
++
++#[derive(Deserialize)]
++pub struct GroupActionParams {
++    pub conversation_id: String,
++    pub action: String,
++    #[serde(default)] pub text: String,
++    #[serde(default)] pub key_version: String,
++    #[serde(default)] pub user_ids: Vec<String>,
++    #[serde(default)] pub enabled: bool,
++    #[serde(default)] pub ttl_msec: i64,
++    pub permissions: Option<GroupActionPermissions>,
++    pub expires_at_msec: Option<i64>,
++    pub affiliate_id: Option<String>,
++    pub for_key_rotation: Option<bool>,
++}
++
++pub struct GroupMemberSnapshot {
++    pub encrypted_description: Option<String>,
++    pub invite_url: Option<String>,
++    pub invite_expires_msec: Option<i64>,
++    pub invite_affiliate_id: Option<String>,
++    pub admin_settings: Option<GroupActionPermissions>,
++}
++
++impl ChatCore {
++    /// Read routing metadata from an inbox event without decrypting its contents.
++    pub fn inspect_inbox_event(event_b64: &str) -> Result<Option<serde_json::Value>, SdkError> {
++        let event = Self::parse_event_b64(event_b64)?;
++        let value = match event.detail {
++            Some(MessageEventDetail::MessageCreateEvent(_)) => serde_json::json!({
++                "type": "message", "conversationId": event.conversation_id, "senderId": event.sender_id,
++                "sequenceId": event.sequence_id, "timestampMs": event.created_at_msec,
++            }),
++            Some(MessageEventDetail::MarkConversationReadEvent(read)) => serde_json::json!({
++                "type": "read", "conversationId": event.conversation_id, "senderId": event.sender_id,
++                "seenUntilId": read.seen_until_sequence_id,
++            }),
++            _ => return Ok(None),
++        };
++        Ok(Some(value))
++    }
++
++    pub fn inspect_event_encryption(event_b64: &str) -> Result<Option<(String, bool)>, SdkError> {
++        let event = Self::parse_event_b64(event_b64)?;
++        let encrypted = match event.detail {
++            Some(MessageEventDetail::MessageCreateEvent(message)) => message.conversation_key_version.is_some(),
++            Some(MessageEventDetail::ConversationKeyChangeEvent(_)) => true,
++            _ => return Ok(None),
++        };
++        Ok(event.conversation_id.map(|id| (id, encrypted)))
++    }
++
++    pub fn inspect_conversation_token(event_b64: &str) -> Result<Option<String>, SdkError> {
++        Ok(Self::parse_event_b64(event_b64)?.conversation_token)
++    }
++
++    pub fn commit_prepared_direct_key(&self, change: &PreparedConversationChange) -> Result<(), SdkError> {
++        let key = change.conversation_key.as_ref().ok_or_else(|| SdkError::InvalidInput("missing staged key".into()))?;
++        self.record_verified_key(&change.conversation_id, &change.conversation_key_version, key);
++        Ok(())
++    }
++
++    fn private_action(&self, conversation_id: &str, detail: MessageEventDetail) -> Result<ActionSignature, SdkError> {
++        let sender = self.resolve_sender_id(None)?;
++        let version = self.resolve_signing_key_version(None)?;
++        let canonical = pipeline::canonical_conversation_id(conversation_id, &sender);
++        self.sign_action_event(&version, &sender, &canonical, CURRENT_SIGNATURE_VERSION, detail, None)
++    }
++
++    pub fn prepare_conversation_delete(&self, conversation_id: &str) -> Result<ActionSignature, SdkError> {
++        if conversation_id.is_empty() { return Err(SdkError::InvalidInput("missing conversation id".into())); }
++        let sender = self.resolve_sender_id(None)?;
++        let canonical = pipeline::canonical_conversation_id(conversation_id, &sender);
++        let detail = MessageEventDetail::ConversationDeleteEvent(ConversationDeleteEvent::new(
++            Some(canonical.into_owned()), None::<ClearConversationOptions>));
++        self.private_action(conversation_id, detail)
++    }
++
++    pub fn prepare_plain_read_receipt(&self, conversation_id: &str, seen_until: &str) -> Result<(String, String), SdkError> {
++        if seen_until.is_empty() { return Err(SdkError::InvalidInput("missing read target".into())); }
++        let sender = self.resolve_sender_id(None)?;
++        let canonical = pipeline::canonical_conversation_id(conversation_id, &sender).into_owned();
++        let detail = MessageEventDetail::MarkConversationReadEvent(MarkConversationReadEvent::new(
++            Some(seen_until.to_string()), None::<i64>, None::<bool>));
++        let signed = self.private_action(conversation_id, detail.clone())?;
++        let signature = signed.message_event_signature;
++        let event = MessageEvent {
++            message_id: Some(signed.message_id.clone()),
++            sender_id: Some(sender),
++            conversation_id: Some(canonical),
++            detail: Some(detail),
++            message_event_signature: Some(MessageEventSignature::new(Some(signature.signature),
++                Some(signature.public_key_version), Some(signature.signature_version), None, None)),
++            sequence_id: None, conversation_token: None, created_at_msec: None, relay_source: None,
++            previous_sequence_id: None, is_trusted: None, conversation_event_counter: None,
++        };
++        Ok((signed.message_id, base64_encode(&pipeline::serialize_thrift(&event)?)))
++    }
++
++    pub fn encrypt_read_receipt(&self, conversation_id: &str, seen_until: &str) -> Result<SendPayload, SdkError> {
++        if seen_until.is_empty() { return Err(SdkError::InvalidInput("missing read target".into())); }
++        let sender = self.resolve_sender_id(None)?;
++        let version = self.resolve_signing_key_version(None)?;
++        let (key, key_version) = self.resolve_conversation_key(None, None, conversation_id, &sender)?;
++        let signing = self.get_signing_keypair_arc()?;
++        let holder = product::MessageEntryHolder::new(Some(Box::new(product::MessageEntryContents::MarkConversationRead(
++            Box::new(product::MarkConversationRead::new(Some(seen_until.to_string()), None::<i64>))))));
++        let bytes = pipeline::serialize_thrift(&holder)?;
++        pipeline::encrypt_and_sign(EncryptAndSignParams::new(
++            &key, &signing.private, &Self::generate_message_id(), &sender, conversation_id, &bytes,
++            &key_version, &version).send_version(self.send_version()).should_notify(false))
++    }
++
++    pub fn prepare_key_rotation(&self, params: &ConversationKeyChangeParams, for_rotation: bool) -> Result<PreparedConversationChange, SdkError> {
++        let sender = self.resolve_sender_id(params.sender_id.as_deref())?;
++        let signing_version = self.resolve_signing_key_version(params.signing_key_version.as_deref())?;
++        let public_keys = self.key_change_public_keys(KeyChangeCall::ConversationKeyChange(params))?;
++        let conversation_id = match params.conversation_id.as_deref().filter(|id| !id.is_empty()) {
++            Some(id) => pipeline::canonical_conversation_id(id, &sender).into_owned(),
++            None => Self::derive_one_to_one_conversation_id(&public_keys)?,
++        };
++        let key_version = super::now_millis();
++        let (key, participant_keys) = self.build_participant_keys(&public_keys)?;
++        let wire_keys = participant_keys.iter().map(|p| ConversationParticipantKey {
++            user_id: Some(p.user_id.clone()),
++            encrypted_conversation_key: Some(p.encrypted_conversation_key.clone()),
++            public_key_version: Some(p.public_key_version.clone()),
++        }).collect();
++        let detail = MessageEventDetail::ConversationKeyChangeEvent(ConversationKeyChangeEvent::new(
++            Some(key_version.clone()), Some(wire_keys), None, Some(for_rotation)));
++        let signature_version = self.key_change_signature_version(&conversation_id, self.send_version());
++        let signature = self.sign_action_event_at(&signing_version, &sender, &conversation_id, signature_version,
++            detail, Some(key.encoded()))?;
++        Ok(PreparedConversationChange {
++            conversation_id, conversation_key: Some(key), conversation_key_version: key_version,
++            conversation_participant_keys: participant_keys, action_signatures: vec![signature],
++            encrypted_title: None, encrypted_description: None,
++        })
++    }
++
++    pub fn finish_group_members_change(&self, params: &GroupMembersChangeParams,
++        mut pending: PreparedConversationChange, snapshot: GroupMemberSnapshot) -> Result<PreparedConversationChange, SdkError> {
++        if params.conversation_id != pending.conversation_id { return Err(SdkError::InvalidInput("rotation conversation mismatch".into())); }
++        let sender = self.resolve_sender_id(params.sender_id.as_deref())?;
++        let signing_version = self.resolve_signing_key_version(params.signing_key_version.as_deref())?;
++        let mut detail = Self::group_member_add_detail(&params.new_member_ids, &params.current_member_ids,
++            &params.current_admin_ids, &params.current_pending_member_ids, params.current_title.as_deref(),
++            params.current_avatar_url.as_deref(), snapshot.encrypted_description.as_deref(),
++            params.current_ttl_msec, params.current_screen_capture_blocking_enabled, &pending.conversation_key_version);
++        if let MessageEventDetail::GroupChangeEvent(ref mut group) = detail {
++            if let Some(GroupChange::GroupMemberAdd(ref mut members)) = group.group_change {
++                members.group_invite_enable = snapshot.invite_url.map(|url| Box::new(GroupInviteEnable::new(
++                    snapshot.invite_expires_msec, Some(url), snapshot.invite_affiliate_id)));
++                members.admin_settings = snapshot.admin_settings.map(|settings| Box::new(settings.into_snapshot()));
++            }
++        }
++        let legacy_version = if snapshot.encrypted_description.is_some() {
++            MEMBER_ADD_DESCRIPTION_SIGNATURE_VERSION
++        } else { CURRENT_SIGNATURE_VERSION };
++        let signed = self.sign_action_event(&signing_version, &sender, &params.conversation_id, legacy_version, detail, None)?;
++        pending.action_signatures.insert(0, signed);
++        Ok(pending)
++    }
++
++    pub fn prepare_group_action(&self, params: GroupActionParams) -> Result<ActionSignature, SdkError> {
++        let GroupActionParams { conversation_id, action, text, key_version, user_ids, enabled, ttl_msec,
++            permissions, expires_at_msec, affiliate_id, for_key_rotation } = params;
++        if matches!(action.as_str(), "title" | "description" | "avatar") && text.contains(',') {
++            return Err(SdkError::InvalidInput("invalid encoded group metadata".into()));
++        }
++        let version = (!key_version.is_empty()).then_some(key_version);
++        let change = match action.as_str() {
++            "title" => GroupChange::GroupTitleChange(GroupTitleChange::new(Some(text), version)),
++            "description" => GroupChange::GroupDescriptionChange(GroupDescriptionChange::new(Some(text), version)),
++            "avatar" => GroupChange::GroupAvatarChange(GroupAvatarUrlChange::new(Some(text), version)),
++            "inviteEnable" => GroupChange::GroupInviteEnable(GroupInviteEnable::new(expires_at_msec, Some(text), affiliate_id)),
++            "inviteDisable" => GroupChange::GroupInviteDisable(GroupInviteDisable::new(Some(self.resolve_sender_id(None)?))),
++            "addAdmin" => GroupChange::GroupAdminAdd(GroupAdminAddChange::new(Some(user_ids))),
++            "removeAdmin" => GroupChange::GroupAdminRemove(GroupAdminRemoveChange::new(Some(user_ids))),
++            "removeMembers" if !user_ids.is_empty() => GroupChange::GroupMemberRemove(GroupMemberRemoveChange::new(Some(user_ids), version)),
++            "leave" => GroupChange::GroupMemberRemove(GroupMemberRemoveChange::new(Some(vec![self.resolve_sender_id(None)?]), version)),
++            "permissions" => {
++                let p = permissions.ok_or_else(|| SdkError::InvalidInput("missing group permissions".into()))?;
++                GroupChange::GroupAdminSettingsChange(GroupAdminSettingsChange::new(p.edit_group_info,
++                    p.edit_message_ttl, p.block_screen_capture, p.add_member, p.send_message, p.start_call))
++            }
++            "ttl" => return first_signature(self.prepare_message_ttl_change(&MessageTtlChangeParams::new(conversation_id, ttl_msec))?),
++            "removeTtl" => return first_signature(self.prepare_message_ttl_remove(&MessageTtlRemoveParams::new(conversation_id))?),
++            "screenCapture" => {
++                let change = if enabled { ScreenCaptureChange::BlockingEnabled } else { ScreenCaptureChange::BlockingDisabled };
++                return first_signature(self.prepare_screen_capture(&ScreenCaptureParams::new(conversation_id, change))?);
++            }
++            _ => return Err(SdkError::InvalidInput("unknown group action".into())),
++        };
++        self.private_action(&conversation_id, MessageEventDetail::GroupChangeEvent(GroupChangeEvent::new(Some(change), for_key_rotation)))
++    }
++}
++
++fn first_signature(prepared: crate::PreparedAction) -> Result<ActionSignature, SdkError> {
++    prepared.action_signatures.into_iter().next().ok_or_else(|| SdkError::InvalidInput("missing action signature".into()))
++}
+diff --git a/crates/core/src/lib.rs b/crates/core/src/lib.rs
+index d6105d29dc0da89b785a186987042e0e53c698eb..aa091b9980454d4cb9d3adafa798750ceec60d82 100644
+--- a/crates/core/src/lib.rs
++++ b/crates/core/src/lib.rs
+@@ -152,4 +152,5 @@ mod chat;
+ mod clock;
+ mod core;
++pub use core::harmonyx::{GroupActionParams, GroupActionPermissions, GroupMemberSnapshot};
+ mod features;
+ mod params;
+diff --git a/crates/core/src/params.rs b/crates/core/src/params.rs
+index d0fb004e0ac60aa0f0dbf19b445b3527c915510e..512e7d7cbffe780ea7df57132152659d5639c362 100644
+--- a/crates/core/src/params.rs
++++ b/crates/core/src/params.rs
+@@ -131,4 +131,6 @@ impl std::fmt::Debug for ImportKeysParams {
+ #[non_exhaustive]
+ pub struct EncryptMessageParams {
++    /// Reserved UUID from the Harmony X private media upload.
++    pub message_id: Option<String>,
+     /// ID of the conversation the message belongs to.
+     pub conversation_id: String,
+@@ -166,4 +168,5 @@ impl EncryptMessageParams {
+     pub fn new(conversation_id: impl Into<String>, text: impl Into<String>) -> Self {
+         Self {
++            message_id: None,
+             conversation_id: conversation_id.into(),
+             text: text.into(),
+@@ -284,4 +287,6 @@ impl std::fmt::Debug for EncryptMessageParams {
+ #[non_exhaustive]
+ pub struct EncryptReplyParams {
++    /// Reserved UUID from the Harmony X private media upload.
++    pub message_id: Option<String>,
+     /// ID of the conversation the reply belongs to.
+     pub conversation_id: String,
+@@ -357,4 +362,5 @@ impl EncryptReplyParams {
+     ) -> Self {
+         Self {
++            message_id: None,
+             conversation_id: conversation_id.into(),
+             text: text.into(),
+diff --git a/crates/core/src/types.rs b/crates/core/src/types.rs
+index e168729ed76c090e4f246b56597e5870592b8eb5..61efce2f5509bed0d60a52741458e7daad1b57da 100644
+--- a/crates/core/src/types.rs
++++ b/crates/core/src/types.rs
+@@ -1996,6 +1996,8 @@ pub struct PublicKeyInput {
+     /// Base64-encoded identity public key (SEC1 or SPKI): the X API's
+     /// `public_key`.
++    #[serde(alias = "public_key")]
+     pub identity_public_key: String,
+     /// The key's version, as the X API returns it.
++    #[serde(alias = "key_version")]
+     pub public_key_version: String,
+ }

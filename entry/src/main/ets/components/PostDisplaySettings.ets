@@ -1,3 +1,4 @@
+import { STORAGE_KEY_POST_CARD_LAYOUT, STORAGE_KEY_POST_DETAIL_COMPACT, STORAGE_KEY_POST_MEDIA_SCALE } from '../services/PostDisplaySettingsStore';
 import { common } from '@kit.AbilityKit';
 import promptAction from '@ohos.promptAction';
 import { DEFAULT_POST_ACTIONS_MASK, postDisplaySettingsStore, STORAGE_KEY_POST_ACTIONS_MASK, STORAGE_KEY_POST_ACTION_COUNTS } from '../services/PostDisplaySettingsStore';
@@ -9,6 +10,9 @@ import { STORAGE_KEY_POST_COUNT_FORMAT } from '../services/PostDisplaySettingsSt
 export struct PostDisplaySettings {
   @StorageProp(STORAGE_KEY_POST_ACTIONS_MASK) private actionsMask: number = DEFAULT_POST_ACTIONS_MASK;
   @StorageProp(STORAGE_KEY_POST_ACTION_COUNTS) private counts: boolean = true;
+  @StorageLink(STORAGE_KEY_POST_CARD_LAYOUT) private cardLayout: number = 0;
+  @StorageLink(STORAGE_KEY_POST_DETAIL_COMPACT) private detailLayout: number = 0;
+  @StorageLink(STORAGE_KEY_POST_MEDIA_SCALE) private mediaScale: number = 100;
   @StorageProp(STORAGE_KEY_POST_COUNT_FORMAT) private countFormat: number = 0;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
   @StorageProp('harmonyx.page_background') private pageBackgroundValue: string = '';
@@ -33,6 +37,37 @@ export struct PostDisplaySettings {
 
   build(): void {
     Column({ space: 4 }) {
+      Row({ space: 12 }) {
+        Text($r('app.string.settings_post_card_layout')).fontFamily(this.appFontFamily)
+          .fontSize($r('sys.float.Body_L')).layoutWeight(1)
+        Select([{ value: $r('app.string.settings_post_layout_classic') },
+          { value: $r('app.string.settings_post_layout_wide') },
+          { value: $r('app.string.settings_post_layout_compact') }]).selected(this.cardLayout)
+          .onSelect((value: number): void => {
+            this.saved(postDisplaySettingsStore.saveLayoutValue(getContext(this), STORAGE_KEY_POST_CARD_LAYOUT, value));
+          })
+      }.width('100%').constraintSize({ minHeight: 48 })
+      Row({ space: 12 }) {
+        Text($r('app.string.settings_post_detail_layout')).fontFamily(this.appFontFamily)
+          .fontSize($r('sys.float.Body_L')).layoutWeight(1)
+        Select([{ value: $r('app.string.settings_post_layout_classic') },
+          { value: $r('app.string.settings_post_layout_compact') }]).selected(this.detailLayout)
+          .onSelect((value: number): void => {
+            this.saved(postDisplaySettingsStore.saveLayoutValue(getContext(this), STORAGE_KEY_POST_DETAIL_COMPACT, value));
+          })
+      }.width('100%').constraintSize({ minHeight: 48 })
+      Row({ space: 12 }) {
+        Text($r('app.string.settings_post_media_scale')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_L'))
+        Slider({ value: this.mediaScale, min: 50, max: 100, step: 5 }).layoutWeight(1)
+          .accessibilityText($r('app.string.settings_post_media_scale'))
+          .onChange((value: number, mode: SliderChangeMode): void => {
+            if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+              const saved: boolean = postDisplaySettingsStore.saveLayoutValue(getContext(this), STORAGE_KEY_POST_MEDIA_SCALE, value);
+              this.saved(saved);
+            }
+          })
+        Text(this.mediaScale.toString() + '%').fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M'))
+      }.width('100%').constraintSize({ minHeight: 48 })
       Text($r('app.string.settings_post_actions')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Title_S'))
         .fontWeight(FontWeight.Bold).fontColor(pageTextColor($r('app.color.text_primary'), this.pageBackgroundValue, Color.Transparent)).width('100%')
       Text($r('app.string.settings_post_actions_desc')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M'))

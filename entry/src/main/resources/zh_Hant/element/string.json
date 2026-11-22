@@ -69,8 +69,12 @@
       "value": "此裝置支援臉部追蹤。進入閱讀頁後，點「開始眼動」才會開啟相機。"
     },
     {
+      "name": "huawei_supported_models",
+      "value": "華為官方支援機型"
+    },
+    {
       "name": "eye_reading_unsupported",
-      "value": "此裝置不支援所需的臉部追蹤功能，請繼續使用觸控或鍵盤閱讀。"
+      "value": "系統未向 HarmonyX+ 開放人臉追蹤。華為閱讀的眼動翻頁支援以華為官方機型清單為準。"
     },
     {
       "name": "eye_reading_dwell",
@@ -470,15 +474,15 @@
     },
     {
       "name": "module_desc",
-      "value": "Harmony X 應用程式入口模組"
+      "value": "HarmonyX+ 應用程式入口模組"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Harmony X 主介面"
+      "value": "HarmonyX+ 主介面"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
@@ -486,7 +490,7 @@
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -666,7 +670,7 @@
     },
     {
       "name": "compose_media_limit",
-      "value": "最多選擇 4 張圖片"
+      "value": "每則貼文最多加入 20 個媒體附件，其中最多一個 GIF。"
     },
     {
       "name": "compose_character_count",
@@ -1150,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "歡迎來到 Harmony X"
+      "value": "歡迎來到 HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1170,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2（API 22-26）· Stage 模型"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2（API 22-26）· Stage 模型"
     },
     {
       "name": "profile_following",
@@ -1202,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "登入 Harmony X"
+      "value": "登入 HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1278,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "登入成功，正在開啟 Harmony X…"
+      "value": "登入成功，正在開啟 HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1454,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "管理 Harmony X 如何向你顯示內容。"
+      "value": "管理 HarmonyX+ 如何向你顯示內容。"
     },
     {
       "name": "settings_resources",
@@ -1518,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "選擇 Harmony X 的介面語言。變更會立即生效，下次開啟應用程式時也會保留。"
+      "value": "選擇 HarmonyX+ 的介面語言。變更會立即生效，下次開啟應用程式時也會保留。"
     },
     {
       "name": "settings_language_system",
@@ -1534,7 +1538,7 @@
     },
     {
       "name": "settings_language_zh_cn_desc",
-      "value": "使用簡體中文瀏覽 Harmony X。"
+      "value": "使用簡體中文瀏覽 HarmonyX+。"
     },
     {
       "name": "settings_language_en",
@@ -1542,7 +1546,7 @@
     },
     {
       "name": "settings_language_en_desc",
-      "value": "Use Harmony X in English."
+      "value": "Use HarmonyX+ in English."
     },
     {
       "name": "settings_language_it",
@@ -1550,7 +1554,7 @@
     },
     {
       "name": "settings_language_it_desc",
-      "value": "Usa Harmony X in italiano."
+      "value": "Usa HarmonyX+ in italiano."
     },
     {
       "name": "settings_font_size",
@@ -1570,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "為 Harmony X 挑一個圖示。切換後桌面、應用程式清單和最近任務裡的圖示會一起更新。"
+      "value": "為 HarmonyX+ 挑一個圖示。切換後桌面、應用程式清單和最近任務裡的圖示會一起更新。"
     },
     {
       "name": "settings_app_icon_note",
@@ -2122,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "請在系統通知設定中允許 Harmony X 傳送通知"
+      "value": "請在系統通知設定中允許 HarmonyX+ 傳送通知"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2670,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "同步 X 帳號的敏感媒體偏好，並套用至 Harmony X。"
+      "value": "同步 X 帳號的敏感媒體偏好，並套用至 HarmonyX+。"
     },
     {
       "name": "sensitive_media_hidden",
@@ -3977,6 +3981,26 @@
       "value": "XChat 加密對話：目前可讀取對話與訊息數量，傳送和解密需要完成金鑰交換。"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "開啟 X Chat 網頁版"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "複製分享內容並開啟 X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "背景 X Chat 尚未就緒。請確認網頁版已解鎖後重試。"
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "此對話已有網頁草稿。請先處理原草稿。"
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "網頁傳送結果未確認。請先開啟對話查看。"
+    },
+    {
       "name": "dm_web_failed",
       "value": "私人訊息載入失敗，請檢查網路或代理後重試"
     },
@@ -4466,7 +4490,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "歡迎使用 Harmony X"
+      "value": "歡迎使用 HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4494,11 +4518,11 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "請勿使用 Google 登入，請直接輸入電子郵件；網路正常時若出現白畫面，請耐心等候。"
+      "value": "請勿使用 Google 登入，請直接輸入電子郵件。"
     },
     {
       "name": "onboarding_login_hint",
-      "value": "請在下方網頁完成登入；成功後會自動進入 Harmony X。"
+      "value": "請在下方網頁完成登入；成功後會自動進入 HarmonyX+。"
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4662,7 +4686,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "當前 X 帳號已連線，可以直接開始使用 Harmony X。"
+      "value": "當前 X 帳號已連線，可以直接開始使用 HarmonyX+。"
     },
     {
       "name": "onboarding_finish",
@@ -4914,7 +4938,7 @@
     },
     {
       "name": "follow_contacts_sdk_unavailable",
-      "value": "暫時無法在 Harmony X 同步本機通訊錄。你可以在 X 官方客戶端啟用通訊錄同步，再返回檢視推薦。"
+      "value": "暫時無法在 HarmonyX+ 同步本機通訊錄。你可以在 X 官方客戶端啟用通訊錄同步，再返回檢視推薦。"
     },
     {
       "name": "follow_contacts_open_x",
@@ -5742,7 +5766,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "重置聊天"
+      "value": "鎖定聊天"
     },
     {
       "name": "chat_phone",
@@ -6282,7 +6306,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "安裝 MeoW 後，在此繫結暱稱。配置常駐 HTTPS 中轉後，Harmony X 關閉時也可接收 X 傳送的私人訊息提醒。"
+      "value": "安裝 MeoW 後，在此繫結暱稱。配置常駐 HTTPS 中轉後，HarmonyX+ 關閉時也可接收 X 傳送的私人訊息提醒。"
     },
     {
       "name": "meow_relay_url",
@@ -6586,7 +6610,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "統計 Harmony X 自本次開機以來的實際網路流量，包含媒體和請求。裝置重啟後重新計數。"
+      "value": "統計 HarmonyX+ 自本次開機以來的實際網路流量，包含媒體和請求。裝置重啟後重新計數。"
     },
     {
       "name": "storage_network_unavailable",
@@ -6810,7 +6834,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "這些過濾僅影響 Harmony X。X 帳號中的靜音詞語和帳號請在隱私與安全中管理。"
+      "value": "這些過濾僅影響 HarmonyX+。X 帳號中的靜音詞語和帳號請在隱私與安全中管理。"
     },
     {
       "name": "xsettings_muted_list",
@@ -7258,7 +7282,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "與目前的 X 帳號同步，並控制 Harmony X 顯示的媒體。"
+      "value": "與目前的 X 帳號同步，並控制 HarmonyX+ 顯示的媒體。"
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8550,7 +8574,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X 當前支援收聽與回放，不上傳麥克風音訊，也不提交發言請求。"
+      "value": "HarmonyX+ 當前支援收聽與回放，不上傳麥克風音訊，也不提交發言請求。"
     },
     {
       "name": "spaces_manage_title",
@@ -8766,7 +8790,7 @@
     },
     {
       "name": "share_post_media_limit",
-      "value": "發帖支援最多四張圖片（含一個 GIF），或一個影片。請減少附件或選擇私人訊息。"
+      "value": "每則貼文最多加入 20 個媒體附件，其中最多一個 GIF。"
     },
     {
       "name": "share_receive_failed",
@@ -9382,7 +9406,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  字体预览  2026"
+      "value": "HarmonyX+  字体预览  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10170,19 +10194,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · luoxiaoxin123/HarmonyX"
-    },
-    {
-      "name": "logo_universe_title",
-      "value": "懸浮宇宙"
-    },
-    {
-      "name": "logo_universe_desc",
-      "value": "每一次相遇，都讓 Harmony X 更完整。"
-    },
-    {
-      "name": "logo_universe_hint",
-      "value": "輕觸圖示，走進懸浮宇宙"
+      "value": "GitHub · luoxiaoxin123/Harmony-X-Plus"
     },
     {
       "name": "logo_motion_pause",
@@ -10214,7 +10226,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Harmony X，也有你的一部分。"
+      "value": "HarmonyX+，也有你的一部分。"
     },
     {
       "name": "logo_touch_hint",
@@ -11018,7 +11030,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "匯入失敗，請選擇有效的 HarmonyX 背景方案（不超過 48 MB）"
+      "value": "匯入失敗，請選擇有效的 HarmonyX+ 背景方案（不超過 48 MB）"
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -12923,6 +12935,362 @@
     {
       "name": "grok_chat_hint",
       "value": "直接向 Grok 提問，開始新的對話。"
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "貼文超過字元上限，請編輯後再發佈。"
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "記住播放倍速"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "在本次應用程式執行期間切換影片時，沿用上次手動選擇的倍速。"
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "X 登入頁面長時間沒有顯示。請重試，或用瀏覽器測試 X 能否開啟。"
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "用瀏覽器測試 X"
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "無法載入 X 登入頁面。"
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "貼文作者已封鎖你的帳號。"
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "貼文卡片版面"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "貼文詳情版面"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "經典"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "寬版"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "精簡"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "貼文媒體大小"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "貼文滑動手勢"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "向左滑動"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "向右滑動"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "關閉"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "每則貼文只能加入一個 GIF。"
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "圖片說明（ALT）"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "為使用螢幕閱讀器的人描述這張圖片。"
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "套用說明"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "圖片說明提交失敗，草稿已保留。"
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "移除附件"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "開啟色彩選擇器"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "個人主頁回覆按鈕"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "在使用者個人主頁顯示浮動回覆按鈕。"
+    },
+    {
+      "name": "external_article_read",
+      "value": "閱讀文章"
+    },
+    {
+      "name": "external_article_save",
+      "value": "儲存離線副本"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "已儲存離線副本"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "縮小字級"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "放大字級"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "無法擷取文章，可以繼續檢視原網頁。"
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "預覽個人資料"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "繼續編輯"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "圖片檔名"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "欄位依啟用順序組合。"
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "發文日期"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "作者使用者名稱"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "圖片序號"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "原始圖片代碼"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "貼文 ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "完整功能"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces 提示音"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "成功加入或主動離開直播時播放短提示音。"
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "亮度"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "對比度"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "飽和度"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "橡皮擦"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "馬賽克"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "自由裁切"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "套用裁切"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "切成直條"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "加入圖片貼圖"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "依序編輯圖片"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "拼接圖片"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "橫排"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "直排"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "格狀"
+    },
+    {
+      "name": "post_share_message",
+      "value": "附上留言"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "搜尋私訊收件人"
+    },
+    {
+      "name": "post_share_system",
+      "value": "系統分享"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "貼文長圖"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "複製截圖"
+    },
+    {
+      "name": "post_share_email",
+      "value": "電子郵件"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "複製內文"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "在 X 中開啟"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "剪輯影片"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "起點"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "長度"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "預覽起點"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "產生預覽"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "繼續發文"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "無法產生片段，請試試其他起點或長度。"
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "顯示所有貼文"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "在通知中顯示私訊內容"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "在本機私訊通知（包含鎖定畫面）中顯示訊息文字。"
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "你有一條新私訊"
+    },
+    {
+      "name": "chat_typing",
+      "value": "正在輸入"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "股票行情"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "個人主頁預設媒體"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "以連結傳送"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "此收件人暫無可用的聊天金鑰"
+    },
+    {
+      "name": "sidebar_update_available",
+      "value": "偵測到新版本 %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "目前裝置缺少此對話的金鑰。"
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X 尚未確認此操作。重試會沿用原訊息。"
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X 拒絕了此操作（代碼 %s）。"
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "取得或註冊對話金鑰失敗"
     }
   ]
 }

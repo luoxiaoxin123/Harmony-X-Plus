@@ -16,9 +16,10 @@ const titleSearchRadius = Number.parseFloat(dimensions.find(item => item.name ==
 const source = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8').replace('struct Index', 'class Index');
 const tree = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true);
 const root = tree.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'Index');
-const names = ['exploreContentTopInset', 'rootTitleBarBottomHeight', 'captureExploreTitleContent', 'captureExploreContentTop',
+const names = ['exploreContentTopInset', 'exploreHeaderBottom', 'rootTitleBarBottomHeight', 'captureExploreTitleContent', 'captureExploreContentTop',
   'captureTitleBarSurfaceBottom', 'exploreSearchHeight', 'exploreSearchRadius', 'exploreTitleContentHeight', 'exploreCategoriesHeight',
-  'desktopTitleBarHeight', 'desktopHeaderHeight', 'exploreTitleContentOffset', 'captureExploreTitleIdentity', 'useTitleBarLogo'];
+  'desktopTitleBarHeight', 'desktopHeaderHeight', 'exploreTitleContentOffset', 'captureExploreTitleIdentity',
+  'useTitleBarLogo', 'homeTitleBarParked'];
 const methods = names.map(name => root.members.find(node => node.name && node.name.getText(tree) === name).getText(tree));
 const output = ts.transpileModule(`class Root { ${methods.join('\n')} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2020 }
@@ -53,19 +54,20 @@ test('Explore reserves its measured content and native title heights without cou
   }
 });
 
-test('logo, compact controls, query and enlarged text all replace the previous measured header size', () => {
+test('Explore restores enough space for its category row before it is measured again', () => {
   const component = fixture();
-  for (const [logo, query, scale, height] of [[true, '', 1, 158], [false, '', 1, 114],
-    [false, 'text', 1.4, 69.2], [true, 'text', 1.4, 113.2], [true, '', 1.4, 194]]) {
-    Object.assign(component, { titleBarLogoEnabled: logo, activeExploreQuery: query, fontScale: scale });
-    component.captureExploreTitleContent({ globalPosition: { y: 44 }, height });
-    assert.equal(component.exploreContentTopInset(), 44 + height - 12 + 8);
+  for (const logo of [true, false]) {
+    Object.assign(component, { titleBarLogoEnabled: logo, activeExploreQuery: '', fontScale: 1.4 });
+    component.captureExploreTitleIdentity({ globalPosition: { y: 52 }, height: 44 });
+    component.captureExploreTitleContent({ globalPosition: { y: 44 }, height: 68 });
+    const header = 96 + component.exploreTitleContentHeight();
+    assert.equal(component.exploreContentTopInset(), header - 12 + 8);
+    component.activeExploreQuery = 'text';
+    component.captureExploreTitleContent({ globalPosition: { y: 85 }, height: 35 });
+    assert.ok(component.exploreContentTopInset() < header - 12 + 8);
+    component.activeExploreQuery = '';
+    assert.equal(component.exploreContentTopInset(), header - 12 + 8);
   }
-  component.captureExploreTitleContent({ globalPosition: { y: 44 }, height: 0 });
-  assert.equal(component.exploreTitleContentBottom, 44 + 194);
-  component.chromeTab = 0;
-  component.captureExploreTitleContent({ globalPosition: { y: 44 }, height: 40 });
-  assert.equal(component.exploreTitleContentBottom, 44 + 194);
 });
 
 test('desktop search and category slots grow with text instead of clipping in a fixed 108vp title', () => {
@@ -100,7 +102,7 @@ test('Explore shares the identity row height and follows its actual bottom acros
   component.titleBarLogoEnabled = false;
   component.activeExploreQuery = 'text';
   component.captureExploreTitleIdentity({ globalPosition: { y: 60 }, height: 38 });
-  assert.equal(component.exploreTitleContentBottom, 60 + 38);
+  assert.equal(component.exploreHeaderBottom(), 60 + 38);
   component.fontScale = 1.6;
   assert.equal(component.exploreSearchHeight(), titleSearchHeight);
   const identity = root.members.find(node => node.name && node.name.getText(tree) === 'TitleBarIdentityRow').getText(tree);

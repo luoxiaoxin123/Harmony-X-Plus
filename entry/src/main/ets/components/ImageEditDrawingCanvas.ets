@@ -1,3 +1,5 @@
+import { image } from '@kit.ImageKit';
+
 class ImageEditDrawPoint {
   x: number;
   y: number;
@@ -13,15 +15,20 @@ class ImageEditDrawStroke {
   color: string;
   widthRatio: number;
 
-  constructor(color: string, widthRatio: number) {
+  mode: number;
+
+  constructor(color: string, widthRatio: number, mode: number = 0) {
     this.color = color;
     this.widthRatio = widthRatio;
+    this.mode = mode;
   }
 }
 
 @Component
 export struct ImageEditDrawingCanvas {
   @Prop active: boolean = false;
+  @Prop mode: number = 0;
+  @Prop source: image.PixelMap | null = null;
   @Prop penColor: string = '#FF3B30';
   @Prop penWidth: number = 5;
   @Prop @Watch('onUndoRequested') undoSignal: number = 0;
@@ -83,7 +90,7 @@ export struct ImageEditDrawingCanvas {
     for (let strokeIndex: number = 0; strokeIndex < source.length; strokeIndex++) {
       const sourceStroke: ImageEditDrawStroke = source[strokeIndex];
       const copiedStroke: ImageEditDrawStroke = new ImageEditDrawStroke(sourceStroke.color,
-        sourceStroke.widthRatio);
+        sourceStroke.widthRatio, sourceStroke.mode);
       for (let pointIndex: number = 0; pointIndex < sourceStroke.points.length; pointIndex++) {
         const sourcePoint: ImageEditDrawPoint = sourceStroke.points[pointIndex];
         copiedStroke.points.push(new ImageEditDrawPoint(sourcePoint.x, sourcePoint.y));
@@ -137,7 +144,7 @@ export struct ImageEditDrawingCanvas {
     this.recordUndoSnapshot();
     const width: number = Math.max(1, this.context.width);
     const stroke: ImageEditDrawStroke = new ImageEditDrawStroke(this.penColor,
-      Math.max(3, this.penWidth) / width);
+      Math.max(3, this.mode === 1 ? 18 : this.penWidth) / width, this.mode);
     stroke.points.push(point);
     this.strokes.push(stroke);
     this.activeStroke = stroke;
@@ -151,6 +158,7 @@ export struct ImageEditDrawingCanvas {
     }
     const previous: ImageEditDrawPoint = stroke.points[stroke.points.length - 1];
     stroke.points.push(point);
+    if (stroke.mode === 2) { this.mosaicSegment(previous, point); return; }
     this.context.beginPath();
     this.configureStroke(stroke);
     this.context.moveTo(previous.x * this.context.width, previous.y * this.context.height);
@@ -159,6 +167,7 @@ export struct ImageEditDrawingCanvas {
   }
 
   private configureStroke(stroke: ImageEditDrawStroke): void {
+    this.context.globalCompositeOperation = stroke.mode === 1 ? 'destination-out' : 'source-over';
     this.context.strokeStyle = stroke.color;
     this.context.fillStyle = stroke.color;
     this.context.lineWidth = Math.max(1, stroke.widthRatio * this.context.width);
@@ -167,12 +176,41 @@ export struct ImageEditDrawingCanvas {
   }
 
   private drawDot(point: ImageEditDrawPoint, stroke: ImageEditDrawStroke): void {
+    if (stroke.mode === 2) { this.mosaicSegment(point, point); return; }
     this.context.beginPath();
     this.configureStroke(stroke);
     const radius: number = Math.max(1, this.context.lineWidth / 2);
     this.context.arc(point.x * this.context.width, point.y * this.context.height,
       radius, 0, Math.PI * 2);
     this.context.fill();
+  }
+
+  private mosaicSegment(first: ImageEditDrawPoint, last: ImageEditDrawPoint): void {
+    const bitmap: image.PixelMap | null = this.source;
+    if (bitmap === null) { return; }
+    const width: number = this.context.width;
+    const height: number = this.context.height;
+    if (width <= 0 || height <= 0) { return; }
+    const dimensions: image.Size = bitmap.getImageInfoSync().size;
+    const cell: number = Math.max(8, Math.round(width / 30));
+    const distance: number = Math.hypot((last.x - first.x) * width, (last.y - first.y) * height);
+    const steps: number = Math.max(1, Math.ceil(distance / (cell / 2)));
+    this.context.globalCompositeOperation = 'source-over';
+    for (let index: number = 0; index <= steps; index++) {
+      const progress: number = index / steps;
+      const x: number = Math.floor((first.x + (last.x - first.x) * progress) * width / cell) * cell;
+      const y: number = Math.floor((first.y + (last.y - first.y) * progress) * height / cell) * cell;
+      for (let dx: number = -1; dx <= 1; dx++) {
+        for (let dy: number = -1; dy <= 1; dy++) {
+          const left: number = x + dx * cell;
+          const top: number = y + dy * cell;
+          if (left < 0 || left >= width || top < 0 || top >= height) { continue; }
+          const sx: number = Math.min(dimensions.width - 1, Math.floor((left + cell / 2) * dimensions.width / width));
+          const sy: number = Math.min(dimensions.height - 1, Math.floor((top + cell / 2) * dimensions.height / height));
+          this.context.drawImage(bitmap, sx, sy, 1, 1, left, top, cell, cell);
+        }
+      }
+    }
   }
 
   private redraw(): void {
@@ -189,6 +227,13 @@ export struct ImageEditDrawingCanvas {
 
   private drawStroke(stroke: ImageEditDrawStroke): void {
     if (stroke.points.length === 0) {
+      return;
+    }
+    if (stroke.mode === 2) {
+      this.mosaicSegment(stroke.points[0], stroke.points[0]);
+      for (let index: number = 1; index < stroke.points.length; index++) {
+        this.mosaicSegment(stroke.points[index - 1], stroke.points[index]);
+      }
       return;
     }
     if (stroke.points.length === 1) {

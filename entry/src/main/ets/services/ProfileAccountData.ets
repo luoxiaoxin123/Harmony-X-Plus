@@ -6,6 +6,8 @@ export class ProfileActivityPage {
   loaded: boolean = false;
   loading: boolean = false;
   status: string = '';
+  webPosts: boolean = false;
+  publicPosts: boolean = false;
 }
 
 export class AccountAbout {
@@ -20,20 +22,29 @@ export class ProfileAccountData {
     try {
       const root: Record<string, Object> = JSON.parse(body) as Record<string, Object>;
       const data: Record<string, Object> = ProfileAccountData.obj(root, 'data');
-      const wrapper: Record<string, Object> = ProfileAccountData.obj(data, 'user_result_by_screen_name');
-      const result: Record<string, Object> = ProfileAccountData.obj(wrapper, 'result');
-      const profile: Record<string, Object> = ProfileAccountData.obj(result, 'about_profile');
-      if (Object.keys(profile).length === 0) {
-        return null;
+      for (const key of ['user_result_by_screen_name', 'user_result', 'user']) {
+        const result: Record<string, Object> = ProfileAccountData.obj(ProfileAccountData.obj(data, key), 'result');
+        const module: Record<string, Object> = ProfileAccountData.obj(result, 'aboutModule');
+        const profiles: Record<string, Object>[] = [ProfileAccountData.obj(result, 'about_profile'),
+          ProfileAccountData.obj(result, 'aboutProfile'), ProfileAccountData.obj(module, 'about_profile'),
+          ProfileAccountData.obj(module, 'aboutProfile')];
+        for (const profile of profiles) {
+          if (Object.keys(profile).length === 0) { continue; }
+          const about: AccountAbout = new AccountAbout();
+          about.country = ProfileAccountData.text(profile['account_based_in'] ?? profile['accountBasedIn']);
+          about.source = ProfileAccountData.text(profile['source']);
+          about.locationAccurate = (profile['location_accurate'] ?? profile['locationAccurate']) !== false;
+          return about;
+        }
       }
-      const about: AccountAbout = new AccountAbout();
-      about.country = String(profile['account_based_in'] ?? '');
-      about.source = String(profile['source'] ?? '');
-      about.locationAccurate = profile['location_accurate'] !== false;
-      return about;
+      return null;
     } catch (error) {
       return null;
     }
+  }
+
+  private static text(value: Object | undefined): string {
+    return typeof value === 'string' ? value.trim() : '';
   }
 
   static video(post: Tweet): MediaAttachment | null {

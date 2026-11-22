@@ -1,3 +1,7 @@
+import { openPostShare } from '../services/PostShareRequest';
+import { ColorMetrics } from '@kit.ArkUI';
+import { STORAGE_KEY_POST_DETAIL_COMPACT } from '../services/PostDisplaySettingsStore';
+import { STANDARD_POST_CHARACTERS, weightedPostLength } from '../utils/PostCharacterCount';
 import { formatPostCount } from '../utils/PostCountFormat';
 import { STORAGE_KEY_POST_COUNT_FORMAT } from '../services/PostDisplaySettingsStore';
 import { PostLinkMenu } from '../components/PostLinkMenu';
@@ -50,6 +54,7 @@ import { CommentPhotoViewer } from '../components/CommentPhotoViewer';
 import { PhotoRequest } from '../utils/PhotoViewerRequest';
 import { browsingHistoryStore } from '../services/BrowsingHistoryStore';
 import { QuotedPostCard } from '../components/QuotedPostCard';
+import { StockQuoteCard, stockTicker } from '../components/StockQuoteCard';
 import { PostInteractiveContent } from '../components/PostInteractiveContent';
 import { canPostAction } from '../utils/PostContentVisibility';
 import { FloatingComposeButton } from '../components/FloatingComposeButton';
@@ -165,7 +170,7 @@ export struct PostDetail {
   }
 
   @Builder
-  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl) }
+  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl, this.pageStack) }
 
   private bodyTextController: TextController = new TextController();
   private translatedTextController: TextController = new TextController();
@@ -228,6 +233,7 @@ export struct PostDetail {
   @StorageProp(STORAGE_KEY_POST_TIME_NOW) private postTimeNow: number = Date.now();
   @StorageProp(STORAGE_KEY_POST_VIEWS_REVISION) private viewCountRevision: number = 0;
   @Consume('pageStack') pageStack: NavPathStack;
+  @StorageProp(STORAGE_KEY_POST_DETAIL_COMPACT) private detailLayout: number = 0;
   @StorageProp('harmonyx.status_bar_height') statusBarHeight: number =
     AppStorage.get<number>('harmonyx.status_bar_height') ?? 0;
   @StorageProp('harmonyx.navigation_indicator_height') navigationIndicatorHeight: number =
@@ -329,6 +335,10 @@ export struct PostDetail {
   private keyboardListenerRegistered: boolean = false;
   private keyboardObserverGeneration: number = 0;
   private continuationScrollOffset: number = 0;
+  private focusedReplyContextKey: string = '';
+  private detailPositionTimer: number = -1;
+  private detailScrollTakenOver: boolean = false;
+  private continuationPositioned: boolean = false;
   private lastPublishedContinuationOffset: number = -1;
   private gesturesShareCallback: (target: harmonyShare.SharableTarget) => void =
     (target: harmonyShare.SharableTarget): void => {
@@ -442,6 +452,7 @@ export struct PostDetail {
   }
 
   aboutToDisappear(): void {
+    this.cancelDetailPositioning();
     this.closeCommentPhoto();
     this.closePostPip();
     if (this.embedded && this.tweet !== null) {
@@ -497,6 +508,7 @@ export struct PostDetail {
 
   private onDetailWillHide(): void {
     this.detailVisible = false;
+    this.cancelDetailPositioning();
     // Keep the detail page in resize mode while a full reply destination is
     // stacked above it, so returning with the keyboard open does not lift the
     // whole page.
@@ -512,6 +524,7 @@ export struct PostDetail {
     // trigger from before it was hidden.
     this.setAutoPipArmed(false);
     this.publishContinuationState(true);
+    this.restoreContinuationScroll();
   }
 
   private dismissExpandedReply(): void {
@@ -563,13 +576,46 @@ export struct PostDetail {
     continuationStore.publishPost(current.id, offset, this.replySortMode);
   }
 
+  private cancelDetailPositioning(): void {
+    if (this.detailPositionTimer < 0) { return; }
+    clearTimeout(this.detailPositionTimer);
+    this.detailPositionTimer = -1;
+  }
+
+  private scheduleDetailPosition(delay: number, position: () => void): void {
+    this.cancelDetailPositioning();
+    const timer: number = setTimeout((): void => {
+      if (this.detailPositionTimer !== timer) { return; }
+      this.detailPositionTimer = -1;
+      if (this.alive && this.detailVisible && !this.detailScrollTakenOver) { position(); }
+    }, delay);
+    this.detailPositionTimer = timer;
+  }
+
+  private takeDetailScrollControl(): void {
+    if (this.detailScrollTakenOver) { return; }
+    this.detailScrollTakenOver = true;
+    this.continuationScrollOffset = 0;
+    this.cancelDetailPositioning();
+  }
+
+  private detailTouchIntercept(event: TouchEvent, scroller: Scroller): HitTestMode {
+    if (event.type === TouchType.Down) { this.takeDetailScrollControl(); }
+    return stopScrollOnTouch(event, scroller);
+  }
+
+  private detailScrollFrame(scroller: Scroller, offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult {
+    if (state === ScrollState.Scroll && offset !== 0) { this.takeDetailScrollControl(); }
+    return scrollFrame(scroller, offset, state);
+  }
+
   private restoreContinuationScroll(): void {
     const offset: number = this.continuationScrollOffset;
-    if (offset <= 0) {
-      return;
-    }
-    this.continuationScrollOffset = 0;
-    setTimeout((): void => {
+    if (offset <= 0 || this.detailScrollTakenOver || !this.detailVisible || this.threadLoading ||
+      this.detailPositionTimer >= 0) { return; }
+    this.scheduleDetailPosition(160, (): void => {
+      this.continuationScrollOffset = 0;
+      this.continuationPositioned = true;
       try {
         if (this.useWideThreadLayout()) {
           this.primaryScroller.scrollTo({ xOffset: 0, yOffset: offset, animation: { duration: 180 } });
@@ -579,7 +625,7 @@ export struct PostDetail {
         this.lastPublishedContinuationOffset = offset;
       } catch (error) {
       }
-    }, 160);
+    });
   }
 
   private useWideThreadLayout(): boolean {
@@ -666,6 +712,10 @@ export struct PostDetail {
       browsingHistoryStore.record(getContext(this) as common.UIAbilityContext, param.tweet);
     }
     if (previousId !== param.tweet.id) {
+      this.cancelDetailPositioning();
+      this.detailScrollTakenOver = false;
+      this.continuationPositioned = false;
+      this.focusedReplyContextKey = '';
       this.wideMediaIndex = 0;
       this.resetHeroTranslation();
     }
@@ -676,8 +726,9 @@ export struct PostDetail {
       param.continuationReplySortMode === REPLY_SORT_LIKES) {
       this.replySortMode = param.continuationReplySortMode;
     }
-    this.continuationScrollOffset = param.continuationScrollOffset === undefined ? 0 :
-      Math.max(0, param.continuationScrollOffset);
+    if (!this.detailScrollTakenOver && !this.continuationPositioned) {
+      this.continuationScrollOffset = Math.max(0, param.continuationScrollOffset ?? 0);
+    }
     this.lastPublishedContinuationOffset = -1;
     this.syncActionStates(param.tweet);
     this.prepareGestureSharePreview();
@@ -745,6 +796,7 @@ export struct PostDetail {
       this.tweet = live;
       postViewCounts.remember(live.id, live.metrics.viewCount);
       this.syncActionStates(live);
+      this.positionFocalReply();
       return;
     }
     const stable: Tweet = {
@@ -759,7 +811,8 @@ export struct PostDetail {
       reposted: live.reposted,
       bookmarked: live.bookmarked,
       isReply: live.isReply,
-      replyToTweetId: live.replyToTweetId,
+      replyToTweetId: live.replyToTweetId ?? current.replyToTweetId,
+      replyContext: (live.replyContext?.length ?? 0) > 0 ? live.replyContext : current.replyContext,
       replyToUsername: live.replyToUsername,
       conversationId: live.conversationId,
       isRepost: current.isRepost,
@@ -775,6 +828,7 @@ export struct PostDetail {
     this.tweet = stable;
     postViewCounts.remember(live.id, live.metrics.viewCount);
     this.syncActionStates(stable);
+    this.positionFocalReply();
   }
 
   private isXPostId(value: string): boolean {
@@ -1241,6 +1295,7 @@ export struct PostDetail {
       }
       TweetCard({
         tweet: row.tweet,
+        useDetailLayout: true, detailLayout: this.detailLayout,
         onPhotoOpen: (request: PhotoRequest): boolean => this.openCommentPhoto(request),
         readingState: readingState,
         roundedCard: !this.embedded && postCardUsesCustomSurface(this.pageBackgroundValue),
@@ -1585,6 +1640,10 @@ export struct PostDetail {
     if (content.length === 0 || current === null || this.replyCapsuleSending) {
       return false;
     }
+    if (weightedPostLength(content) > STANDARD_POST_CHARACTERS) {
+      this.openReplyComposer(content, '', '');
+      return true;
+    }
     this.replyCapsuleSending = true;
     try {
       const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -1669,6 +1728,7 @@ export struct PostDetail {
   // the reason has to be read out of the payload: an account-level posting
   // limit and a dead session both used to collapse into "无法连接 X".
   private privateActionError(result: XPrivateResult, action: Resource): string {
+    if (result.isBlockedByAuthor()) { return this.text($r('app.string.post_blocked_by_author')); }
     if (result.status === 401 || result.status === 403) {
       return this.text($r('app.string.private_session_expired'));
     }
@@ -1952,27 +2012,12 @@ export struct PostDetail {
     this.gestureSharing = false;
   }
 
-  private async shareCurrentPost(): Promise<void> {
+  private shareCurrentPost(): void {
     const post: Tweet | null = this.tweet;
-    if (post === null) {
-      return;
-    }
-    const sharedData: systemShare.SharedData = new systemShare.SharedData({
-      utd: utd.UniformDataType.HYPERLINK,
-      content: this.postShareUrl(post),
-      title: post.author.name + ' on X',
-      description: post.text
+    if (post === null) { return; }
+    openPostShare(post, this.pageStack, (): void => {
+      if (this.embedded) { this.onEmbeddedNavigate(); }
     });
-    const controller: systemShare.ShareController = new systemShare.ShareController(sharedData);
-    const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
-    try {
-      await controller.show(context, {
-        selectionMode: systemShare.SelectionMode.SINGLE,
-        previewMode: systemShare.SharePreviewMode.DEFAULT
-      });
-    } catch {
-      promptAction.showToast({ message: this.text($r('app.string.share_failed')), duration: 2000 });
-    }
   }
 
   private useSplitReplyCapsule(): boolean {
@@ -2187,6 +2232,12 @@ export struct PostDetail {
     }
   }
 
+  private detailSystemBarStyle(): SystemBarStyle {
+    const ink: ColorMetrics = ColorMetrics.resourceColor(pageTextColor($r('app.color.text_primary'),
+      this.pageBackgroundValue, Color.Transparent));
+    return { statusBarContentColor: ink.red + ink.green + ink.blue > 382 ? '#FFFFFF' : '#000000' };
+  }
+
   private postActionColor(color: ResourceColor): ResourceColor {
     return pageTextColor(color, this.embedded ? '' : this.pageBackgroundValue,
       postCardSurfaceColor(cardSurfaceColor(this.themeDisplayMode, this.themeDarkSurface), this.pageBackgroundValue), 4.6, true);
@@ -2397,7 +2448,7 @@ export struct PostDetail {
         accentColor: this.accentColor,
         onReply: (): void => this.openReplyComposer('', '', ''),
         onRepost: (): void => { this.toggleRepost(); }, onLike: (): void => { this.toggleLike(); },
-        onBookmark: (): void => { this.toggleBookmark(); }, onShare: (): void => { void this.shareCurrentPost(); }
+        onBookmark: (): void => { this.toggleBookmark(); }, onShare: (): void => { this.shareCurrentPost(); }
       }).width('100%')
         .padding({ top: 4, bottom: 8 })
         .border({ width: { bottom: 0.5 }, color: $r('app.color.divider') })
@@ -2608,7 +2659,8 @@ export struct PostDetail {
               }
             }
             .width('100%')
-            Text('@' + this.tweet.author.username).fontFamily(this.appFontFamily)
+            Text('@' + this.tweet.author.username + (this.detailLayout === 1 ?
+              ' · ' + formatPostDetailTime(this.tweet.createdAt, this.postTimeNow) : '')).fontFamily(this.appFontFamily)
               .fontSize($r('sys.float.Body_M'))
               .fontColor(pageTextColor($r('app.color.text_secondary'), this.embedded ? '' : this.pageBackgroundValue, postCardSurfaceColor(this.transparentEmbeddedBackground() ? Color.Transparent :
         avatarTintSurface(this.avatarPalette, this.tweet.author.avatarUrl ?? '',
@@ -2731,6 +2783,9 @@ export struct PostDetail {
             pipEnabled: true,
             naturalVideoSize: true
           })
+        }
+        if (this.tweet.presentation?.visibility?.hidden !== true && stockTicker(this.tweet.text).length > 0) {
+          StockQuoteCard({ symbol: stockTicker(this.tweet.text), initialExpanded: true })
         }
         if (this.tweet.poll !== undefined || this.tweet.card !== undefined || this.tweet.article !== undefined || this.tweet.presentation !== undefined) {
           PostInteractiveContent({ postId: this.tweet.id, poll: this.tweet.poll, card: this.tweet.card,
@@ -2925,9 +2980,38 @@ export struct PostDetail {
     }
   }
 
+  private focalAncestors(): Tweet[] {
+    return this.embedded ? [] : this.tweet?.replyContext ?? [];
+  }
+
+  private positionFocalReply(): void {
+    const count: number = this.focalAncestors().length;
+    if (this.tweet === null || count === 0 || this.continuationScrollOffset > 0 || this.continuationPositioned ||
+      !this.detailVisible || this.detailScrollTakenOver || this.useWideThreadLayout()) { return; }
+    const key: string = this.tweet.id + ':' + count;
+    if (key === this.focusedReplyContextKey) { return; }
+    this.scheduleDetailPosition(40, (): void => {
+      if (this.useWideThreadLayout() || this.tweet === null ||
+        key !== this.tweet.id + ':' + this.focalAncestors().length) { return; }
+      try {
+        this.scroller.scrollToIndex(count, false, ScrollAlign.START);
+        this.focusedReplyContextKey = key;
+      } catch (error) { /* The list can detach while the layout changes. */ }
+    });
+  }
+
   @Builder
   private SingleThreadLayout(): void {
     List({ scroller: this.scroller }) {
+      ForEach(this.focalAncestors(), (ancestor: Tweet, index: number): void => {
+        ListItem() {
+          TweetCard({ tweet: ancestor, showActions: false,
+            useDetailLayout: true, detailLayout: this.detailLayout, connectAbove: index > 0, connectBelow: true,
+            onOpen: (post: Tweet, source: string): void => this.openPost(post, source),
+            onAuthorTapped: (post: Tweet): void => this.openUser(post.author),
+            onMentionTapped: (handle: string): void => this.openMention(handle) })
+        }.width('100%')
+      }, (ancestor: Tweet): string => 'parent-' + ancestor.id)
       ListItem() { this.PrimaryPane() }.width('100%').margin({ bottom: 8 })
       this.CommentListItems()
     }
@@ -2939,8 +3023,8 @@ export struct PostDetail {
     .onScrollStop((): void => scrollStopped(this.scroller))
     .onScrollStart((): void => scrollStarted(this.scroller))
     .onScrollFrameBegin((offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult =>
-      scrollFrame(this.scroller, offset, state))
-    .onTouchIntercept((event: TouchEvent): HitTestMode => stopScrollOnTouch(event, this.scroller))
+      this.detailScrollFrame(this.scroller, offset, state))
+    .onTouchIntercept((event: TouchEvent): HitTestMode => this.detailTouchIntercept(event, this.scroller))
     .width('100%')
     .height('100%')
     .scrollBar(BarState.Off)
@@ -2971,8 +3055,8 @@ export struct PostDetail {
       .onScrollStop((): void => scrollStopped(this.primaryScroller))
       .onScrollStart((): void => scrollStarted(this.primaryScroller))
       .onScrollFrameBegin((offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult =>
-        scrollFrame(this.primaryScroller, offset, state))
-      .onTouchIntercept((event: TouchEvent): HitTestMode => stopScrollOnTouch(event, this.primaryScroller))
+        this.detailScrollFrame(this.primaryScroller, offset, state))
+      .onTouchIntercept((event: TouchEvent): HitTestMode => this.detailTouchIntercept(event, this.primaryScroller))
       .width('42%')
       .height('100%')
       .scrollBar(BarState.Off)
@@ -2990,8 +3074,8 @@ export struct PostDetail {
       .onScrollStop((): void => scrollStopped(this.repliesScroller))
       .onScrollStart((): void => scrollStarted(this.repliesScroller))
       .onScrollFrameBegin((offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult =>
-        scrollFrame(this.repliesScroller, offset, state))
-      .onTouchIntercept((event: TouchEvent): HitTestMode => stopScrollOnTouch(event, this.repliesScroller))
+        this.detailScrollFrame(this.repliesScroller, offset, state))
+      .onTouchIntercept((event: TouchEvent): HitTestMode => this.detailTouchIntercept(event, this.repliesScroller))
       .layoutWeight(1)
       .height('100%')
       .scrollBar(BarState.Off)
@@ -3030,8 +3114,7 @@ export struct PostDetail {
                 playbackEnabled: index === this.wideMediaIndex, naturalVideoSize: true,
                 fillVideoViewport: true, videoViewportHeight: this.wideMediaHeight(),
                 photoViewportHeight: this.wideMediaHeight(), photoViewerAttachments: this.tweet?.attachments ?? [],
-                onPhotoViewerReturn: (sourceIndex: number): void => { this.wideMediaIndex = sourceIndex; },
-                showDownloadButton: true })
+                onPhotoViewerReturn: (sourceIndex: number): void => { this.wideMediaIndex = sourceIndex; } })
                 .width('100%')
             }, (media: MediaAttachment): string => media.id)
           }.index(this.wideMediaIndex).loop(false).width('100%').height(this.wideMediaHeight())
@@ -3051,8 +3134,8 @@ export struct PostDetail {
       .onScrollStop((): void => scrollStopped(this.repliesScroller))
       .onScrollStart((): void => scrollStarted(this.repliesScroller))
       .onScrollFrameBegin((offset: number, state: ScrollState): OnScrollFrameBeginHandlerResult =>
-        scrollFrame(this.repliesScroller, offset, state))
-      .onTouchIntercept((event: TouchEvent): HitTestMode => stopScrollOnTouch(event, this.repliesScroller)).layoutWeight(1).height('100%').scrollBar(BarState.Off)
+        this.detailScrollFrame(this.repliesScroller, offset, state))
+      .onTouchIntercept((event: TouchEvent): HitTestMode => this.detailTouchIntercept(event, this.repliesScroller)).layoutWeight(1).height('100%').scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .onWillScroll((scrollOffset: number): void => this.onRepliesDetailScroll(scrollOffset))
         .onReachEnd((): void => { if (!this.threadLoadMoreFailed) { this.loadMoreThread(); } })
@@ -3198,6 +3281,7 @@ export struct PostDetail {
     })
     .onShown((): void => {
       this.onDetailShown();
+      this.positionFocalReply();
     })
     .titleMode(HdsNavDestinationTitleMode.MINI)
     .hideBackButton(false)
@@ -3268,6 +3352,7 @@ export struct PostDetail {
       style: destinationTitleBarStyle(ScrollEffectType.GRADIENT_BLUR, this.themeDisplayMode,
         this.themeDarkSurface, this.titleBarStyleMode, this.replyCapsuleExpanded)
     })
+    .systemBarStyle(this.detailSystemBarStyle(), this.detailSystemBarStyle())
     // Transparent while the row expands, so the list is not blanked out by a
     // freshly mounted page before the expansion has covered it.
     .backgroundColor(this.sharedElementId.length > 0 ? Color.Transparent :

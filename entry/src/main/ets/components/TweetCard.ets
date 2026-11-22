@@ -1,3 +1,9 @@
+import { POST_SWIPE_BOOKMARK, POST_SWIPE_LIKE, POST_SWIPE_NOT_INTERESTED, POST_SWIPE_OFF, POST_SWIPE_REPLY, POST_SWIPE_REPOST, POST_SWIPE_SHARE } from '../services/TimelineSettingsStore';
+import { POST_CARD_CLASSIC, POST_CARD_COMPACT, POST_CARD_WIDE, STORAGE_KEY_POST_CARD_LAYOUT, STORAGE_KEY_POST_MEDIA_SCALE } from '../services/PostDisplaySettingsStore';
+import { openPostShare } from '../services/PostShareRequest';
+import { STORAGE_KEY_SHOW_SENSITIVE_MEDIA } from '../services/MediaSettingsStore';
+import { videoPlaybackPositionStore } from '../services/VideoPlaybackPositionStore';
+import { requestVideoViewer } from '../utils/VideoViewerRequest';
 import { PostLinkMenu } from '../components/PostLinkMenu';
 import type { PostCardReadingState } from '../services/PostCardReadingState';
 import { PostTranslationInfo } from '../components/PostTranslationInfo';
@@ -17,7 +23,7 @@ import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 // Reusable post card: X-style row (avatar, header, text, action bar)
 // with HarmonyOS SymbolGlyph icons and theme-resource colors.
-import type { MediaAttachment, Tweet, TweetPoll } from '../models/Tweet';
+import type { MediaAttachment, Tweet, TweetAuthor, TweetPoll } from '../models/Tweet';
 import { formatCount } from '../models/Tweet';
 import { hdsEffect } from '@kit.UIDesignKit';
 import { motionDuration, motionScale, motionDistance, motionCurve } from '../utils/AppMotion';
@@ -30,6 +36,7 @@ import { SpaceAwareAvatar } from './SpaceAwareAvatar';
 import { CommunitySource } from './CommunitySource';
 import { ProxyMediaImage } from './ProxyMediaImage';
 import { QuotedPostCard } from './QuotedPostCard';
+import { StockQuoteCard, stockTicker } from './StockQuoteCard';
 import { PostInteractiveContent } from './PostInteractiveContent';
 import { canPostAction } from '../utils/PostContentVisibility';
 import {
@@ -47,7 +54,6 @@ import { EmojiSpans } from './EmojiSpans';
 import { EmojiCopyMenu } from '../utils/EmojiCopyMenu';
 import { openExternalLink, requestSearch } from '../utils/PostEntities';
 import { hapticTick } from '../utils/Haptics';
-import { sharePost } from '../utils/SharePost';
 import { LIST_ITEM_PRESS_SCALE } from '../utils/SharedElementMotion';
 import { XPrivateResult, xPrivateClient } from '../services/XPrivateClient';
 import { fieldSurfaceColor } from '../utils/ThemeColors';
@@ -79,6 +85,7 @@ const CARD_PRESS_MOVE_SLOP: number = 8;
 
 @Component
 export struct TweetCard {
+  @Consume('pageStack') private pageStack: NavPathStack;
   onPhotoOpen: (request: PhotoRequest) => boolean = (): boolean => false;
   @State private linkMenuVisible: boolean = false;
   @State private translatedLinkMenuVisible: boolean = false;
@@ -97,7 +104,7 @@ export struct TweetCard {
   }
 
   @Builder
-  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl) }
+  private LinkMenu(): void { PostLinkMenu(this.getUIContext(), this.selectedLinkUrl, this.pageStack) }
 
   private bodyTextController: TextController = new TextController();
   private translatedTextController: TextController = new TextController();
@@ -143,6 +150,21 @@ export struct TweetCard {
   @Prop showActions: boolean = true;
   @Prop transparentBackground: boolean = false;
   @Prop compactAuthorHeader: boolean = true;
+  @Prop useDetailLayout: boolean = false;
+  @Prop detailLayout: number = 0;
+  @StorageProp(STORAGE_KEY_POST_CARD_LAYOUT) private cardLayout: number = POST_CARD_CLASSIC;
+  @StorageProp(STORAGE_KEY_POST_MEDIA_SCALE) private mediaScale: number = 100;
+
+  private usesWideCard(): boolean { return !this.useDetailLayout && this.cardLayout === POST_CARD_WIDE; }
+  private authorInOneRow(): boolean {
+    return this.useDetailLayout ? this.detailLayout === 1 :
+      this.cardLayout === POST_CARD_COMPACT || this.cardLayout === POST_CARD_CLASSIC && this.compactAuthorHeader;
+  }
+  private avatarSize(): number {
+    return !this.useDetailLayout && this.cardLayout === POST_CARD_COMPACT ? 40 : 48;
+  }
+
+  private mediaStartInset(): number { return this.usesWideCard() ? 8 : this.avatarSize() + 16; }
   @Prop narrowColumn: boolean = false;
   @Prop roundedCard: boolean = false;
   @Prop showReplyContext: boolean = false;
@@ -157,6 +179,11 @@ export struct TweetCard {
   @Prop connectBelow: boolean = false;
   @State private cardHeight: number = 0;
   @State private inputMenuRequest: number = 0;
+  @Prop swipeLeftAction: number = POST_SWIPE_OFF;
+  @Prop swipeRightAction: number = POST_SWIPE_OFF;
+  @State private swipeOffset: number = 0;
+  private swipeId: string = '';
+  @State private feedbackRequest: number = 0;
   @State private avatarTop: number = 12;
   @State liked: boolean = false;
   @State private likeCount: number = 0;
@@ -191,7 +218,9 @@ export struct TweetCard {
   @State private mediaPanProgress: number = 0;
   @StorageProp(STORAGE_KEY_POST_ACTIONS_MASK) private actionsMask: number = DEFAULT_POST_ACTIONS_MASK;
   @State private cardWidth: number = 0;
+  @StorageProp('harmonyx.window_width') private postWindowWidth: number = 0;
   @StorageProp('harmonyx.window_height') private photoWindowHeight: number = 0;
+  @StorageProp(STORAGE_KEY_SHOW_SENSITIVE_MEDIA) private showSensitiveMedia: boolean = false;
   private visibleForViews: boolean = false;
   // The row sinks under the finger while it is pressed.
   @State private pressScale: number = 1;
@@ -200,6 +229,21 @@ export struct TweetCard {
   private pressStartY: number = 0;
   @StorageLink(STORAGE_KEY_PRESS_EFFECT_ENABLED) pressEffectEnabled: boolean = false;
   @StorageLink('harmonyx.accent_color') accentColor: string = '#007DFF';
+
+  private openCardPost(tweet: Tweet, sourceId: string): void {
+    if (this.photoWindowHeight > 0 && this.postWindowWidth > this.photoWindowHeight &&
+      tweet.presentation?.visibility?.hidden !== true) {
+      const video: MediaAttachment | undefined = tweet.attachments?.find((item: MediaAttachment): boolean =>
+        item.type === 'video' && item.id.length > 0 && item.mediaUrl.length > 0 &&
+        (item.sensitive !== true || this.showSensitiveMedia));
+      if (video !== undefined) {
+        if (this.videoFeedEnabled) { this.onVideoOpen(tweet, video); }
+        else { requestVideoViewer(tweet, video, videoPlaybackPositionStore.positionFor(video.id)); }
+        return;
+      }
+    }
+    this.onOpen(tweet, sourceId);
+  }
 
   aboutToAppear(): void {
     this.loadModeration();
@@ -359,10 +403,10 @@ export struct TweetCard {
   private hasWidePhotoStrip(): boolean {
     const attachments: MediaAttachment[] = this.tweet.attachments ?? [];
     const videoStrip: boolean = postUsesHorizontalMediaStrip(attachments, false);
-    if (this.connectAbove || this.connectBelow || (!this.hasPhotoStrip() && !videoStrip) || attachments.length < 2 || this.cardWidth <= 0) {
+    if (this.mediaScale < 100 || this.connectAbove || this.connectBelow || (!this.hasPhotoStrip() && !videoStrip) || attachments.length < 2 || this.cardWidth <= 0) {
       return false;
     }
-    return photoStripLayout(attachments, Math.max(1, this.cardWidth - 72), this.photoWindowHeight).overflows;
+    return photoStripLayout(attachments, Math.max(1, this.cardWidth - this.mediaStartInset() - 8), this.photoWindowHeight).overflows;
   }
 
   private displayedViewCount(): number {
@@ -378,6 +422,37 @@ export struct TweetCard {
     }
     return (this.tweet.repostText ?? '').length > 0 ? this.tweet.repostText as string :
       this.resourceText($r('app.string.post_reposted'));
+  }
+
+  private openRepostAuthor(): void {
+    const author: TweetAuthor | undefined = this.tweet.repostAuthor;
+    if (author === undefined || (author.id.length === 0 && author.username.length === 0)) { return; }
+    const post: Tweet = {
+      id: this.tweet.id, author: author, text: this.tweet.text, createdAt: this.tweet.createdAt,
+      metrics: this.tweet.metrics, liked: this.tweet.liked, reposted: this.tweet.reposted
+    };
+    this.onAuthorTapped(post);
+  }
+
+  @Builder
+  private RepostAttribution(inset: number): void {
+    Row({ space: 8 }) {
+      SymbolGlyph($r('sys.symbol.repeat'))
+        .fontSize(14)
+        .fontColor([this.readingText($r('app.color.text_secondary'))])
+      Text(this.repostLabel()).fontFamily(this.appFontFamily)
+        .fontSize($r('sys.float.Body_S'))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.readingText($r('app.color.text_secondary')))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .focusable(this.tweet.repostAuthor !== undefined)
+        .monopolizeEvents(this.tweet.repostAuthor !== undefined)
+        .onClick((): void => this.openRepostAuthor())
+        .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.openRepostAuthor()))
+    }
+    .width('100%')
+    .padding({ start: LengthMetrics.vp(inset), end: LengthMetrics.vp(12), top: LengthMetrics.vp(8) })
   }
 
   @Builder
@@ -597,6 +672,59 @@ export struct TweetCard {
     return this.sharedElementId + '-quote-' + this.tweet.quotedTweet.id;
   }
 
+  private openPostShare(): void {
+    openPostShare(this.tweet, this.pageStack);
+  }
+
+  private swipeAction(offset: number): number {
+    return offset < 0 ? this.swipeLeftAction : this.swipeRightAction;
+  }
+
+  private swipeIcon(): Resource {
+    const action: number = this.swipeAction(this.swipeOffset);
+    switch (action) {
+      case POST_SWIPE_REPLY: return $r('sys.symbol.ellipsis_bubble');
+      case POST_SWIPE_LIKE: return $r('sys.symbol.heart');
+      case POST_SWIPE_REPOST: return $r('sys.symbol.repeat');
+      case POST_SWIPE_BOOKMARK: return $r('sys.symbol.bookmark');
+      case POST_SWIPE_SHARE: return $r('sys.symbol.share');
+      default: return $r('sys.symbol.face_sading');
+    }
+  }
+
+  private finishPostSwipe(commit: boolean): void {
+    const action: number = this.swipeAction(this.swipeOffset);
+    const accepted: boolean = commit && this.swipeId === this.tweet.id && Math.abs(this.swipeOffset) >= 64;
+    this.getUIContext().animateTo({ duration: motionDuration(160), curve: Curve.EaseOut }, (): void => {
+      this.swipeOffset = 0;
+    });
+    this.swipeId = '';
+    if (!accepted) { return; }
+    switch (action) {
+      case POST_SWIPE_REPLY: if (canPostAction(this.tweet, 'reply')) { this.onReply(this.tweet); } break;
+      case POST_SWIPE_LIKE: void this.toggleLike(); break;
+      case POST_SWIPE_REPOST: void this.toggleRepost(); break;
+      case POST_SWIPE_BOOKMARK: void this.toggleBookmark(); break;
+      case POST_SWIPE_SHARE:
+        this.openPostShare();
+        break;
+      case POST_SWIPE_NOT_INTERESTED: this.feedbackRequest++; break;
+      default: break;
+    }
+  }
+
+  @Builder
+  private PostSwipePreview(): void {
+    if (this.swipeOffset !== 0) {
+      Row() {
+        SymbolGlyph(this.swipeIcon()).fontSize(24)
+          .fontColor([Math.abs(this.swipeOffset) >= 64 ? this.accentColor : $r('app.color.text_secondary')])
+      }.width('100%').height(this.cardHeight)
+        .justifyContent(this.swipeOffset * (isAppRtl(this.appLocale) ? -1 : 1) < 0 ? FlexAlign.End : FlexAlign.Start)
+        .padding({ left: 12, right: 12 }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
+    }
+  }
+
   private releaseCardPress(): void {
     this.pressTracking = false;
     if (this.pressScale === 1) { return; }
@@ -633,6 +761,7 @@ export struct TweetCard {
   @Builder
   private PostAttachments(): void {
     if (this.tweet.attachments !== undefined && this.tweet.attachments.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
+      Row() {
       PostMedia({
         controlsUsePageBackground: !this.transparentBackground, controlSurface: this.readingSurface(),
         sourceTweet: this.tweet,
@@ -642,7 +771,7 @@ export struct TweetCard {
         videoFeedEnabled: this.videoFeedEnabled,
         homeTimelineVideo: this.homeTimelineVideo,
         naturalVideoSize: this.naturalVideoSize,
-        photoStartOffset: this.hasWidePhotoStrip() ? 64 : 0,
+        photoStartOffset: this.hasWidePhotoStrip() ? this.mediaStartInset() : 0,
         photoEndOffset: this.hasWidePhotoStrip() ? 8 : 0,
         onMediaPanProgress: (progress: number): void => { this.mediaPanProgress = progress; },
         onPhotoPageChanged: (index: number): void => { this.photoPageIndex = index; },
@@ -650,8 +779,10 @@ export struct TweetCard {
           this.onVideoOpen(this.tweet, media);
         }
       })
-        .width('100%')
-        .padding({ start: LengthMetrics.vp(this.hasWidePhotoStrip() ? 0 : 64), end: LengthMetrics.vp(this.hasWidePhotoStrip() ? 0 : 8) })
+        .width(this.mediaScale.toString() + '%')
+      }.width('100%').justifyContent(FlexAlign.Start)
+        .padding({ start: LengthMetrics.vp(this.hasWidePhotoStrip() ? 0 : this.mediaStartInset()),
+          end: LengthMetrics.vp(this.hasWidePhotoStrip() ? 0 : 8) })
         .margin({ top: 8 })
     }
 
@@ -660,6 +791,9 @@ export struct TweetCard {
   @Builder
   private PostFooter(): void {
     Column({ space: 4 }) {
+      if (this.tweet.presentation?.visibility?.hidden !== true && stockTicker(this.tweet.text).length > 0) {
+        StockQuoteCard({ symbol: stockTicker(this.tweet.text) })
+      }
       if (this.interactivePoll() !== undefined || this.tweet.card !== undefined || this.tweet.article !== undefined || this.tweet.presentation !== undefined) {
         PostInteractiveContent({ postId: this.tweet.id, poll: this.interactivePoll(), card: this.tweet.card,
           article: this.tweet.article, presentation: this.tweet.presentation,
@@ -672,7 +806,7 @@ export struct TweetCard {
           accentColor: this.accentColor,
           sharedElementId: this.quotedSharedElementId(),
           onOpen: (quoted: Tweet): void => {
-            this.onOpen(quoted, this.quotedSharedElementId());
+            this.openCardPost(quoted, this.quotedSharedElementId());
           }
         })
       }
@@ -688,14 +822,14 @@ export struct TweetCard {
         onRepost: (): void => { void this.toggleRepost(); },
         onLike: (): void => { void this.toggleLike(); },
         onBookmark: (): void => { this.toggleBookmark(); },
-        onShare: (): void => { sharePost(this.getUIContext().getHostContext() as common.UIAbilityContext, this.tweet); },
+        onShare: (): void => { this.openPostShare(); },
         onTranslate: (): void => { this.runTranslation(); }
       })
 
     }
     .width('100%')
-    .padding({ start: LengthMetrics.vp(64), end: LengthMetrics.vp(8), bottom: LengthMetrics.vp(4) })
-    .onClick((): void => { this.onOpen(this.tweet, this.sharedElementId); })
+    .padding({ start: LengthMetrics.vp(this.mediaStartInset()), end: LengthMetrics.vp(8), bottom: LengthMetrics.vp(4) })
+    .onClick((): void => { this.openCardPost(this.tweet, this.sharedElementId); })
   }
 
   private async toggleRepost(): Promise<void> {
@@ -723,10 +857,10 @@ export struct TweetCard {
           .width($r('app.float.reply_connector_width'))
           .height(this.avatarTop)
           .fill(this.connectAbove ? $r('app.color.reply_connector') : Color.Transparent)
-        Blank().height(44)
+        Blank().height(this.avatarSize() - 4)
         Rect()
           .width($r('app.float.reply_connector_width'))
-          .height(Math.max(0, this.cardHeight - this.avatarTop - 48))
+          .height(Math.max(0, this.usesWideCard() ? 0 : this.cardHeight - this.avatarTop - this.avatarSize()))
           .fill(this.connectBelow ? $r('app.color.reply_connector') : Color.Transparent)
       }
     }
@@ -756,6 +890,7 @@ export struct TweetCard {
   @Builder
   private NarrowTimelineCard(): void {
     Column({ space: 0 }) {
+      if (this.tweet.isRepost) { this.RepostAttribution(8); }
       if (this.narrowHasMedia()) {
         PostMedia({
           controlsUsePageBackground: !this.transparentBackground, controlSurface: this.readingSurface(),
@@ -769,7 +904,6 @@ export struct TweetCard {
           limitNaturalHeight: true,
           // Use the same autoplay and visibility policy as the ordinary feed.
           hideInlineControls: true,
-          showDownloadButton: false,
           onVideoOpen: (media: MediaAttachment): void => this.onVideoOpen(this.tweet, media)
         }).width('100%')
       }
@@ -791,7 +925,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.translatedText)
             .bindMenu(this.translatedLinkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.translatedLinkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           } else if (this.tweet.text.length > 0) {
           Text() {
             PostLinkSpans(this.getUIContext(), this.tweet.text, $r('app.float.timeline_column_body_font'), this.systemEmojiEnabled, (url: string): void => this.selectPostLink(url))
@@ -801,7 +935,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.tweet.text)
             .bindMenu(this.linkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.linkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           }
           if (!this.translationReplaceOriginal && this.translatedText.length > 0 && !this.showingOriginal) {
           Text() {
@@ -812,7 +946,7 @@ export struct TweetCard {
             .maxLines(this.narrowPreviewLines()).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityText(this.translatedText)
             .bindMenu(this.translatedLinkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.translatedLinkMenuVisible = false; } })
-            .onClick((): void => this.onOpen(this.tweet, this.sharedElementId))
+            .onClick((): void => this.openCardPost(this.tweet, this.sharedElementId))
           }
         }
         if (!this.narrowHasMedia() && (this.interactivePoll() !== undefined || this.tweet.card !== undefined ||
@@ -821,11 +955,15 @@ export struct TweetCard {
             article: this.tweet.article, presentation: this.tweet.presentation,
             accentColor: this.accentColor, showPollMedia: true })
         }
+        if (!this.narrowHasMedia() && this.tweet.presentation?.visibility?.hidden !== true &&
+          stockTicker(this.tweet.text).length > 0) {
+          StockQuoteCard({ symbol: stockTicker(this.tweet.text) })
+        }
         if (!this.narrowHasMedia() && this.tweet.quotedTweet !== undefined && this.tweet.presentation?.visibility?.hidden !== true) {
           QuotedPostCard({ quoted: this.tweet.quotedTweet, narrowColumn: true, accentColor: this.accentColor,
             onPhotoOpen: this.onPhotoOpen,
             sharedElementId: this.quotedSharedElementId(),
-            onOpen: (quoted: Tweet): void => this.onOpen(quoted, this.quotedSharedElementId()) })
+            onOpen: (quoted: Tweet): void => this.openCardPost(quoted, this.quotedSharedElementId()) })
         }
         Row({ space: 4 }) {
           Row({ space: 4 }) {
@@ -841,9 +979,9 @@ export struct TweetCard {
             Text() { EmojiSpans(this.getUIContext(), this.tweet.author.name, $r('app.float.timeline_column_author_font'), this.systemEmojiEnabled) }
               .fontFamily(this.appFontFamily).fontSize($r('app.float.timeline_column_author_font'))
               .fontColor(this.readingText($r('app.color.text_secondary'))).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+              .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
           }.layoutWeight(1).alignItems(VerticalAlign.Center)
-            .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
           if (this.showActions && (this.actionsMask & 4) !== 0) {
             Row({ space: 3 }) {
               SymbolGlyph(this.liked ? $r('sys.symbol.heart_fill') : $r('sys.symbol.heart'))
@@ -860,7 +998,7 @@ export struct TweetCard {
               .onClick((): void => { void this.toggleLike(); })
           }
         }.width('100%').alignItems(VerticalAlign.Center).id('narrow-post-author-' + this.tweet.id)
-        PostOverflowButton({ tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, hideTrigger: true })
+        PostOverflowButton({ tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, feedbackRequest: this.feedbackRequest, hideTrigger: true })
       }.width('100%').alignItems(HorizontalAlign.Start).padding($r('app.float.timeline_column_inset'))
     }.width('100%').id('narrow-post-card-' + this.tweet.id)
   }
@@ -876,35 +1014,10 @@ export struct TweetCard {
       this.themeDisplayMode, this.themeDarkSurface, this.avatarThemeDark), this.pageBackgroundValue);
   }
 
-  build(): void {
-    if (!this.readerHidden) {
-    Column() {
-      if (this.narrowColumn) { this.NarrowTimelineCard() } else {
-      CommunitySource({ communityId: this.tweet.communityId ?? '', communityName: this.tweet.communityName ?? '', inset: 56 })
-      if (this.tweet.pinned) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.pin_fill')).fontSize(13).fontColor([this.readingText($r('app.color.text_secondary'))])
-          Text($r('app.string.community_pinned_post')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S'))
-            .fontColor(this.readingText($r('app.color.text_secondary')))
-        }.width('100%').padding({ start: LengthMetrics.vp(56), top: LengthMetrics.vp(6) })
-      }
-      if (this.tweet.isRepost) {
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.repeat'))
-            .fontSize(14)
-            .fontColor([this.readingText($r('app.color.text_secondary'))])
-          Text(this.repostLabel()).fontFamily(this.appFontFamily)
-            .fontSize($r('sys.float.Body_S'))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.readingText($r('app.color.text_secondary')))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .padding({ start: LengthMetrics.vp(38), end: LengthMetrics.vp(12), top: LengthMetrics.vp(8) })
-      }
-      Row({ space: 8 }) {
-          SpaceAwareAvatar({verifiedType: this.tweet.author.verifiedType ?? '', avatarShape: this.tweet.author.avatarShape ?? '',  userId: this.tweet.author.id, url: this.avatarUrl(), avatarSize: 48, radius: 24,
+  @Builder
+  private CardAvatar(): void {
+    SpaceAwareAvatar({verifiedType: this.tweet.author.verifiedType ?? '', avatarShape: this.tweet.author.avatarShape ?? '',  userId: this.tweet.author.id, url: this.avatarUrl(), avatarSize: this.avatarSize(), radius: this.avatarSize() / 2,
+            openSpaceOnTap: !this.useDetailLayout,
             followed: this.tweet.author.following === true,
             fallbackText: this.tweet.author.name.substring(0, 1).toUpperCase(),
             fallbackColor: this.tweet.author.avatarColor, tintBackground: true,
@@ -913,9 +1026,11 @@ export struct TweetCard {
             .renderGroup(true)
             .scale({ x: mediaAvatarScale(this.mediaPanProgress), y: mediaAvatarScale(this.mediaPanProgress),
               centerX: '50%', centerY: '50%' })
+  }
 
-        Column({ space: 4 }) {
-          Column({ space: 1 }) {
+  @Builder
+  private CardAuthor(): void {
+    Column({ space: 1 }) {
             Row({ space: 4 }) {
               Flex({ alignItems: ItemAlign.Center }) {
                 Text() { EmojiSpans(this.getUIContext(), this.tweet.author.name, $r('sys.float.Body_L'), this.systemEmojiEnabled) }.fontFamily(this.appFontFamily)
@@ -926,13 +1041,14 @@ export struct TweetCard {
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .flexShrink(1)
                   .margin({ end: LengthMetrics.vp(4) })
+                  .onClick((): void => this.onAuthorTapped(this.tweet)).monopolizeEvents(true)
                 if (this.tweet.author.verified) {
                   SymbolGlyph($r('sys.symbol.checkmark_circle_fill'))
                     .fontSize(16)
                     .fontColor([verificationBadgeColor(this.tweet.author.verifiedType ?? '', this.accentColor)])
                     .flexShrink(0)
                 }
-                if (this.compactAuthorHeader) {
+                if (this.authorInOneRow()) {
                   Text('@' + this.tweet.author.username).fontFamily(this.appFontFamily)
                     .margin({ start: LengthMetrics.vp(4) })
                     .fontSize($r('sys.float.Body_M')).fontColor(this.readingText($r('app.color.text_secondary')))
@@ -944,8 +1060,7 @@ export struct TweetCard {
                 }
               }
               .layoutWeight(1)
-              .onClick((): void => this.onAuthorTapped(this.tweet))
-              PostOverflowButton({ compactHeader: true, foreground: this.readingText($r('app.color.text_secondary')), tweet: this.tweet, inputMenuRequest: this.inputMenuRequest })
+              PostOverflowButton({ compactHeader: true, foreground: this.readingText($r('app.color.text_secondary')), tweet: this.tweet, inputMenuRequest: this.inputMenuRequest, feedbackRequest: this.feedbackRequest })
               if (this.translationEnabled && (this.actionsMask & 64) !== 0 && !this.showActions) {
                 Stack() {
                   SymbolGlyph($r('sys.symbol.ellipsis_circle'))
@@ -962,19 +1077,21 @@ export struct TweetCard {
             }
             .width('100%')
 
-            if (!this.compactAuthorHeader) {
+            if (!this.authorInOneRow()) {
             Text(this.authorTimeLabel()).fontFamily(this.appFontFamily)
               .fontSize($r('sys.float.Body_M'))
               .fontColor(this.readingText($r('app.color.text_secondary')))
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .maxLines(1)
               .width('100%')
-              .onClick((): void => this.onAuthorTapped(this.tweet))
             }
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
+  }
 
+  @Builder
+  private CardText(): void {
           if (this.translatedText.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
             PostTranslationInfo({ language: this.tweet.language ?? '', showingOriginal: this.showingOriginal,
               foreground: this.readingText($r('app.color.text_secondary')), accent: this.readingText(this.accentColor),
@@ -1012,7 +1129,7 @@ export struct TweetCard {
               .editMenuOptions(new EmojiCopyMenu(this.getUIContext(), this.translatedTextController, this.translatedText, this.systemEmojiEnabled))
               .bindMenu(this.linkMenuVisible, this.LinkMenu(), { onDisappear: (): void => { this.linkMenuVisible = false; } })
               .onClick((): void => {
-                this.onOpen(this.tweet, this.sharedElementId);
+                this.openCardPost(this.tweet, this.sharedElementId);
               })
           } else if (this.tweet.text.length > 0 && this.tweet.presentation?.visibility?.hidden !== true) {
             Text(undefined, { controller: this.bodyTextController }) {
@@ -1052,7 +1169,7 @@ export struct TweetCard {
               // Clickable spans handle mentions, hashtags and links first. This
               // handler opens the post when the rest of the body is tapped.
               .onClick((): void => {
-                this.onOpen(this.tweet, this.sharedElementId);
+                this.openCardPost(this.tweet, this.sharedElementId);
               })
           }
 
@@ -1093,12 +1210,45 @@ export struct TweetCard {
               .borderColor(this.accentColor)
               .margin({ top: 8 })
           }
+  }
 
+  build(): void {
+    if (!this.readerHidden) {
+    Stack() {
+    this.PostSwipePreview()
+    Column() {
+      if (this.narrowColumn) { this.NarrowTimelineCard() } else {
+      CommunitySource({ communityId: this.tweet.communityId ?? '', communityName: this.tweet.communityName ?? '', inset: 56 })
+      if (this.tweet.pinned) {
+        Row({ space: 6 }) {
+          SymbolGlyph($r('sys.symbol.pin_fill')).fontSize(13).fontColor([this.readingText($r('app.color.text_secondary'))])
+          Text($r('app.string.community_pinned_post')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_S'))
+            .fontColor(this.readingText($r('app.color.text_secondary')))
+        }.width('100%').padding({ start: LengthMetrics.vp(56), top: LengthMetrics.vp(6) })
+      }
+      if (this.tweet.isRepost) {
+        this.RepostAttribution(38)
+      }
+      if (this.usesWideCard()) {
+        Row({ space: 8 }) {
+          this.CardAvatar()
+          Column() { this.CardAuthor() }.layoutWeight(1)
+        }.width('100%').padding({ left: 8, right: 8, top: 12 })
+          .onAreaChange((_oldValue: Area, newValue: Area): void => { this.avatarTop = Number(newValue.position.y) + 12; })
+        Column({ space: 4 }) { this.CardText() }
+          .width('100%').alignItems(HorizontalAlign.Start)
+          .padding({ left: 8, right: 8, top: 6 })
+      } else {
+        Row({ space: 8 }) {
+          this.CardAvatar()
+          Column({ space: 4 }) {
+            this.CardAuthor()
+            this.CardText()
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
         .onClick((): void => {
-          this.onOpen(this.tweet, this.sharedElementId);
+          this.openCardPost(this.tweet, this.sharedElementId);
         })
       }
       .width('100%')
@@ -1110,6 +1260,7 @@ export struct TweetCard {
           this.avatarTop = top;
         }
       })
+      }
       this.PostAttachments()
       this.PostFooter()
       }
@@ -1136,7 +1287,7 @@ export struct TweetCard {
         this.cardHeight = height;
       }
     })
-    .overlay(this.ConversationLines(), { align: Alignment.TopStart, offset: { x: isAppRtl(this.appLocale) ? -31 : 31, y: 0 } })
+    .overlay(this.ConversationLines(), { align: Alignment.TopStart, offset: { x: (isAppRtl(this.appLocale) ? -1 : 1) * (7 + this.avatarSize() / 2), y: 0 } })
     .border({ width: { bottom: this.narrowColumn || this.roundedCard || this.connectBelow ? 0 : 1 }, color: $r('app.color.divider') })
     .scale({ x: this.reduceMotion ? 1 : this.pressScale, y: this.reduceMotion ? 1 : this.pressScale })
     .visualEffect(new hdsEffect.HdsEffectBuilder()
@@ -1147,6 +1298,7 @@ export struct TweetCard {
     // The row follows the destination page: the post page leads, the row
     // tracks it, which is what turns the tap into a list expansion instead of
     // two independent elements flying to a meeting point.
+    .translate({ x: this.swipeOffset })
     .geometryTransition(this.sharedElementId, { follow: true })
     // Paired with the transition above, as in the official long-take samples:
     // the near-opaque transition keeps the row's node alive for the length of
@@ -1154,12 +1306,12 @@ export struct TweetCard {
     // rebuilds under the opening page.
     .transition(TransitionEffect.opacity(0.99))
     .focusable(true).focusOnTouch(false).hoverEffect(HoverEffect.Highlight)
-    .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.onOpen(this.tweet, this.sharedElementId)))
+    .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.openCardPost(this.tweet, this.sharedElementId)))
     .onMouse((event: MouseEvent): void => contextInputMouse(event, (): void => {
       this.inputMenuRequest++;
     }))
     .onClick((): void => {
-      this.onOpen(this.tweet, this.sharedElementId);
+      this.openCardPost(this.tweet, this.sharedElementId);
     })
     .onTouch((event?: TouchEvent): void => {
       this.onCardTouch(event);
@@ -1173,6 +1325,19 @@ export struct TweetCard {
           if (this.recordRecommendationSeen) { homeSeenTweetStore.observe(getContext(this), this.tweet.id); }
         }
       })
+    }.width('100%').clip(this.swipeLeftAction !== POST_SWIPE_OFF || this.swipeRightAction !== POST_SWIPE_OFF)
+      .onGestureJudgeBegin((info: GestureInfo): GestureJudgeResult =>
+        info.tag === 'home-post-swipe' && this.swipeLeftAction === POST_SWIPE_OFF &&
+          this.swipeRightAction === POST_SWIPE_OFF ? GestureJudgeResult.REJECT : GestureJudgeResult.CONTINUE)
+      .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 14 }).tag('home-post-swipe')
+        .onActionStart((): void => { this.swipeId = this.tweet.id; })
+        .onActionUpdate((event: GestureEvent): void => {
+          this.swipeOffset = this.swipeAction(event.offsetX) === POST_SWIPE_OFF ? 0 :
+            Math.max(-88, Math.min(88, event.offsetX));
+          if (this.swipeOffset !== 0) { this.releaseCardPress(); }
+        })
+        .onActionEnd((): void => this.finishPostSwipe(true))
+        .onActionCancel((): void => this.finishPostSwipe(false)))
     }
   }
 }

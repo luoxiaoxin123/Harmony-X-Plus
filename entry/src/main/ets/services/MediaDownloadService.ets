@@ -62,9 +62,9 @@ export class MediaDownloadService {
   // open the Gallery destination before downloading: the temporary grant is
   // consumed immediately, while writing to the open file has no time limit.
   async downloadPhotoWithSaveButton(context: common.UIAbilityContext, url: string,
-    mediaId: string, callback: MediaDownloadCallback, isVideo: boolean = false): Promise<void> {
+    mediaId: string, callback: MediaDownloadCallback, isVideo: boolean = false, titleOverride: string = ''): Promise<void> {
     if (downloadLocationStore.useDownloads(context)) {
-      this.download(context, url, mediaId, isVideo, callback);
+      this.download(context, url, mediaId, isVideo, callback, titleOverride);
       return;
     }
     if (url.length === 0) { callback(MEDIA_DOWNLOAD_FAILED); return; }
@@ -74,11 +74,11 @@ export class MediaDownloadService {
     try {
       const helper: photoAccessHelper.PhotoAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
       const uri: string = await helper.createAsset(isVideo ? photoAccessHelper.PhotoType.VIDEO : photoAccessHelper.PhotoType.IMAGE,
-        isVideo ? 'mp4' : this.photoExtension(url));
+        isVideo ? 'mp4' : this.photoExtension(url), titleOverride.length > 0 ? { title: titleOverride } : undefined);
       destination = await fileIo.open(uri, fileIo.OpenMode.WRITE_ONLY);
       let sourcePath: string = url;
       if (!url.startsWith('file://')) {
-        task = await this.photoDownloadForSave(context, url, mediaId, isVideo);
+        task = await this.photoDownloadForSave(context, url, mediaId, isVideo, titleOverride);
         if (task === null) { throw new Error('photo_download_failed'); }
         sourcePath = task.filePath;
       }
@@ -105,7 +105,7 @@ export class MediaDownloadService {
   }
 
   private photoDownloadForSave(context: common.UIAbilityContext, url: string,
-    mediaId: string, isVideo: boolean = false): Promise<DownloadTask | null> {
+    mediaId: string, isVideo: boolean = false, titleOverride: string = ''): Promise<DownloadTask | null> {
     return new Promise<DownloadTask | null>((resolve: (task: DownloadTask | null) => void): void => {
       const taskId: string = downloadManager.enqueue(context, url, mediaId, isVideo,
         (id: string, ready: boolean): void => {
@@ -116,7 +116,7 @@ export class MediaDownloadService {
           }
           this.savingTasks.add(id);
           resolve(task);
-        });
+        }, titleOverride);
       if (taskId.length === 0) { resolve(null); }
     });
   }
@@ -131,31 +131,31 @@ export class MediaDownloadService {
   }
 
   download(context: common.UIAbilityContext, url: string, mediaId: string,
-    isVideo: boolean, callback: MediaDownloadCallback): void {
+    isVideo: boolean, callback: MediaDownloadCallback, titleOverride: string = ''): void {
     if (url.length === 0) { callback(MEDIA_DOWNLOAD_FAILED); return; }
     if (downloadLocationStore.method(context) === MediaSaveMethod.SECURE_BUTTON) {
-      secureMediaSaveController.enqueue(new SecureMediaSaveRequest(context, url, mediaId, isVideo, callback));
+      secureMediaSaveController.enqueue(new SecureMediaSaveRequest(context, url, mediaId, isVideo, callback, titleOverride));
       return;
     }
     if (downloadLocationStore.useDownloads(context)) {
       downloadLocationStore.prepare(context).then((ready: boolean): void => {
-        if (ready) { this.startDownload(context, url, mediaId, isVideo, callback); }
+        if (ready) { this.startDownload(context, url, mediaId, isVideo, callback, titleOverride); }
         else { callback(MEDIA_DOWNLOAD_CANCELED); }
       }).catch((): void => { callback(MEDIA_DOWNLOAD_FAILED); });
       return;
     }
-    this.startDownload(context, url, mediaId, isVideo, callback);
+    this.startDownload(context, url, mediaId, isVideo, callback, titleOverride);
   }
 
   private startDownload(context: common.UIAbilityContext, url: string, mediaId: string,
-    isVideo: boolean, callback: MediaDownloadCallback): void {
+    isVideo: boolean, callback: MediaDownloadCallback, titleOverride: string): void {
     if (url.length === 0) {
       callback(MEDIA_DOWNLOAD_FAILED);
       return;
     }
     if (url.startsWith('file://')) {
       const localVideoId: string = isVideo ? downloadManager.beginLocalVideoSave() : '';
-      this.copyToDestination(context, url, mediaId, isVideo ? 'mp4' : this.localImageExtension(url), isVideo)
+      this.copyToDestination(context, url, titleOverride || mediaId, isVideo ? 'mp4' : this.localImageExtension(url), isVideo)
         .then((result: number): void => {
           if (isVideo) { downloadManager.finishLocalVideoSave(localVideoId, result === MEDIA_DOWNLOAD_SUCCESS); }
           callback(result);
@@ -172,7 +172,7 @@ export class MediaDownloadService {
       }
       this.saveTask(context, taskId, callback);
     };
-    const taskId: string = downloadManager.enqueue(context, url, mediaId, isVideo, onReady);
+    const taskId: string = downloadManager.enqueue(context, url, mediaId, isVideo, onReady, titleOverride);
     if (taskId.length === 0) {
       callback(MEDIA_DOWNLOAD_FAILED);
     }
@@ -182,28 +182,28 @@ export class MediaDownloadService {
   // into a real GIF file so the saved item is an animation, not a video.
   downloadAnimatedGif(context: common.UIAbilityContext, url: string, mediaId: string,
     durationMs: number, sourceWidth: number, sourceHeight: number,
-    callback: MediaDownloadCallback): void {
+    callback: MediaDownloadCallback, titleOverride: string = ''): void {
     if (downloadLocationStore.useDownloads(context)) {
       downloadLocationStore.prepare(context).then((ready: boolean): void => {
         if (ready) {
-          this.startAnimatedGifDownload(context, url, mediaId, durationMs, sourceWidth, sourceHeight, callback);
+          this.startAnimatedGifDownload(context, url, mediaId, durationMs, sourceWidth, sourceHeight, callback, titleOverride);
         } else { callback(MEDIA_DOWNLOAD_CANCELED); }
       }).catch((): void => { callback(MEDIA_DOWNLOAD_FAILED); });
       return;
     }
-    this.startAnimatedGifDownload(context, url, mediaId, durationMs, sourceWidth, sourceHeight, callback);
+    this.startAnimatedGifDownload(context, url, mediaId, durationMs, sourceWidth, sourceHeight, callback, titleOverride);
   }
 
   private startAnimatedGifDownload(context: common.UIAbilityContext, url: string, mediaId: string,
     durationMs: number, sourceWidth: number, sourceHeight: number,
-    callback: MediaDownloadCallback): void {
+    callback: MediaDownloadCallback, titleOverride: string = ''): void {
     if (url.length === 0) {
       callback(MEDIA_DOWNLOAD_FAILED);
       return;
     }
     if (url.startsWith('file://')) {
       const localPath: string = new fileUri.FileUri(url).path;
-      this.encodeAnimatedGif(context, localPath, mediaId, durationMs, sourceWidth, sourceHeight, callback);
+      this.encodeAnimatedGif(context, localPath, titleOverride || mediaId, durationMs, sourceWidth, sourceHeight, callback);
       return;
     }
     const onReady: DownloadTaskReadyCallback = (taskId: string, ready: boolean): void => {
@@ -228,7 +228,7 @@ export class MediaDownloadService {
           callback(result);
         }, task);
     };
-    const taskId: string = downloadManager.enqueue(context, url, mediaId, false, onReady);
+    const taskId: string = downloadManager.enqueue(context, url, mediaId, false, onReady, titleOverride);
     if (taskId.length === 0) {
       callback(MEDIA_DOWNLOAD_FAILED);
     }
@@ -304,42 +304,42 @@ export class MediaDownloadService {
   // Each image gets its own pausable task. Gallery exports use one dialog;
   // file exports ask the system picker for each destination.
   downloadImages(context: common.UIAbilityContext, urls: string[], mediaId: string,
-    callback: MediaDownloadCallback): void {
+    callback: MediaDownloadCallback, titles: string[] = []): void {
     if (downloadLocationStore.method(context) === MediaSaveMethod.SECURE_BUTTON) {
       if (urls.length === 0 || urls.some((url: string): boolean => url.length === 0)) {
         callback(MEDIA_DOWNLOAD_FAILED); return;
       }
-      this.saveSecureImages(context, urls, mediaId).then(callback).catch((): void => callback(MEDIA_DOWNLOAD_FAILED));
+      this.saveSecureImages(context, urls, mediaId, titles).then(callback).catch((): void => callback(MEDIA_DOWNLOAD_FAILED));
       return;
     }
     if (downloadLocationStore.useDownloads(context)) {
       downloadLocationStore.prepare(context).then((ready: boolean): void => {
-        if (ready) { this.startImageDownloads(context, urls, mediaId, callback); }
+        if (ready) { this.startImageDownloads(context, urls, mediaId, callback, titles); }
         else { callback(MEDIA_DOWNLOAD_CANCELED); }
       }).catch((): void => { callback(MEDIA_DOWNLOAD_FAILED); });
       return;
     }
-    this.startImageDownloads(context, urls, mediaId, callback);
+    this.startImageDownloads(context, urls, mediaId, callback, titles);
   }
 
-  private async saveSecureImages(context: common.UIAbilityContext, urls: string[], mediaId: string): Promise<number> {
+  private async saveSecureImages(context: common.UIAbilityContext, urls: string[], mediaId: string, titles: string[]): Promise<number> {
     const pending: Promise<number>[] = [];
     for (let index: number = 0; index < urls.length; index++) {
-      pending.push(this.secureSave(context, urls[index], mediaId + '-' + index.toString(), false));
+      pending.push(this.secureSave(context, urls[index], mediaId + '-' + index.toString(), false, titles[index] ?? ''));
     }
     const results: number[] = await Promise.all(pending);
     for (const result of results) { if (result !== MEDIA_DOWNLOAD_SUCCESS) { return result; } }
     return MEDIA_DOWNLOAD_SUCCESS;
   }
 
-  private secureSave(context: common.UIAbilityContext, url: string, mediaId: string, isVideo: boolean): Promise<number> {
+  private secureSave(context: common.UIAbilityContext, url: string, mediaId: string, isVideo: boolean, titleOverride: string = ''): Promise<number> {
     return new Promise<number>((resolve: (result: number) => void): void => {
-      secureMediaSaveController.enqueue(new SecureMediaSaveRequest(context, url, mediaId, isVideo, resolve));
+      secureMediaSaveController.enqueue(new SecureMediaSaveRequest(context, url, mediaId, isVideo, resolve, titleOverride));
     });
   }
 
   private startImageDownloads(context: common.UIAbilityContext, urls: string[], mediaId: string,
-    callback: MediaDownloadCallback): void {
+    callback: MediaDownloadCallback, titles: string[] = []): void {
     if (urls.length === 0) {
       callback(MEDIA_DOWNLOAD_FAILED);
       return;
@@ -352,7 +352,7 @@ export class MediaDownloadService {
     }
     if (urls.every((url: string): boolean => url.startsWith('file://'))) {
       const files: DownloadedMediaFile[] = urls.map((url: string, index: number): DownloadedMediaFile =>
-        new DownloadedMediaFile('', url, mediaId + '-' + index.toString(), this.localImageExtension(url)));
+        new DownloadedMediaFile('', url, titles[index] || (mediaId + '-' + index.toString()), this.localImageExtension(url)));
       this.copyImagesToDestination(context, files).then(callback)
         .catch((): void => { callback(MEDIA_DOWNLOAD_FAILED); });
       return;
@@ -362,13 +362,17 @@ export class MediaDownloadService {
       const onReady: DownloadTaskReadyCallback = (taskId: string, ready: boolean): void => {
         this.onBatchTaskReady(context, batch, taskId, ready);
       };
-      const taskId: string = downloadManager.enqueue(context, urls[index], mediaId, false, onReady);
+      const taskId: string = downloadManager.enqueue(context, urls[index], mediaId, false, onReady, titles[index] ?? '');
       if (taskId.length === 0) {
         batch.failed = true;
         batch.finished = batch.finished + 1;
       }
     }
     this.finishBatchIfReady(context, batch);
+  }
+
+  private exportTitle(title: string): string {
+    return title.startsWith('HarmonyX-') ? title : 'HarmonyX-' + title;
   }
 
   private localImageExtension(url: string): string {
@@ -435,7 +439,7 @@ export class MediaDownloadService {
         title, isVideo);
     }
     if (downloadLocationStore.useDownloads(context)) {
-      return downloadLocationStore.save(context, sourcePath, 'HarmonyX-' + title + '.' + extension);
+      return downloadLocationStore.save(context, sourcePath, this.exportTitle(title) + '.' + extension);
     }
     return this.copyToGallery(context, sourcePath, title, extension, isVideo);
   }
@@ -460,7 +464,7 @@ export class MediaDownloadService {
     for (let i: number = 0; i < files.length; i++) {
       const file: DownloadedMediaFile = files[i];
       const result: LocalFileSaveResult = await downloadLocationStore.save(context, file.sourcePath,
-        'HarmonyX-' + file.title + '.' + file.extension);
+        this.exportTitle(file.title) + '.' + file.extension);
       if (result !== LocalFileSaveResult.SAVED) { return MEDIA_DOWNLOAD_CANCELED; }
       // A later failed batch copy must not re-export or lose a file already saved successfully.
       if (file.taskId.length > 0) { downloadManager.saveCompleted(file.taskId, context); }
@@ -473,7 +477,7 @@ export class MediaDownloadService {
     const helper: photoAccessHelper.PhotoAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
     const sources: string[] = [sourcePath.startsWith('file://') ? sourcePath : fileUri.getUriFromPath(sourcePath)];
     const configs: photoAccessHelper.PhotoCreationConfig[] = [{
-      title: 'HarmonyX-' + title,
+      title: this.exportTitle(title),
       fileNameExtension: extension,
       photoType: isVideo ? photoAccessHelper.PhotoType.VIDEO : photoAccessHelper.PhotoType.IMAGE,
       subtype: photoAccessHelper.PhotoSubtype.DEFAULT
@@ -505,7 +509,7 @@ export class MediaDownloadService {
       const file: DownloadedMediaFile = files[index];
       sources.push(file.sourcePath.startsWith('file://') ? file.sourcePath : fileUri.getUriFromPath(file.sourcePath));
       const config: photoAccessHelper.PhotoCreationConfig = {
-        title: 'HarmonyX-' + file.title,
+        title: this.exportTitle(file.title),
         fileNameExtension: file.extension,
         photoType: photoAccessHelper.PhotoType.IMAGE,
         subtype: photoAccessHelper.PhotoSubtype.DEFAULT

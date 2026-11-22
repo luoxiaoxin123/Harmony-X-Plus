@@ -85,6 +85,16 @@ export class XPrivateResult {
   // X answers a write that its account-level throttle refuses with GraphQL
   // error 344 ("You have reached your daily limit for sending Tweets and
   // messages"). The HTTP status stays 200, so this is the only signal.
+  isBlockedByAuthor(): boolean {
+    const message: string = this.errorText.toLowerCase();
+    if (message.includes('has blocked you') || message.includes('have been blocked by')) { return true; }
+    try {
+      const payload: Record<string, Object> = JSON.parse(this.body) as Record<string, Object>;
+      const errors: Record<string, Object>[] = (payload['errors'] ?? []) as Record<string, Object>[];
+      return errors.some((error: Record<string, Object>): boolean => String(error['code']) === '136');
+    } catch (error) { return false; }
+  }
+
   isWriteLimit(): boolean {
     return this.errorText.indexOf('(344)') >= 0 ||
       this.errorText.indexOf('daily limit') >= 0 ||
@@ -402,9 +412,29 @@ export class XPrivateClient {
     if (XPrivateClient.sendsListFieldToggles(operation.operation)) {
       body['fieldToggles'] = XPrivateClient.webListFieldToggles();
     }
-    const posted: XPrivateResult = await this.send('POST', url, JSON.stringify(body),
-      GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', -1, minimalHeaders);
+    const generation: number = this.sessionGeneration();
+    let posted: XPrivateResult = await this.send('POST', url, JSON.stringify(body),
+      GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation, minimalHeaders);
+    if (operation.operation === 'GetConversationPageQuery' && (posted.status === 404 || posted.status === 503) &&
+      generation === this.sessionGeneration()) {
+      const webQueryId: string = 'IVlXls9JTnbgQ1gxsGAfJA';
+      const webBody: Record<string, Object | null> = { 'variables': resolved, 'queryId': webQueryId };
+      const alternate: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + webQueryId + '/' + operation.operation,
+        JSON.stringify(webBody), GRAPHQL_ACCEPT, operation.operation, 'application/json', true, '', generation);
+      if (alternate.ok || posted.status === 404) { posted = alternate; }
+    }
     return this.finish(operation.operation, cacheable, cacheKey, posted);
+  }
+
+  async xChatWebWrite(keys: boolean, variables: Record<string, Object>): Promise<XPrivateResult> {
+    const name: string = keys ? 'AddEncryptedConversationKeysMutation' : 'SendMessageMutation';
+    const id: string = keys ? '4V1KC8ue2tHHvRuIzeczdg' : 'LkAIEchf8AGj-WgeLoTVcw';
+    if (!this.isSignedIn()) { return new XPrivateResult(false, 0, '', 'no_session', name); }
+    const generation: number = this.sessionGeneration();
+    const body: Record<string, Object> = { 'operationName': name, 'variables': variables, 'queryId': id };
+    const result: XPrivateResult = await this.send('POST', GRAPHQL_BASE + '/' + id + '/' + name,
+      JSON.stringify(body), GRAPHQL_ACCEPT, name, 'application/json', false, '', generation);
+    return this.finish(name, false, '', result);
   }
 
   // Records the outcome for the diagnostics page, then hands the result
@@ -1592,8 +1622,22 @@ export class XPrivateClient {
     return this.graphql('user_by_rest_id', variables, '', fresh);
   }
 
-  userAbout(screenName: string): Promise<XPrivateResult> {
-    return this.graphql('AboutAccountQuery', { 'screenName': screenName });
+  async userAbout(screenName: string): Promise<XPrivateResult> {
+    const operation: string = 'AboutAccountQuery';
+    if (!this.isSignedIn()) { return new XPrivateResult(false, 0, '', 'no_session', operation); }
+    const generation: number = this.sessionGeneration();
+    const query: string = '?variables=' + encodeURIComponent(JSON.stringify({ 'screenName': screenName }));
+    let result: XPrivateResult = await this.send('GET', WEB_GRAPHQL_BASE + '/TzOG2twZEfhr9KmClvVVqA/' + operation + query,
+      '', GRAPHQL_ACCEPT, operation, '', true, '', generation);
+    if (!result.ok && result.status === 404 && generation === this.sessionGeneration()) {
+      result = await this.send('GET', WEB_GRAPHQL_BASE + '/XRqGa7EeokUU5kppkh13EA/' + operation + query,
+        '', GRAPHQL_ACCEPT, operation, '', true, '', generation);
+    }
+    if (generation !== this.sessionGeneration()) {
+      return new XPrivateResult(false, 0, '', 'account_changed', operation);
+    }
+    requestLog.record(operation, result.status, result.ok, result.errorText);
+    return result;
   }
 
   userProfileActivity(userId: string, cursor: string, count: number,
@@ -1693,6 +1737,31 @@ export class XPrivateClient {
       variables['cursor'] = cursor;
     }
     return this.graphql('user_with_profile_tweets_query_v2', variables);
+  }
+
+  userOriginalsWeb(screenName: string, cursor: string, count: number): Promise<XPrivateResult> {
+    const name: string = 'UserOriginalsTimeline';
+    if (!this.session.isUsable() || !/^[A-Za-z0-9_]{1,15}$/.test(screenName)) {
+      return Promise.resolve(new XPrivateResult(false, 0, '', 'invalid_profile', name));
+    }
+    // These Relay-provided variables are part of the current X profile page's
+    // request. The old profile operation took a numeric ID and feature toggles.
+    const variables: Record<string, Object | null> = {
+      'screenName': screenName, 'count': count, 'cursor': cursor.length > 0 ? cursor : null,
+      'sortByMostLiked': null,
+      '__relay_internal__pv__liveeventpostcontextenabledrelayprovider': true,
+      '__relay_internal__pv__postctafetchenabledrelayprovider': true,
+      '__relay_internal__pv__replydownvoteenabledrelayprovider': false,
+      '__relay_internal__pv__timelineuserbioautotranslationrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturesappviewerisloggedinrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestranslationgroktranslatedpostenabledrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestranslationnoteautotranslationenabledrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestweetcomponentsgrokanalyzepostrelayprovider': true,
+      '__relay_internal__pv__xclientsfeaturestweetsportspostcontextenabledrelayprovider': true
+    };
+    const query: string = '?variables=' + encodeURIComponent(JSON.stringify(variables));
+    return this.send('GET', GRAPHQL_BASE + '/UPo7Ggh7GexyQ79kedHoDw/' + name + query,
+      '', GRAPHQL_ACCEPT, name, '', true, '', this.sessionGeneration());
   }
 
   // Likes are a viewer scoped profile timeline. The operation table supplies
@@ -2555,6 +2624,43 @@ export class XPrivateClient {
 
   // ---- Direct messages ----------------------------------------------------
 
+  private chatOAuthToken(): string {
+    const context: common.Context | undefined = this.context;
+    return context === undefined ? '' : xPrivateStore.chatOAuthToken(context, this.session.accountId, this.viewerId());
+  }
+
+  hasChatOAuth(): boolean { return this.chatOAuthToken().length > 0; }
+
+  async chatOAuthRequest(path: string, operation: string, payload?: Record<string, Object>): Promise<XPrivateResult> {
+    const token: string = this.chatOAuthToken();
+    const generation: number = this.sessionGeneration();
+    if (token.length === 0) { return new XPrivateResult(false, 0, '', 'no_chat_oauth', operation); }
+    const request: DohHttpRequest = createDohHttpRequest();
+    try {
+      const options: http.HttpRequestOptions = {
+        method: payload === undefined ? http.RequestMethod.GET : http.RequestMethod.POST,
+        header: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        connectTimeout: REQUEST_TIMEOUT_MS, readTimeout: REQUEST_TIMEOUT_MS
+      };
+      if (payload !== undefined) { options.extraData = JSON.stringify(payload); }
+      await proxyStore.apply(options);
+      if (generation !== this.sessionGeneration() || token !== this.chatOAuthToken()) {
+        return new XPrivateResult(false, 0, '', 'account_changed', operation);
+      }
+      const response: http.HttpResponse = await request.request('https://api.x.com/2/' + path, options);
+      if (generation !== this.sessionGeneration() || token !== this.chatOAuthToken()) {
+        return new XPrivateResult(false, 0, '', 'account_changed', operation);
+      }
+      const status: number = response.responseCode;
+      const body: string = typeof response.result === 'string' ? response.result : JSON.stringify(response.result);
+      return this.finish(operation, false, '', new XPrivateResult(status >= 200 && status < 300, status, body, '', operation));
+    } catch (_error) {
+      return this.finish(operation, false, '', new XPrivateResult(false, -1, '', 'network', operation));
+    } finally {
+      request.destroy();
+    }
+  }
+
   // XChat supplies the current inbox. Legacy compatibility must not mask a
   // rate-limit, authentication or transport failure from the current route.
   async dmInbox(cursor: string): Promise<XPrivateResult> {
@@ -2929,6 +3035,20 @@ export class XPrivateClient {
     const body: ArrayBuffer = XPrivateClient.multipartBody(boundary, bytes, mimeType, category, altText);
     return await this.postBinary(UPLOAD_BASE + '/1.1/media/upload.json', body,
       'multipart/form-data; boundary=' + boundary, 'media/upload');
+  }
+
+  async setPostMediaDescription(mediaId: string, description: string): Promise<XPrivateResult> {
+    const operation: string = 'media/metadata/create';
+    if (!this.session.isUsable() || !/^[1-9][0-9]*$/.test(mediaId)) {
+      return new XPrivateResult(false, 0, '', 'invalid_media_session', operation);
+    }
+    const altText: Record<string, string> = { 'text': description };
+    const payload: Record<string, Object> = { 'media_id': mediaId, 'alt_text': altText };
+    const bytes: Uint8Array = new util.TextEncoder().encodeInto(JSON.stringify(payload));
+    const result: XPrivateResult = await this.postBinary(UPLOAD_BASE + '/1.1/media/metadata/create.json',
+      bytes.buffer as ArrayBuffer, 'application/json', operation);
+    if (result.ok && XPrivateClient.graphqlErrorSummary(result.body).length > 0) { result.ok = false; }
+    return result;
   }
 
   // Profile photos use account endpoints, not tweet media uploads. Decode from
@@ -3568,9 +3688,19 @@ export class XPrivateClient {
     return this.rest('POST', path, { 'user_id': userId });
   }
 
-  block(userId: string, blocking: boolean): Promise<XPrivateResult> {
+  async block(userId: string, blocking: boolean): Promise<XPrivateResult> {
     const path: string = blocking ? '/1.1/blocks/create.json' : '/1.1/blocks/destroy.json';
-    return this.rest('POST', path, { 'user_id': userId });
+    if (!this.session.isUsable() || !/^\d+$/.test(userId)) {
+      return new XPrivateResult(false, 0, '', 'invalid_block_request', path);
+    }
+    const generation: number = this.sessionGeneration();
+    const form: string = 'user_id=' + userId;
+    const primary: string = blocking ? REST_BASE : 'https://api.x.com';
+    const result: XPrivateResult = await this.send('POST', primary + path, form, 'application/json',
+      path, 'application/x-www-form-urlencoded;charset=UTF-8', false, '', generation);
+    if (result.status !== 404 && result.status !== 405) { return result; }
+    return this.send('POST', 'https://x.com/i/api' + path, form, 'application/json', path,
+      'application/x-www-form-urlencoded;charset=UTF-8', false, '', generation);
   }
 }
 

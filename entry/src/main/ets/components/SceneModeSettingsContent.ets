@@ -29,8 +29,8 @@ export struct SceneModeSettingsContent {
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
         SymbolGlyph(this.mode === mode ? $r('sys.symbol.checkmark_circle_fill') : $r('sys.symbol.circle'))
           .fontSize(24).fontColor([this.mode === mode ? this.accent : $r('app.color.text_secondary')])
-      }.width('100%').padding(16)
-    }.width('100%').borderRadius(16).backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
+      }.width('100%').padding(14)
+    }.width('100%').padding(0).borderRadius(16).backgroundColor(fieldSurfaceColor(this.displayMode, this.darkSurface))
       .accessibilityText(title).accessibilitySelected(this.mode === mode).id('scene-' + mode)
       .onClick((): void => this.select(mode))
   }
@@ -46,6 +46,6 @@ export struct SceneModeSettingsContent {
         Text($r('app.string.scene_failed')).fontFamily(this.appFontFamily).fontSize($r('sys.float.Body_M'))
           .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackground))
       }
-    }.width('100%').alignItems(HorizontalAlign.Start)
+    }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 20, right: 20, top: 16, bottom: 28 })
   }
 }

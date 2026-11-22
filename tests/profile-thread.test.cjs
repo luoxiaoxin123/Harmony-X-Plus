@@ -297,6 +297,11 @@ test('account information omits absent values and video rows use actual duration
   assert.equal(about.locationAccurate, false);
   assert.equal(about.verifiedSince, '');
   assert.equal(ProfileAccountData.about('{"data":{}}'), null);
+  const web = ProfileAccountData.about(JSON.stringify({ data: { user: { result: {
+    aboutModule: { aboutProfile: { accountBasedIn: ' Japan ', source: 'Japan App Store', locationAccurate: true } }
+  } } } }));
+  assert.equal(web.country, 'Japan');
+  assert.equal(web.source, 'Japan App Store');
   const video = tweet('video', '', '', [{ type: 'video', durationMs: 4100 }]);
   assert.equal(ProfileAccountData.duration(ProfileAccountData.video(video)), '0:05');
   assert.equal(ProfileAccountData.video(tweet('photo', '', '', [{ type: 'photo' }])), null);

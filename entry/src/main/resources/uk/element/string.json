@@ -69,6 +69,10 @@
       "value": "Відстеження обличчя підтримується. Камера вмикається лише після запуску на сторінці читання."
     },
     {
+      "name": "huawei_supported_models",
+      "value": "Підтримувані пристрої Huawei"
+    },
+    {
       "name": "eye_reading_unsupported",
       "value": "Пристрій не підтримує потрібне відстеження обличчя. Скористайтеся дотиком або клавіатурою."
     },
@@ -470,23 +474,23 @@
     },
     {
       "name": "module_desc",
-      "value": "Основний модуль Harmony X"
+      "value": "Основний модуль HarmonyX+"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Головний екран Harmony X"
+      "value": "Головний екран HarmonyX+"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_desc",
-      "value": "Відкривати посилання, фото й відео в Harmony X"
+      "value": "Відкривати посилання, фото й відео в HarmonyX+"
     },
     {
       "name": "ShareReceiverAbility_label",
-      "value": "Harmony X"
+      "value": "HarmonyX+"
     },
     {
       "name": "home_title",
@@ -1150,7 +1154,7 @@
     },
     {
       "name": "profile_welcome",
-      "value": "Ласкаво просимо до Harmony X"
+      "value": "Ласкаво просимо до HarmonyX+"
     },
     {
       "name": "profile_signed_in",
@@ -1170,7 +1174,7 @@
     },
     {
       "name": "profile_version",
-      "value": "Harmony X 3.9.0 · HarmonyOS 6.0.2 (API 22-26) · модель Stage"
+      "value": "HarmonyX+ · HarmonyOS 6.0.2 (API 22-26) · модель Stage"
     },
     {
       "name": "profile_following",
@@ -1202,7 +1206,7 @@
     },
     {
       "name": "login_title",
-      "value": "Вхід у Harmony X"
+      "value": "Вхід у HarmonyX+"
     },
     {
       "name": "login_description",
@@ -1278,7 +1282,7 @@
     },
     {
       "name": "callback_opening",
-      "value": "Вхід виконано. Відкриваємо Harmony X…"
+      "value": "Вхід виконано. Відкриваємо HarmonyX+…"
     },
     {
       "name": "callback_back_to_login",
@@ -1454,7 +1458,7 @@
     },
     {
       "name": "settings_accessibility_desc",
-      "value": "Налаштуйте відображення вмісту в Harmony X."
+      "value": "Налаштуйте відображення вмісту в HarmonyX+."
     },
     {
       "name": "settings_resources",
@@ -1518,7 +1522,7 @@
     },
     {
       "name": "settings_language_intro",
-      "value": "Виберіть мову Harmony X. Вона зміниться відразу й збережеться для наступного запуску."
+      "value": "Виберіть мову HarmonyX+. Вона зміниться відразу й збережеться для наступного запуску."
     },
     {
       "name": "settings_language_system",
@@ -1526,7 +1530,7 @@
     },
     {
       "name": "settings_language_system_desc",
-      "value": "Використовувати мову системи в Harmony X."
+      "value": "Використовувати мову системи в HarmonyX+."
     },
     {
       "name": "settings_language_zh_cn",
@@ -1570,7 +1574,7 @@
     },
     {
       "name": "settings_app_icon_intro",
-      "value": "Виберіть значок Harmony X. Він зміниться на головному екрані, у списку застосунків і нещодавніх застосунках."
+      "value": "Виберіть значок HarmonyX+. Він зміниться на головному екрані, у списку застосунків і нещодавніх застосунках."
     },
     {
       "name": "settings_app_icon_note",
@@ -2122,7 +2126,7 @@
     },
     {
       "name": "settings_notification_permission_needed",
-      "value": "Дозвольте сповіщення Harmony X у налаштуваннях системи"
+      "value": "Дозвольте сповіщення HarmonyX+ у налаштуваннях системи"
     },
     {
       "name": "settings_notification_settings_failed",
@@ -2670,7 +2674,7 @@
     },
     {
       "name": "settings_sensitive_media_desc",
-      "value": "Синхронізувати налаштування чутливих медіа облікового запису X з Harmony X."
+      "value": "Синхронізувати налаштування чутливих медіа облікового запису X з HarmonyX+."
     },
     {
       "name": "sensitive_media_hidden",
@@ -3977,6 +3981,26 @@
       "value": "XChat: доступні дані розмови й кількість повідомлень. Для надсилання й розшифрування потрібен обмін ключами."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Відкрити X Chat у браузері"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Скопіювати текст для надсилання й відкрити X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat ще не готовий. Розблокуйте його в браузері й повторіть спробу."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "У цій розмові вже є вебчернетка. Спочатку перегляньте її."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Надсилання через браузер не підтверджено. Відкрийте розмову для перевірки."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Не вдалося завантажити повідомлення. Перевірте мережу або проксі та спробуйте ще раз."
     },
@@ -4466,7 +4490,7 @@
     },
     {
       "name": "onboarding_welcome_title",
-      "value": "Ласкаво просимо до Harmony X"
+      "value": "Ласкаво просимо до HarmonyX+"
     },
     {
       "name": "onboarding_welcome_detail",
@@ -4494,11 +4518,11 @@
     },
     {
       "name": "onboarding_login_notice",
-      "value": "Не входьте через Google — введіть адресу електронної пошти безпосередньо. Якщо мережа працює, а сторінка залишається білою, зачекайте."
+      "value": "Введіть адресу електронної пошти замість входу через Google."
     },
     {
       "name": "onboarding_login_hint",
-      "value": "Увійдіть на сторінці нижче. Harmony X відкриється автоматично після входу."
+      "value": "Увійдіть на сторінці нижче. HarmonyX+ відкриється автоматично після входу."
     },
     {
       "name": "onboarding_login_save_failed",
@@ -4642,7 +4666,7 @@
     },
     {
       "name": "onboarding_tips_detail",
-      "value": "Кілька налаштувань, щоб Harmony X був зручним вам."
+      "value": "Кілька налаштувань, щоб HarmonyX+ був зручним вам."
     },
     {
       "name": "onboarding_customize_title",
@@ -4662,7 +4686,7 @@
     },
     {
       "name": "onboarding_already_signed_in",
-      "value": "Обліковий запис X підключено. Можна користуватися Harmony X."
+      "value": "Обліковий запис X підключено. Можна користуватися HarmonyX+."
     },
     {
       "name": "onboarding_finish",
@@ -5742,7 +5766,7 @@
     },
     {
       "name": "chat_reset",
-      "value": "Скинути чат"
+      "value": "Заблокувати чат"
     },
     {
       "name": "chat_phone",
@@ -6282,7 +6306,7 @@
     },
     {
       "name": "meow_intro",
-      "value": "Установіть MeoW і вкажіть нік. Постійно активний HTTPS-сервер зможе передавати сповіщення X, поки Harmony X закрито."
+      "value": "Установіть MeoW і вкажіть нік. Постійно активний HTTPS-сервер зможе передавати сповіщення X, поки HarmonyX+ закрито."
     },
     {
       "name": "meow_relay_url",
@@ -6586,7 +6610,7 @@
     },
     {
       "name": "storage_network_note",
-      "value": "Фактичний трафік Harmony X із запуску пристрою, зокрема медіа й запити. Лічильники скидаються після перезавантаження."
+      "value": "Фактичний трафік HarmonyX+ із запуску пристрою, зокрема медіа й запити. Лічильники скидаються після перезавантаження."
     },
     {
       "name": "storage_network_unavailable",
@@ -6810,7 +6834,7 @@
     },
     {
       "name": "xsettings_local_filter_note",
-      "value": "Фільтри діють лише в Harmony X. Спільні для облікового запису ігноровані слова й люди — у розділі конфіденційності."
+      "value": "Фільтри діють лише в HarmonyX+. Спільні для облікового запису ігноровані слова й люди — у розділі конфіденційності."
     },
     {
       "name": "xsettings_muted_list",
@@ -7258,7 +7282,7 @@
     },
     {
       "name": "xsettings_sensitive_media_desc",
-      "value": "Синхронізується з обліковим записом X й керує медіа в Harmony X."
+      "value": "Синхронізується з обліковим записом X й керує медіа в HarmonyX+."
     },
     {
       "name": "xsettings_sensitive_categories",
@@ -8550,7 +8574,7 @@
     },
     {
       "name": "spaces_listen_only_body",
-      "value": "Harmony X підтримує прослуховування й записи. Звук мікрофона й запити виступити не надсилаються."
+      "value": "HarmonyX+ підтримує прослуховування й записи. Звук мікрофона й запити виступити не надсилаються."
     },
     {
       "name": "spaces_manage_title",
@@ -9382,7 +9406,7 @@
     },
     {
       "name": "settings_custom_font_sample_medium",
-      "value": "Harmony X  Typography  2026"
+      "value": "HarmonyX+  Typography  2026"
     },
     {
       "name": "settings_custom_font_sample_small",
@@ -10170,19 +10194,7 @@
     },
     {
       "name": "about_project_desc",
-      "value": "GitHub · luoxiaoxin123/HarmonyX"
-    },
-    {
-      "name": "logo_universe_title",
-      "value": "Невагомий всесвіт"
-    },
-    {
-      "name": "logo_universe_desc",
-      "value": "Кожна зустріч доповнює Harmony X."
-    },
-    {
-      "name": "logo_universe_hint",
-      "value": "Торкніться значка, щоб увійти в невагомий всесвіт"
+      "value": "GitHub · luoxiaoxin123/Harmony-X-Plus"
     },
     {
       "name": "logo_motion_pause",
@@ -10214,7 +10226,7 @@
     },
     {
       "name": "logo_part_of_you",
-      "value": "Ви — частина Harmony X."
+      "value": "Ви — частина HarmonyX+."
     },
     {
       "name": "logo_touch_hint",
@@ -11018,7 +11030,7 @@
     },
     {
       "name": "page_background_scheme_import_failed",
-      "value": "Unable to import. Choose a valid HarmonyX background scheme (up to 48 MB)."
+      "value": "Unable to import. Choose a valid HarmonyX+ background scheme (up to 48 MB)."
     },
     {
       "name": "page_background_scheme_share_failed",
@@ -12923,6 +12935,362 @@
     {
       "name": "grok_chat_hint",
       "value": "Поставте Grok запитання, щоб почати розмову."
+    },
+    {
+      "name": "compose_character_limit_exceeded",
+      "value": "This post exceeds the character limit. Edit it to continue."
+    },
+    {
+      "name": "settings_video_remember_speed",
+      "value": "Remember playback speed"
+    },
+    {
+      "name": "settings_video_remember_speed_desc",
+      "value": "Use the last speed you selected when switching videos during this app session."
+    },
+    {
+      "name": "auth_web_paint_timeout",
+      "value": "Сторінка входу в X так і не з’явилася. Спробуйте ще раз або перевірте з’єднання в браузері."
+    },
+    {
+      "name": "auth_web_test_browser",
+      "value": "Перевірити X у браузері"
+    },
+    {
+      "name": "auth_web_load_failed",
+      "value": "Couldn’t load the X sign-in page."
+    },
+    {
+      "name": "post_blocked_by_author",
+      "value": "The author has blocked your account."
+    },
+    {
+      "name": "settings_post_card_layout",
+      "value": "Post card layout"
+    },
+    {
+      "name": "settings_post_detail_layout",
+      "value": "Post detail layout"
+    },
+    {
+      "name": "settings_post_layout_classic",
+      "value": "Classic"
+    },
+    {
+      "name": "settings_post_layout_wide",
+      "value": "Wide"
+    },
+    {
+      "name": "settings_post_layout_compact",
+      "value": "Compact"
+    },
+    {
+      "name": "settings_post_media_scale",
+      "value": "Post media size"
+    },
+    {
+      "name": "settings_post_swipe_title",
+      "value": "Post swipe gestures"
+    },
+    {
+      "name": "settings_post_swipe_left",
+      "value": "Swipe left"
+    },
+    {
+      "name": "settings_post_swipe_right",
+      "value": "Swipe right"
+    },
+    {
+      "name": "settings_post_swipe_off",
+      "value": "Disabled"
+    },
+    {
+      "name": "image_edit_ratio_3_4",
+      "value": "3:4"
+    },
+    {
+      "name": "image_edit_ratio_9_16",
+      "value": "9:16"
+    },
+    {
+      "name": "compose_one_gif",
+      "value": "You can add one GIF per post."
+    },
+    {
+      "name": "compose_media_alt",
+      "value": "Image description (ALT)"
+    },
+    {
+      "name": "compose_media_alt_hint",
+      "value": "Describe this image for people who use a screen reader."
+    },
+    {
+      "name": "compose_alt_apply",
+      "value": "Apply description"
+    },
+    {
+      "name": "compose_alt_upload_failed",
+      "value": "Couldn’t save the description. Your draft is still available."
+    },
+    {
+      "name": "compose_remove_media",
+      "value": "Remove attachment"
+    },
+    {
+      "name": "page_background_native_color",
+      "value": "Open color picker"
+    },
+    {
+      "name": "settings_profile_reply_button",
+      "value": "Profile reply button"
+    },
+    {
+      "name": "settings_profile_reply_button_desc",
+      "value": "Show the floating reply button on user profiles."
+    },
+    {
+      "name": "external_article_read",
+      "value": "Read article"
+    },
+    {
+      "name": "external_article_save",
+      "value": "Save offline"
+    },
+    {
+      "name": "external_article_saved",
+      "value": "Saved offline"
+    },
+    {
+      "name": "external_article_smaller",
+      "value": "Smaller text"
+    },
+    {
+      "name": "external_article_larger",
+      "value": "Larger text"
+    },
+    {
+      "name": "external_article_unavailable",
+      "value": "Couldn’t extract the article. You can still open the original page."
+    },
+    {
+      "name": "profile_editor_preview",
+      "value": "Preview profile"
+    },
+    {
+      "name": "profile_editor_resume_editing",
+      "value": "Continue editing"
+    },
+    {
+      "name": "storage_photo_filename",
+      "value": "Photo file names"
+    },
+    {
+      "name": "storage_photo_filename_order",
+      "value": "Fields appear in the order you turn them on."
+    },
+    {
+      "name": "storage_photo_filename_date",
+      "value": "Post date"
+    },
+    {
+      "name": "storage_photo_filename_author",
+      "value": "Author username"
+    },
+    {
+      "name": "storage_photo_filename_index",
+      "value": "Photo number"
+    },
+    {
+      "name": "storage_photo_filename_code",
+      "value": "Original image code"
+    },
+    {
+      "name": "storage_photo_filename_post",
+      "value": "Post ID"
+    },
+    {
+      "name": "device_full_features",
+      "value": "Full interface"
+    },
+    {
+      "name": "settings_space_cues",
+      "value": "Spaces sounds"
+    },
+    {
+      "name": "settings_space_cues_desc",
+      "value": "Play a short sound when you join or leave a live Space."
+    },
+    {
+      "name": "image_edit_brightness",
+      "value": "Brightness"
+    },
+    {
+      "name": "image_edit_contrast",
+      "value": "Contrast"
+    },
+    {
+      "name": "image_edit_saturation",
+      "value": "Saturation"
+    },
+    {
+      "name": "image_edit_eraser",
+      "value": "Eraser"
+    },
+    {
+      "name": "image_edit_mosaic",
+      "value": "Mosaic"
+    },
+    {
+      "name": "image_edit_free_crop",
+      "value": "Free crop"
+    },
+    {
+      "name": "image_edit_apply_crop",
+      "value": "Apply crop"
+    },
+    {
+      "name": "image_edit_split",
+      "value": "Split vertically"
+    },
+    {
+      "name": "image_edit_sticker",
+      "value": "Add photo sticker"
+    },
+    {
+      "name": "image_edit_sequence",
+      "value": "Edit photos in order"
+    },
+    {
+      "name": "image_edit_collage",
+      "value": "Make collage"
+    },
+    {
+      "name": "image_edit_collage_horizontal",
+      "value": "Horizontal row"
+    },
+    {
+      "name": "image_edit_collage_vertical",
+      "value": "Vertical column"
+    },
+    {
+      "name": "image_edit_collage_grid",
+      "value": "Grid"
+    },
+    {
+      "name": "post_share_message",
+      "value": "Add a message"
+    },
+    {
+      "name": "post_share_dm",
+      "value": "Find a direct message recipient"
+    },
+    {
+      "name": "post_share_system",
+      "value": "System share"
+    },
+    {
+      "name": "post_share_screenshot",
+      "value": "Post screenshot"
+    },
+    {
+      "name": "post_share_copy_screenshot",
+      "value": "Copy screenshot"
+    },
+    {
+      "name": "post_share_email",
+      "value": "Email"
+    },
+    {
+      "name": "post_share_copy_body",
+      "value": "Copy post text"
+    },
+    {
+      "name": "post_share_open_x",
+      "value": "Open in X"
+    },
+    {
+      "name": "video_clip_title",
+      "value": "Clip video"
+    },
+    {
+      "name": "video_clip_start",
+      "value": "Start"
+    },
+    {
+      "name": "video_clip_length",
+      "value": "Length"
+    },
+    {
+      "name": "video_clip_actual_start",
+      "value": "Preview start"
+    },
+    {
+      "name": "video_clip_preview",
+      "value": "Create preview"
+    },
+    {
+      "name": "video_clip_use",
+      "value": "Continue to post"
+    },
+    {
+      "name": "video_clip_failed",
+      "value": "Couldn’t create the clip. Try a different start or length."
+    },
+    {
+      "name": "profile_show_blocked_posts",
+      "value": "Показати всі дописи"
+    },
+    {
+      "name": "settings_message_notification_preview",
+      "value": "Показувати текст повідомлень у сповіщеннях"
+    },
+    {
+      "name": "settings_message_notification_preview_desc",
+      "value": "Показує текст у локальних сповіщеннях чатів, зокрема на екрані блокування."
+    },
+    {
+      "name": "notification_new_direct_message",
+      "value": "У вас нове повідомлення"
+    },
+    {
+      "name": "chat_typing",
+      "value": "Пише…"
+    },
+    {
+      "name": "post_stock_quote",
+      "value": "Котирування"
+    },
+    {
+      "name": "settings_profile_default_media",
+      "value": "Медіа профілю за замовчуванням"
+    },
+    {
+      "name": "post_share_send_as_link",
+      "value": "Надіслати як посилання"
+    },
+    {
+      "name": "post_share_no_recipient_key",
+      "value": "Для цього одержувача немає ключа чату"
+    },
+    {
+      "name": "sidebar_update_available",
+      "value": "Доступна нова версія %s"
+    },
+    {
+      "name": "xchat_existing_key_unavailable",
+      "value": "Ключ цієї розмови недоступний."
+    },
+    {
+      "name": "xchat_delivery_unconfirmed",
+      "value": "X ще не підтвердив дію. Під час повторної спроби буде використано те саме повідомлення."
+    },
+    {
+      "name": "xchat_delivery_rejected",
+      "value": "X відхилив дію (код %s)."
+    },
+    {
+      "name": "xchat_key_request_failed",
+      "value": "Не вдалося отримати або зареєструвати ключ розмови"
     }
   ]
 }

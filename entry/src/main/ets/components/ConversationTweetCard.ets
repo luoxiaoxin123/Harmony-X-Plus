@@ -10,6 +10,8 @@ export struct ConversationTweetCard {
   @Prop narrowColumn: boolean = false;
   @Prop videoFeedEnabled: boolean = false;
   @Prop homeTimelineVideo: boolean = false;
+  @Prop swipeLeftAction: number = 0;
+  @Prop swipeRightAction: number = 0;
   @Prop recordRecommendationSeen: boolean = false;
   @Prop naturalVideoSize: boolean = true;
   onLikeChanged: (t: Tweet, liked: boolean) => Promise<boolean> = async () => false;
@@ -68,6 +70,7 @@ export struct ConversationTweetCard {
       narrowColumn: this.narrowColumn,
       tweet: post, sharedElementId: this.sourceId(post), showActions: this.showActions,
       videoFeedEnabled: this.videoFeedEnabled, homeTimelineVideo: this.homeTimelineVideo,
+      swipeLeftAction: this.swipeLeftAction, swipeRightAction: this.swipeRightAction,
       recordRecommendationSeen: this.recordRecommendationSeen,
       naturalVideoSize: this.naturalVideoSize, connectAbove: above, connectBelow: below,
       showReplyContext: !above && post.isReply === true,

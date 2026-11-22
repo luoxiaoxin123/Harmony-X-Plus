@@ -1,6 +1,7 @@
 use chat_xdk_core::{Chat, ChatCore, EncryptMessageParams, EncryptReplyParams, EncryptReactionParams, Event, SigningKeyEntry, PublicKeyInput,
     ConversationKeyChangeParams, GroupCreateParams, GroupMembersChangeParams, MessageDeleteParams, AttachmentDescriptor,
-    GroupActionParams, PreparedConversationChange, GroupActionPermissions};
+    GroupActionParams, PreparedConversationChange, GroupActionPermissions, GroupMemberSnapshot,
+    SetIdentityParams, ImportKeysParams, DecryptEventParams, DecryptEventsParams, DecryptFileParams};
 use chat_xdk_core::keys::juicebox::JuiceboxConfig;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -10,7 +11,9 @@ use zeroize::Zeroizing;
 use std::sync::Arc;
 use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
-use chat_xdk_core::crypto::keys::XChatConversationKey;
+use chat_xdk_core::crypto::{encryption, keys::XChatConversationKey};
+use chat_xdk_core::signatures::ActionSignature;
+use chat_xdk_core::error::SdkError;
 use p256::pkcs8::{DecodePublicKey, EncodePublicKey};
 mod recovery;
 
@@ -22,6 +25,7 @@ pub struct Session {
     raw_key_events: HashMap<String, HashMap<String, String>>,
     raw_edits: HashMap<String, (String, String)>,
     pending_rotations: HashMap<String, PreparedConversationChange>,
+    pending_direct: HashMap<String, PreparedConversationChange>,
 }
 
 #[derive(Deserialize)]
@@ -33,6 +37,14 @@ struct UnlockArgs {
     public_key: String,
     #[serde(default)]
     proxy: String,
+}
+
+#[derive(Deserialize)]
+struct RestoreIdentityArgs {
+    key_blob: String,
+    user_id: String,
+    version: String,
+    public_key: String,
 }
 
 #[derive(Deserialize)]
@@ -106,12 +118,65 @@ struct LocalArgs { conversation_id: String, #[serde(default)] text: String,
     #[serde(default)] key_version: String, #[serde(default)] ciphertext: String }
 #[derive(Deserialize)]
 struct MediaArgs { conversation_id: String, input_path: String, output_path: String,
-    #[serde(default)] key_version: String }
+    #[serde(default)] key_version: String,
+    #[serde(default)] raw_event: String,
+    #[serde(default)] media_hash_key: String,
+}
 #[derive(Deserialize)]
 struct RecoveryArgs { config: Value, proxy: String }
 #[derive(Deserialize)]
 struct FingerprintArgs { #[serde(default)] public_key: String, #[serde(default)] signing_key: String,
     #[serde(default)] binding: String }
+
+fn encrypt_stream(file: &[u8], key: &XChatConversationKey) -> Result<Vec<u8>, SdkError> {
+    let mut out = Vec::new();
+    encryption::encrypt_file(key, file, &mut out)?;
+    Ok(out)
+}
+
+fn decrypt_stream(file: &[u8], key: &XChatConversationKey) -> Result<Vec<u8>, SdkError> {
+    let mut out = Vec::new();
+    encryption::decrypt_file(key, file, &mut out)?;
+    Ok(out)
+}
+
+fn action_value(signature: &ActionSignature) -> Value {
+    json!({
+        "message_id": signature.message_id,
+        "encoded_message_event_detail": signature.encoded_message_event_detail,
+        "signature": signature.message_event_signature.signature,
+        "signature_version": signature.message_event_signature.signature_version,
+        "public_key_version": signature.message_event_signature.public_key_version,
+    })
+}
+
+fn content_value(content: &chat_xdk_core::MessageContent) -> Value {
+    use chat_xdk_core::MessageContent;
+    let mut value = json!(content);
+    match content {
+        MessageContent::Reaction { target_message_sequence_id, .. } |
+        MessageContent::ReactionRemoved { target_message_sequence_id, .. } => {
+            value["target_message_id"] = json!(target_message_sequence_id);
+        }
+        MessageContent::Edit { target_message_sequence_id, updated_text, .. } => {
+            value["target_message_id"] = json!(target_message_sequence_id);
+            value["new_text"] = json!(updated_text);
+        }
+        _ => {}
+    }
+    value
+}
+
+fn change_value(change: PreparedConversationChange) -> Value {
+    let participants: Vec<Value> = change.conversation_participant_keys.iter().map(|key| json!({
+        "user_id": key.user_id, "encrypted_key": key.encrypted_conversation_key,
+        "public_key_version": key.public_key_version,
+    })).collect();
+    let signatures: Vec<Value> = change.action_signatures.iter().map(action_value).collect();
+    json!({"conversation_id": change.conversation_id, "conversation_key_version": change.conversation_key_version,
+        "participant_keys": participants, "action_signatures": signatures, "encrypted_title": change.encrypted_title,
+        "encrypted_description": change.encrypted_description })
+}
 
 impl Session {
     fn new() -> Result<Self, String> {
@@ -121,7 +186,7 @@ impl Session {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2).enable_all().build().map_err(|e| e.to_string())?;
         Ok(Self { chat, runtime, recovery, media_keys: HashMap::new(), raw_key_events: HashMap::new(), raw_edits: HashMap::new(),
-            pending_rotations: HashMap::new() })
+            pending_rotations: HashMap::new(), pending_direct: HashMap::new() })
     }
 
     fn call(&mut self, method: &str, input: &str) -> Result<Value, String> {
@@ -129,32 +194,59 @@ impl Session {
             "recoveryConfig" => {
                 let a: RecoveryArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
                 self.recovery.configure(a.proxy);
-                self.chat.update_config(JuiceboxConfig::from_x_api_json(&a.config.to_string())?);
+                self.chat.update_config(JuiceboxConfig::from_x_api_json(&a.config.to_string()).map_err(|e| e.to_string())?);
                 Ok(json!({"configured": true}))
             }
             "unlock" => {
                 let mut a: UnlockArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
                 let pin = Zeroizing::new(std::mem::take(&mut a.pin));
                 self.recovery.configure(a.proxy);
-                let config = JuiceboxConfig::from_x_api_json(&a.config.to_string())?;
+                let config = JuiceboxConfig::from_x_api_json(&a.config.to_string()).map_err(|e| e.to_string())?;
                 self.chat.update_config(config);
-                self.runtime.block_on(self.chat.unlock(pin.as_bytes())).map_err(|e| e.to_string())?;
+                self.runtime.block_on(async {
+                    tokio::time::timeout(std::time::Duration::from_secs(35), self.chat.unlock(pin.as_bytes())).await
+                }).map_err(|_| "recovery_timeout".to_string())?.map_err(|e| e.to_string())?;
                 if !self.chat.matches_registered_key(&a.public_key).map_err(|e| e.to_string())? {
                     self.chat.lock();
                     return Err("registered_key_mismatch".into());
                 }
-                self.chat.set_identity(a.user_id, a.version);
-                Ok(json!({"unlocked": true}))
+                self.chat.set_identity(&SetIdentityParams::new(a.user_id, a.version)).map_err(|e| e.to_string())?;
+                let keys = Zeroizing::new(self.chat.export_keys().map_err(|e| e.to_string())?);
+                Ok(json!({"unlocked": true, "key_blob": B64.encode(&*keys)}))
+            }
+            "restoreIdentity" => {
+                let a: RestoreIdentityArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
+                let blob = Zeroizing::new(a.key_blob);
+                let keys = B64.decode(blob.as_bytes()).map_err(|_| "invalid_identity_blob")?;
+                self.chat.import_keys(&ImportKeysParams::new(keys)).map_err(|e| e.to_string())?;
+                let restored = self.chat.matches_registered_key(&a.public_key)
+                    .and_then(|matches| {
+                        if !matches { return Ok(false); }
+                        self.chat.set_identity(&SetIdentityParams::new(a.user_id, a.version))?;
+                        Ok(true)
+                    });
+                match restored {
+                    Ok(true) => Ok(json!({"unlocked": true})),
+                    Ok(false) => { self.chat.lock(); Err("registered_key_mismatch".into()) }
+                    Err(error) => { self.chat.lock(); Err(error.to_string()) }
+                }
+            }
+            "inspectInbox" => {
+                let events: Vec<String> = serde_json::from_str(input).map_err(|e| e.to_string())?;
+                let messages: Vec<Value> = events.iter().filter_map(|event|
+                    ChatCore::inspect_inbox_event(event).ok().flatten()).collect();
+                Ok(json!({"messages": messages}))
             }
             "decrypt" => {
                 let a: DecryptArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
-                let events: Vec<&str> = a.events.iter().map(String::as_str).collect();
-                let mut result = self.chat.decrypt_events(&events, &a.signing_keys);
+                self.chat.add_signing_keys(&a.signing_keys);
+                let events = a.events;
+                let mut result = self.chat.decrypt_events(&DecryptEventsParams::new(events.clone()));
                 // Classic DMs have plaintext Thrift contents and no signature.
                 // Decode them in a separate keyless core. It never receives identity
                 // keys, conversation keys, or key-change events, so encrypted events
                 // cannot bypass the strict verifier above.
-                let mut legacy = ChatCore::new();
+                let legacy = ChatCore::new();
                 legacy.set_reject_unverified(false);
                 let mut legacy_messages: Vec<Value> = Vec::new();
                 let encryption: Vec<Value> = events.iter().filter_map(|event| {
@@ -164,8 +256,8 @@ impl Session {
                 {
                     for (index, event) in events.iter().enumerate() {
                         if !result.errors.contains_key(&index) { continue; }
-                        if let Ok(Event::Message(msg)) = legacy.decrypt_event(event, &HashMap::new(), &[]) {
-                            if msg.key_version.is_none() {
+                        if let Ok(Event::Message(msg)) = legacy.decrypt_event(&DecryptEventParams::new(event, HashMap::new())) {
+                            if msg.conversation_key_version.is_none() {
                                 legacy_messages.push(json!({
                                     "id": msg.meta.id, "sequenceId": msg.meta.sequence_id,
                                     "conversationId": msg.meta.conversation_id,
@@ -178,54 +270,73 @@ impl Session {
                         }
                     }
                 }
-                for m in &result.messages {
+                for m in &result.events {
                     if let Event::KeyChange(k) = &m.event {
-                        if let (Some(key), Some(id)) = (result.conversation_keys.get(&k.key_version), k.meta.conversation_id.as_deref()) {
-                            self.media_keys.entry(id.replace(':', "-")).or_default()
-                                .insert(k.key_version.clone(), key.clone());
+                        if let Some(id) = k.meta.conversation_id.as_deref() {
+                            if let Some(key) = result.conversation_keys.keys_by_conversation.get(id)
+                                .and_then(|keys| keys.get(&k.conversation_key_version)) {
+                                self.media_keys.entry(id.replace(':', "-")).or_default()
+                                    .insert(k.conversation_key_version.clone(), key.clone());
+                            }
                             if k.verified {
                                 let canonical = id.replace(':', "-");
                                 if self.pending_rotations.get(&canonical)
-                                    .map(|pending| pending.conversation_key_version == k.key_version).unwrap_or(false) {
+                                    .map(|pending| pending.conversation_key_version == k.conversation_key_version).unwrap_or(false) {
                                     self.pending_rotations.remove(&canonical);
                                 }
                                 if let Some(raw) = &m.original_b64 {
-                                    self.raw_key_events.entry(id.replace(':', "-")).or_default().insert(k.key_version.clone(), raw.clone());
+                                    self.raw_key_events.entry(id.replace(':', "-")).or_default().insert(k.conversation_key_version.clone(), raw.clone());
                                 }
                             }
                         }
                     }
                     if let Event::Message(msg) = &m.event {
-                        if let chat_xdk_core::MessageContent::Edit { target_message_id, .. } = &msg.content {
-                            if let (true, Some(conv), Some(seq), Some(raw)) = (msg.verified, &msg.meta.conversation_id, &msg.meta.sequence_id, &m.original_b64) {
-                                let key = format!("{}:{}", conv.replace(':', "-"), target_message_id);
+                        if let chat_xdk_core::MessageContent::Edit { target_message_sequence_id, .. } = &msg.content {
+                            if let (true, Some(conv), Some(seq), Some(raw)) =
+                                (msg.verified, &msg.meta.conversation_id, &msg.meta.sequence_id, &m.original_b64) {
+                                let key = format!("{}:{}", conv.replace(':', "-"), target_message_sequence_id);
                                 let newer = self.raw_edits.get(&key).map(|(old, _)| (seq.len(), seq.as_str()) > (old.len(), old.as_str())).unwrap_or(true);
                                 if newer { self.raw_edits.insert(key, (seq.clone(), raw.clone())); }
                             }
                         }
                     }
                 }
+                let routing: Vec<Value> = result.events.iter().filter_map(|event| {
+                    let meta = match &event.event {
+                        Event::Message(message) if message.verified => &message.meta,
+                        Event::KeyChange(change) if change.verified => &change.meta,
+                        Event::ReadReceipt(read) if read.verified => &read.meta,
+                        _ => return None,
+                    };
+                    let token = ChatCore::inspect_conversation_token(event.original_b64.as_deref()?).ok()??;
+                    if token.is_empty() || token.len() > 8192 { return None; }
+                    Some(json!({"conversationId": meta.conversation_id.as_deref()?,
+                        "sequenceId": meta.sequence_id.as_deref()?, "token": token}))
+                }).collect();
                 // Conversation keys stay inside Chat. No key blobs cross NAPI.
-                let mut messages: Vec<Value> = result.messages.iter().filter_map(|m| {
+                let mut messages: Vec<Value> = result.events.iter().filter_map(|m| {
                     match &m.event {
                         Event::Message(msg) => Some(json!({
                             "id": msg.meta.id, "sequenceId": msg.meta.sequence_id,
                             "conversationId": msg.meta.conversation_id,
                             "senderId": msg.meta.sender_id, "timestampMs": msg.meta.created_at_msec,
                             "text": msg.text(), "verified": msg.verified,
-                            "keyVersion": msg.key_version, "content": msg.content,
+                            "keyVersion": msg.conversation_key_version, "content": content_value(&msg.content),
                             "attachments": msg.attachments
                             , "rawEvent": m.original_b64
                         })),
                         Event::MessageDeleted(d) => Some(json!({"type": "deleted", "event": d,
                             "conversationId": d.meta.conversation_id, "sequenceId": d.meta.sequence_id})),
                         Event::KeyChange(k) => Some(json!({"type": "keyChange", "sequenceId": k.meta.sequence_id,
-                            "conversationId": k.meta.conversation_id, "keyVersion": k.key_version})),
+                            "conversationId": k.meta.conversation_id, "keyVersion": k.conversation_key_version,
+                            "verified": k.verified})),
                         Event::Failure(f) => Some(json!({"type": "failure", "conversationId": f.meta.conversation_id,
                             "id": f.meta.id, "failure": f.failure})),
                         Event::ReadReceipt(r) => Some(json!({"type": "read", "conversationId": r.meta.conversation_id,
                             "id": r.meta.id, "sequenceId": r.meta.sequence_id,
-                            "senderId": r.meta.sender_id, "seenUntilId": r.seen_until_id, "verified": r.verified})),
+                            "senderId": r.meta.sender_id, "seenUntilId": r.seen_until_sequence_id, "verified": r.verified})),
+                        Event::Typing(t) => Some(json!({"type": "typing", "conversationId": t.meta.conversation_id,
+                            "senderId": t.meta.sender_id, "timestampMs": t.meta.created_at_msec})),
                         Event::SettingsChange(s) => Some(json!({"type": "settings", "event": s,
                             "conversationId": s.meta.conversation_id})),
                         _ => None,
@@ -233,7 +344,7 @@ impl Session {
                 }).collect();
                 messages.extend(legacy_messages);
                 let errors: Vec<String> = result.errors.values().cloned().collect();
-                Ok(json!({"messages": messages, "errors": errors, "encryption": encryption,
+                Ok(json!({"messages": messages, "errors": errors, "encryption": encryption, "routing": routing,
                     "unlocked": self.chat.is_unlocked()}))
             }
             "encrypt" => {
@@ -250,7 +361,7 @@ impl Session {
                     params.ttl_msec = a.ttl_msec.filter(|ttl| *ttl > 0);
                     if params.reply_to_event.is_none() {
                         params.reply_to_sequence_id = Some(reply.sequence_id);
-                        params.reply_to_sender_id = Some(reply.sender_id.parse::<i64>().map_err(|_| "invalid_reply_sender")?);
+                        params.reply_to_sender_id = Some(reply.sender_id);
                         params.reply_to_text = Some(reply.text);
                     }
                     if !a.attachments.is_empty() { params.attachments = Some(a.attachments); }
@@ -259,7 +370,7 @@ impl Session {
                             .and_then(|keys| keys.get(&a.media_key_version)).ok_or("missing_conversation_key")?;
                         params = params.with_conversation_key(key.to_bytes(), a.media_key_version);
                     }
-                    self.chat.encrypt_reply(params)
+                    self.chat.encrypt_reply(&params)
                 } else {
                 let mut params = EncryptMessageParams::new(&a.conversation_id, a.text);
                 params.message_id = a.message_id.filter(|id| !id.is_empty());
@@ -270,13 +381,13 @@ impl Session {
                         .and_then(|keys| keys.get(&a.media_key_version)).ok_or("missing_conversation_key")?;
                     params = params.with_conversation_key(key.to_bytes(), a.media_key_version);
                 }
-                self.chat.encrypt_message(params)
+                self.chat.encrypt_message(&params)
                 }.map_err(|e| e.to_string())?;
                 Ok(json!({
                     "conversation_id": a.conversation_id,
                     "message_id": payload.message_id,
-                    "encoded_message_create_event": payload.encrypted_content,
-                    "encoded_message_event_signature": payload.encoded_event_signature
+                    "encoded_message_create_event": payload.encoded_message_create_event,
+                    "encoded_message_event_signature": payload.encoded_message_event_signature
                 }))
             }
             "encryptReaction" => {
@@ -288,8 +399,8 @@ impl Session {
                 let payload = if a.remove { self.chat.encrypt_remove_reaction(&params) }
                     else { self.chat.encrypt_add_reaction(&params) }.map_err(|e| e.to_string())?;
                 Ok(json!({"conversation_id": a.conversation_id, "message_id": payload.message_id,
-                    "encoded_message_create_event": payload.encrypted_content,
-                    "encoded_message_event_signature": payload.encoded_event_signature}))
+                    "encoded_message_create_event": payload.encoded_message_create_event,
+                    "encoded_message_event_signature": payload.encoded_message_event_signature}))
             }
             "prepareConversation" | "prepareGroup" | "prepareKeyRotation" => {
                 let a: CreateArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -297,31 +408,36 @@ impl Session {
                 let change = if method == "prepareGroup" {
                     let mut params = GroupCreateParams::new(a.public_keys, a.conversation_id, a.members, a.admins);
                     if !a.title.is_empty() { params.title = Some(a.title); }
-                    self.chat.prepare_group_create(params)
+                    self.chat.prepare_group_create(&params)
                 } else {
                     let mut params = ConversationKeyChangeParams::new(a.public_keys);
                     if !a.conversation_id.is_empty() { params.conversation_id = Some(a.conversation_id); }
                     if method == "prepareKeyRotation" && params.conversation_id.is_none() {
                         return Err("missing_conversation_id".into());
                     }
-                    if method == "prepareKeyRotation" { self.chat.prepare_key_rotation(params, a.for_key_rotation) }
-                    else { self.chat.prepare_conversation_key_change(params) }
+                    if method == "prepareKeyRotation" { self.chat.prepare_key_rotation(&params, a.for_key_rotation) }
+                    else { self.chat.prepare_key_rotation(&params, false) }
                 }.map_err(|e| e.to_string())?;
-                if method == "prepareKeyRotation" {
+                if method == "prepareConversation" {
+                    self.pending_direct.insert(change.conversation_id.replace(':', "-"), change.clone());
+                } else if method == "prepareKeyRotation" {
                     self.pending_rotations.insert(change.conversation_id.replace(':', "-"), change.clone());
                 }
-                // The key-change action signature is bound to the new conversation
-                // key, so the verifier can only check it when the same key travels
-                // with the mutation. `PreparedConversationChange` hides the raw key
-                // from its own serialization (it must never be logged or cached),
-                // so expose exactly this one protocol field here using the same
-                // unpadded base64 the signed payload uses.
-                let mut value = serde_json::to_value(&change).map_err(|e| e.to_string())?;
-                if let Some(key) = change.conversation_key.as_ref() {
-                    value["base64_encoded_key_rotation"] =
-                        json!(base64::engine::general_purpose::STANDARD_NO_PAD.encode(key.encoded()));
-                }
-                Ok(value)
+                Ok(change_value(change))
+            }
+            "commitDirectConversation" => {
+                let args: serde_json::Value = serde_json::from_str(input).map_err(|e| e.to_string())?;
+                let id = args["conversation_id"].as_str().unwrap_or_default().replace(':', "-");
+                let version = args["key_version"].as_str().unwrap_or_default();
+                if !self.chat.is_unlocked() { return Err("locked".into()); }
+                let change = self.pending_direct.get(&id)
+                    .filter(|change| change.conversation_key_version == version)
+                    .ok_or("missing_staged_conversation_key")?;
+                let key = change.conversation_key.as_ref().ok_or("missing_staged_conversation_key")?;
+                self.chat.commit_prepared_direct_key(change).map_err(|e| e.to_string())?;
+                self.media_keys.entry(id.clone()).or_default().insert(version.into(), key.clone());
+                self.pending_direct.remove(&id);
+                Ok(json!({"key_version": version}))
             }
             "prepareGroupMembers" => {
                 let a: GroupMembersArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -334,34 +450,40 @@ impl Session {
                 params.current_avatar_url = a.current_avatar_url;
                 params.current_ttl_msec = a.current_ttl_msec;
                 params.current_screen_capture_blocking_enabled = a.current_screen_capture_blocking_enabled;
-                params.current_invite_url = a.current_invite_url;
-                params.current_invite_expires_msec = a.current_invite_expires_msec;
-                params.current_invite_affiliate_id = a.current_invite_affiliate_id;
-                params.current_admin_settings = a.current_admin_settings;
-                let change = if a.key_version.is_empty() {
-                    self.chat.prepare_group_members_change(params)
+                let snapshot = GroupMemberSnapshot {
+                    encrypted_description: a.current_description,
+                    invite_url: a.current_invite_url,
+                    invite_expires_msec: a.current_invite_expires_msec,
+                    invite_affiliate_id: a.current_invite_affiliate_id,
+                    admin_settings: a.current_admin_settings,
+                };
+                let pending = if a.key_version.is_empty() {
+                    let rotation = ConversationKeyChangeParams::new(params.public_keys.clone())
+                        .with_conversation_id(&params.conversation_id);
+                    self.chat.prepare_key_rotation(&rotation, false).map_err(|e| e.to_string())?
                 } else {
-                    let pending = self.pending_rotations.get(&params.conversation_id.replace(':', "-"))
+                    self.pending_rotations.get(&params.conversation_id.replace(':', "-"))
                         .filter(|pending| pending.conversation_key_version == a.key_version)
-                        .ok_or("missing_prepared_rotation")?;
-                    self.chat.finish_group_members_change(params, pending.clone(), a.current_description)
-                }.map_err(|e| e.to_string())?;
+                        .ok_or("missing_prepared_rotation")?.clone()
+                };
+                let change = self.chat.finish_group_members_change(&params, pending, snapshot)
+                    .map_err(|e| e.to_string())?;
                 // Do not activate a prepared key before the server accepts it.
                 // Refresh and decrypt the acknowledged key-change event instead.
-                serde_json::to_value(change).map_err(|e| e.to_string())
+                Ok(change_value(change))
             }
             "prepareGroupAction" => {
                 let a: GroupActionParams = serde_json::from_str(input).map_err(|e| e.to_string())?;
                 if !self.chat.is_unlocked() { return Err("locked".into()); }
                 let signature = self.chat.prepare_group_action(a).map_err(|e| e.to_string())?;
-                Ok(json!({"action_signatures": [signature]}))
+                Ok(json!({"action_signatures": [action_value(&signature)]}))
             }
             "encryptRead" => {
                 let a: ConversationArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
                 let payload = self.chat.encrypt_read_receipt(&a.conversation_id, &a.sequence_id).map_err(|e| e.to_string())?;
                 Ok(json!({"conversation_id": a.conversation_id, "message_id": payload.message_id,
-                    "encoded_message_create_event": payload.encrypted_content,
-                    "encoded_message_event_signature": payload.encoded_event_signature}))
+                    "encoded_message_create_event": payload.encoded_message_create_event,
+                    "encoded_message_event_signature": payload.encoded_message_event_signature}))
             }
             "preparePlainRead" => {
                 let a: ConversationArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -371,7 +493,7 @@ impl Session {
             "prepareConversationDelete" => {
                 let a: ConversationArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
                 let signature = self.chat.prepare_conversation_delete(&a.conversation_id).map_err(|e| e.to_string())?;
-                Ok(json!({"action_signatures": [signature]}))
+                Ok(json!({"action_signatures": [action_value(&signature)]}))
             }
             "encryptMetadata" | "decryptMetadata" => {
                 let a: LocalArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -383,7 +505,7 @@ impl Session {
                         .ok_or("missing_prepared_rotation")?;
                     let key = pending.conversation_key.as_ref().ok_or("missing_prepared_rotation")?;
                     let text = Zeroizing::new(a.text);
-                    let ciphertext = self.chat.encrypt(&text, key).map_err(|e| e.to_string())?;
+                    let ciphertext = B64.encode(encryption::encrypt_message(key, text.as_bytes()).map_err(|e| e.to_string())?);
                     return Ok(json!({"ciphertext": ciphertext, "key_version": a.key_version}));
                 }
                 let keys = self.media_keys.get(&canonical).ok_or("missing_conversation_key")?;
@@ -391,7 +513,7 @@ impl Session {
                     let version = keys.keys().max_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
                         .ok_or("missing_conversation_key")?;
                     let text = Zeroizing::new(a.text);
-                    let ciphertext = self.chat.encrypt(&text, &keys[version]).map_err(|e| e.to_string())?;
+                    let ciphertext = B64.encode(encryption::encrypt_message(&keys[version], text.as_bytes()).map_err(|e| e.to_string())?);
                     return Ok(json!({"ciphertext": ciphertext, "key_version": version}));
                 }
                 // Metadata may still use a previous conversation key after a
@@ -407,9 +529,10 @@ impl Session {
             }
             "prepareDelete" => {
                 let a: DeleteArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
-                let signature = self.chat.prepare_message_delete(&MessageDeleteParams::new(
+                let prepared = self.chat.prepare_message_delete(&MessageDeleteParams::new(
                     a.conversation_id, a.sequence_ids, a.delete_for_all)).map_err(|e| e.to_string())?;
-                Ok(json!({"action_signatures": [signature]}))
+                let signatures: Vec<Value> = prepared.action_signatures.iter().map(action_value).collect();
+                Ok(json!({"action_signatures": signatures}))
             }
             "changePin" => {
                 let mut a: PinChangeArgs = serde_json::from_str(input).map_err(|e| e.to_string())?;
@@ -430,11 +553,11 @@ impl Session {
                 let key = keys.get(version).ok_or("missing_conversation_key")?;
                 if method == "encryptLocal" {
                     let text = Zeroizing::new(a.text);
-                    let encrypted = self.chat.encrypt_stream(text.as_bytes(), key).map_err(|e| e.to_string())?;
+                    let encrypted = encrypt_stream(text.as_bytes(), key).map_err(|e| e.to_string())?;
                     Ok(json!({"key_version": version, "ciphertext": B64.encode(encrypted)}))
                 } else {
                     let bytes = B64.decode(a.ciphertext).map_err(|_| "invalid_ciphertext")?;
-                    let plain = Zeroizing::new(self.chat.decrypt_stream(&bytes, key).map_err(|e| e.to_string())?);
+                    let plain = Zeroizing::new(decrypt_stream(&bytes, key).map_err(|e| e.to_string())?);
                     let text = std::str::from_utf8(&plain).map_err(|_| "invalid_utf8")?;
                     Ok(json!({"text": text}))
                 }
@@ -450,9 +573,18 @@ impl Session {
                     let size = std::fs::metadata(&a.input_path).map_err(|_| "media_read_failed")?.len();
                     if size > 34 * 1024 * 1024 { return Err("media_too_large".into()); }
                     let bytes = Zeroizing::new(std::fs::read(&a.input_path).map_err(|_| "media_read_failed")?);
-                    let encrypted = Zeroizing::new(self.chat.encrypt_stream(&bytes, key).map_err(|e| e.to_string())?);
+                    let encrypted = Zeroizing::new(encrypt_stream(&bytes, key).map_err(|e| e.to_string())?);
                     std::fs::write(&a.output_path, &encrypted).map_err(|_| "media_write_failed")?;
                     return Ok(json!({"key_version": a.key_version, "media_bytes": encrypted.len(), "media_path": a.output_path}));
+                }
+                if method == "decryptMedia" && !a.raw_event.is_empty() && !a.media_hash_key.is_empty() {
+                    let size = std::fs::metadata(&a.input_path).map_err(|_| "media_read_failed")?.len();
+                    if size > 34 * 1024 * 1024 { return Err("media_too_large".into()); }
+                    let bytes = std::fs::read(&a.input_path).map_err(|_| "media_read_failed")?;
+                    let params = DecryptFileParams::new(bytes, a.raw_event, HashMap::new(), a.media_hash_key);
+                    let processed = Zeroizing::new(self.chat.decrypt_file(&params).map_err(|e| e.to_string())?);
+                    std::fs::write(&a.output_path, &processed).map_err(|_| "media_write_failed")?;
+                    return Ok(json!({"key_version": a.key_version, "media_bytes": processed.len(), "media_path": a.output_path}));
                 }
                 let keys = self.media_keys.get(&a.conversation_id.replace(':', "-")).ok_or("missing_conversation_key")?;
                 let version = if method == "encryptMedia" {
@@ -463,8 +595,8 @@ impl Session {
                 if size > 34 * 1024 * 1024 { return Err("media_too_large".into()); }
                 let bytes = Zeroizing::new(std::fs::read(&a.input_path).map_err(|_| "media_read_failed")?);
                 let processed = Zeroizing::new(if method == "encryptMedia" {
-                    self.chat.encrypt_stream(&bytes, key)
-                } else { self.chat.decrypt_stream(&bytes, key) }.map_err(|e| e.to_string())?);
+                    encrypt_stream(&bytes, key)
+                } else { decrypt_stream(&bytes, key) }.map_err(|e| e.to_string())?);
                 std::fs::write(&a.output_path, &processed).map_err(|_| "media_write_failed")?;
                 Ok(json!({"key_version": version, "media_bytes": processed.len(), "media_path": a.output_path}))
             }
@@ -487,7 +619,7 @@ impl Session {
                     right_hint.cmp(&left_hint).then(right.len().cmp(&left.len())).then(right.cmp(left))
                 });
                 for version in versions {
-                    if let Ok(plain) = self.chat.decrypt_stream(&bytes, &keys[version]) {
+                    if let Ok(plain) = decrypt_stream(&bytes, &keys[version]) {
                         let plain = Zeroizing::new(plain);
                         std::fs::write(&a.output_path, &plain).map_err(|_| "media_write_failed")?;
                         return Ok(json!({"key_version": version, "media_bytes": plain.len(), "media_path": a.output_path}));
@@ -524,7 +656,7 @@ impl Session {
                 };
                 Ok(json!({"fingerprint": fingerprint}))
             }
-            "lock" => { self.chat.lock(); self.media_keys.clear(); self.raw_key_events.clear(); self.raw_edits.clear(); self.pending_rotations.clear(); Ok(json!({"unlocked": false})) }
+            "lock" => { self.chat.lock(); self.media_keys.clear(); self.raw_key_events.clear(); self.raw_edits.clear(); self.pending_rotations.clear(); self.pending_direct.clear(); Ok(json!({"unlocked": false})) }
             "diagnostics" => Ok(json!({"network": self.recovery.diagnostics()})),
             _ => Err("unsupported_method".into()),
         }
@@ -584,12 +716,81 @@ mod tests {
         })
     }
 
+    fn fixture_signature(value: &Value, fixture: &Value) -> ActionSignature {
+        serde_json::from_value(json!({
+            "message_id": value["message_id"],
+            "encoded_message_event_detail": value["encoded_message_event_detail"],
+            "message_event_signature": {
+                "signature": value["signature"], "signature_version": value["signature_version"],
+                "public_key_version": value["public_key_version"], "signing_public_key": fixture["signing_public_b64"],
+            },
+        })).unwrap()
+    }
+
     fn loaded(v: &Value) -> Session {
         let s = Session::new().unwrap();
         let keys = Zeroizing::new(B64.decode(v["private_keys_concat_b64"].as_str().unwrap()).unwrap());
-        s.chat.import_keys_with_version(&keys, v["event_recipient_key_version"].as_str().unwrap()).unwrap();
-        s.chat.set_identity(v["event_sender_id"].as_str().unwrap(), v["event_signing_key_version"].as_str().unwrap());
+        s.chat.import_keys(&ImportKeysParams::new(keys.to_vec()).with_signing_key_version(v["event_recipient_key_version"].as_str().unwrap())).unwrap();
+        s.chat.set_identity(&SetIdentityParams::new(v["event_sender_id"].as_str().unwrap(), v["event_signing_key_version"].as_str().unwrap())).unwrap();
         s
+    }
+
+    #[test]
+    fn remembered_identity_restores_only_when_it_matches_the_registered_account_key() {
+        let v = fixture();
+        let mut session = Session::new().unwrap();
+        let mut args = json!({
+            "key_blob": v["private_keys_concat_b64"], "user_id": v["event_sender_id"],
+            "version": v["event_signing_key_version"], "public_key": v["identity_public_b64"]
+        });
+        assert_eq!(session.call("restoreIdentity", &args.to_string()).unwrap()["unlocked"], true);
+        session.call("lock", "{}").unwrap();
+        args["public_key"] = v["signing_public_b64"].clone();
+        assert_eq!(session.call("restoreIdentity", &args.to_string()).unwrap_err(), "registered_key_mismatch");
+        assert!(!session.chat.is_unlocked());
+    }
+
+    #[test]
+    fn official_v1_post_and_media_decrypt_with_their_signed_events() {
+        let v = fixture();
+        let mut s = loaded(&v);
+        let conversation = v["event_conversation_id"].as_str().unwrap();
+        let signer = v["event_sender_id"].as_str().unwrap();
+        s.call("decrypt", &json!({"events": [v["event_key_change_b64"]],
+            "signing_keys": [signing_key(&v)]}).to_string()).unwrap();
+        s.chat.feature_switches_url();
+        s.chat.set_feature_switches(200, br#"{"features":{"v1_send":true}}"#);
+        let attachment = serde_json::from_value(json!({"attachment_type":"post",
+            "rest_id":"12345","post_url":"https://x.com/example/status/12345"})).unwrap();
+        let params = EncryptMessageParams::new(conversation, "看看这条").with_attachments(vec![attachment]);
+        let sent = s.chat.encrypt_message(&params).unwrap();
+        assert_eq!(sent.signature_info.signature_version, "10");
+        let decrypted = s.call("decrypt", &json!({"events":[sent.event_b64],"signing_keys":[signing_key(&v)]}).to_string()).unwrap();
+        let message = &decrypted["messages"][0];
+        assert_eq!(message["senderId"], signer);
+        assert_eq!(message["verified"], true);
+        assert_eq!(message["text"], "看看这条");
+        assert_eq!(message["attachments"][0]["attachment_type"], "Post");
+        assert_eq!(message["attachments"][0]["rest_id"], "12345");
+
+        let hash = "fixture-media-hash";
+        let image = b"fixture image";
+        let attachment = serde_json::from_value(json!({"attachment_type":"media", "media_hash_key":hash,
+            "width":1, "height":1, "filesize_bytes":image.len(), "filename":"fixture.jpg", "media_type":1})).unwrap();
+        let params = EncryptMessageParams::new(conversation, "").with_attachments(vec![attachment]);
+        let sent = s.chat.encrypt_message(&params).unwrap();
+        let cipher = s.chat.encrypt_file(&chat_xdk_core::EncryptFileParams::new(
+            image.to_vec(), &sent.event_b64, hash)).unwrap();
+        let stem = format!("harmonyx-v1-file-{}", std::process::id());
+        let input = std::env::temp_dir().join(format!("{stem}.enc"));
+        let output = std::env::temp_dir().join(format!("{stem}.jpg"));
+        std::fs::write(&input, &cipher).unwrap();
+        let args = json!({"conversation_id":conversation, "input_path":input, "output_path":output,
+            "raw_event":sent.event_b64, "media_hash_key":hash, "key_version":sent.conversation_key_version});
+        s.call("decryptMedia", &args.to_string()).unwrap();
+        assert_eq!(std::fs::read(&output).unwrap(), image);
+        std::fs::remove_file(input).unwrap();
+        std::fs::remove_file(output).unwrap();
     }
 
     #[test]
@@ -606,6 +807,20 @@ mod tests {
         assert_eq!(message["verified"], true);
         assert!(result.get("conversation_keys").is_none());
         assert!(!result.to_string().contains(v["conversation_key_b64"].as_str().unwrap()));
+    }
+
+    #[test]
+    fn locked_inbox_exposes_routing_metadata_only() {
+        let v = fixture();
+        let mut s = Session::new().unwrap();
+        let input = json!([v["event_message_b64"], v["event_key_change_b64"], "invalid-base64"]);
+        let result = s.call("inspectInbox", &input.to_string()).unwrap();
+        let messages = result["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0]["senderId"], v["event_sender_id"]);
+        assert_eq!(messages[0]["conversationId"], v["event_conversation_id"]);
+        assert!(messages[0].get("text").is_none());
+        assert!(!s.chat.is_unlocked());
     }
 
     #[test]
@@ -657,7 +872,7 @@ mod tests {
         assert_eq!(reply["message_id"], id);
         let mut params = EncryptReplyParams::new(conv, "reply", v["event_message_b64"].as_str().unwrap());
         params.message_id = Some(id.into());
-        let payload = s.chat.encrypt_reply(params).unwrap();
+        let payload = s.chat.encrypt_reply(&params).unwrap();
         let event = chat_xdk_core::internals::frame_send_payload(&payload, id,
             v["event_sender_id"].as_str().unwrap(), conv).unwrap();
         let decoded = s.call("decrypt", &json!({"events": [event], "signing_keys": [signing_key(&v)]}).to_string()).unwrap();
@@ -698,7 +913,7 @@ mod tests {
         let mut params = EncryptMessageParams::new(conv, "caption");
         params.message_id = Some(id.into());
         params.attachments = Some(vec![serde_json::from_value(attachment).unwrap()]);
-        let payload = s.chat.encrypt_message(params).unwrap();
+        let payload = s.chat.encrypt_message(&params).unwrap();
         let event = chat_xdk_core::internals::frame_send_payload(&payload, id, sender, conv).unwrap();
         let decoded = s.call("decrypt", &json!({"events": [event], "signing_keys": [signing_key(&v)]}).to_string()).unwrap();
         let message = &decoded["messages"][0];
@@ -731,7 +946,7 @@ mod tests {
         let mut params = EncryptMessageParams::new(conv, "caption");
         params.message_id = Some(id.into());
         params.attachments = Some(attachments.into_iter().map(|a| serde_json::from_value(a).unwrap()).collect());
-        let payload = s.chat.encrypt_message(params).unwrap();
+        let payload = s.chat.encrypt_message(&params).unwrap();
         let event = chat_xdk_core::internals::frame_send_payload(&payload, id, sender, conv).unwrap();
         let decoded = s.call("decrypt", &json!({"events":[event], "signing_keys":[signing_key(&v)]}).to_string()).unwrap();
         let message = &decoded["messages"][0];
@@ -746,7 +961,7 @@ mod tests {
         let mut params = EncryptMessageParams::new(conv, "");
         params.message_id = Some(voice_id.into());
         params.attachments = Some(vec![serde_json::from_value(voice).unwrap()]);
-        let payload = s.chat.encrypt_message(params).unwrap();
+        let payload = s.chat.encrypt_message(&params).unwrap();
         let event = chat_xdk_core::internals::frame_send_payload(&payload, voice_id, sender, conv).unwrap();
         let decoded = s.call("decrypt", &json!({"events":[event], "signing_keys":[signing_key(&v)]}).to_string()).unwrap();
         assert_eq!(decoded["messages"][0]["attachments"][0]["media_type"], "audio");
@@ -773,7 +988,7 @@ mod tests {
         let mut params = EncryptMessageParams::new(conv, "moving caption");
         params.message_id = Some(id.into());
         params.attachments = Some(attachments.into_iter().map(|a| serde_json::from_value(a).unwrap()).collect());
-        let payload = s.chat.encrypt_message(params).unwrap();
+        let payload = s.chat.encrypt_message(&params).unwrap();
         let event = chat_xdk_core::internals::frame_send_payload(&payload, id, sender, conv).unwrap();
         let decoded = s.call("decrypt", &json!({"events":[event],
             "signing_keys":[signing_key(&v)]}).to_string()).unwrap();
@@ -883,7 +1098,7 @@ mod tests {
             "signing_keys": [signing_key(&v)]}).to_string()).unwrap();
         let key = s.media_keys[&conv.replace(':', "-")].values().next().unwrap().clone();
         for text in ["测试群聊", "https://pbs.twimg.com/group.jpg"] {
-            let cipher = s.chat.encrypt(text, &key).unwrap();
+            let cipher = B64.encode(encryption::encrypt_message(&key, text.as_bytes()).unwrap());
             let args = json!({"conversation_id": conv, "ciphertext": cipher});
             // A newer key cannot authenticate the old metadata; the old key can.
             s.media_keys.get_mut(&conv.replace(':', "-")).unwrap()
@@ -926,11 +1141,11 @@ mod tests {
         let v = fixture(); let mut s = loaded(&v);
         let public_keys = json!([
             {"user_id": v["event_sender_id"], "public_key": v["identity_public_b64"], "key_version": "1"},
-            {"user_id": "new-member", "public_key": v["identity_public_b64"], "key_version": "1"}
+            {"user_id": "123456789", "public_key": v["identity_public_b64"], "key_version": "1"}
         ]);
         let args = json!({"conversation_id": "g555", "public_keys": public_keys,
-            "new_member_ids": ["new-member"], "current_member_ids": [v["event_sender_id"]],
-            "current_admin_ids": [v["event_sender_id"]], "current_pending_member_ids": ["pending"],
+            "new_member_ids": ["123456789"], "current_member_ids": [v["event_sender_id"]],
+            "current_admin_ids": [v["event_sender_id"]], "current_pending_member_ids": ["123456780"],
             "current_title": "encrypted-title", "current_avatar_url": "https://example.com/avatar",
             "current_ttl_msec": 86400000, "current_screen_capture_blocking_enabled": true});
         let added = s.call("prepareGroupMembers", &args.to_string()).unwrap();
@@ -939,30 +1154,19 @@ mod tests {
         assert!(added.get("conversation_key").is_none());
         let signatures = added["action_signatures"].as_array().unwrap();
         assert_eq!(signatures.len(), 2);
-        // The key change is verified from the payload the client submits, so
-        // it is present alongside the member-add payload.
-        assert!(signatures[0]["signature_payload"]
-            .as_str()
-            .unwrap()
-            .starts_with("ConversationKeyChangeEvent,"));
-        let add = &signatures[1];
-        let payload = add["signature_payload"].as_str().unwrap();
-        assert!(payload.starts_with("GroupChangeEvent.GroupMemberAddChange,"));
-        assert!(payload.contains(",g555,new-member,"));
-        assert!(payload.contains(",encrypted-title,https://example.com/avatar,86400000,"));
-        assert!(payload.ends_with(",true"));
-        // An invite-enabled group binds the invite triple after the screen
-        // state, matching what the private client submits and the server
-        // re-derives; a group without an invite link must not gain a trailer.
-        let mut invited = args.clone();
-        invited["current_invite_url"] = json!("https://x.com/i/chat/group_join/g555/invite0001");
-        let with_invite = s.call("prepareGroupMembers", &invited.to_string()).unwrap();
-        let invite_payload = with_invite["action_signatures"].as_array().unwrap()[1]["signature_payload"]
-            .as_str().unwrap();
-        assert!(invite_payload.ends_with(",true,https://x.com/i/chat/group_join/g555/invite0001,null,null"));
-        let signature = base64::engine::general_purpose::STANDARD_NO_PAD
-            .decode(add["signature"].as_str().unwrap()).unwrap();
-        assert!(s.chat.verify(v["signing_public_b64"].as_str().unwrap(), &signature, payload.as_bytes()).unwrap());
+        let signer = v["event_sender_id"].as_str().unwrap();
+        let signing_keys: Vec<SigningKeyEntry> = serde_json::from_value(json!([signing_key(&v)])).unwrap();
+        let mut with_invite = args.clone();
+        with_invite["current_invite_url"] = json!("https://x.com/i/chat/group_join/g555/invite0001");
+        let invited = s.call("prepareGroupMembers", &with_invite.to_string()).unwrap();
+        for batch in [&added, &invited] {
+            assert!(batch.get("conversation_key").is_none());
+            assert!(batch["action_signatures"][1].get("signature_payload").is_none());
+            let signed = fixture_signature(&batch["action_signatures"][0], &v);
+            let event = chat_xdk_core::internals::frame_action_signature(&signed, signer, "g555").unwrap();
+            assert!(matches!(s.chat.decrypt_event(&DecryptEventParams::new(event, HashMap::new())
+                .with_signing_keys(signing_keys.clone())).unwrap(), Event::GroupChange(g) if g.verified));
+        }
         assert!(s.media_keys.get("g555").is_none(), "an unaccepted prepared key must not be activated");
         let rotated = s.call("prepareKeyRotation", &json!({"conversation_id": "g555",
             "public_keys": public_keys}).to_string()).unwrap();
@@ -986,7 +1190,7 @@ mod tests {
         // Include non-UTF8 bytes and several chunks to exercise binary framing.
         let mut image = vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10];
         image.extend((0..5000).map(|index| (index % 256) as u8));
-        let ciphertext = s.chat.encrypt_stream(&image, &key).unwrap();
+        let ciphertext = encrypt_stream(&image, &key).unwrap();
         let stem = format!("harmonyx-avatar-test-{}-{}", std::process::id(),
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let cipher_path = std::env::temp_dir().join(format!("{stem}.enc"));
@@ -1033,24 +1237,24 @@ mod tests {
         let signing_keys: Vec<SigningKeyEntry> = serde_json::from_value(json!([signing_key(&v)])).unwrap();
         for (mut args, event_type, trailer) in cases {
             args["conversation_id"] = json!("g555");
-            let result = s.call("prepareGroupAction", &args.to_string()).unwrap();
-            let signature: chat_xdk_core::signatures::ActionSignature = serde_json::from_value(result["action_signatures"][0].clone()).unwrap();
+            let result = s.call("prepareGroupAction", &args.to_string()).unwrap_or_else(|error| panic!("{event_type}: {error}"));
+            let signature: chat_xdk_core::signatures::ActionSignature = fixture_signature(&result["action_signatures"][0], &v);
             let expected = format!("{},{},{},g555{}", event_type, signature.message_id,
                 v["event_sender_id"].as_str().unwrap(), trailer);
-            let bytes = base64::engine::general_purpose::STANDARD_NO_PAD.decode(&signature.signature).unwrap();
+            let bytes = base64::engine::general_purpose::STANDARD_NO_PAD.decode(&signature.message_event_signature.signature).unwrap();
             assert!(s.chat.verify(v["signing_public_b64"].as_str().unwrap(), &bytes, expected.as_bytes()).unwrap(), "{event_type}");
             let framed = chat_xdk_core::internals::frame_action_signature(&signature,
                 v["event_sender_id"].as_str().unwrap(), "g555").unwrap();
-            let event = s.chat.decrypt_event(&framed, &HashMap::new(), &signing_keys).unwrap();
+            let event = s.chat.decrypt_event(&DecryptEventParams::new(&framed, HashMap::new()).with_signing_keys(signing_keys.clone())).unwrap();
             assert!(match event { Event::GroupChange(g) => g.verified, Event::SettingsChange(settings) => settings.verified, _ => false });
         }
         for action in ["inviteDisable", "leave"] {
             let result = s.call("prepareGroupAction", &json!({"conversation_id":"g555","action":action}).to_string()).unwrap();
-            let signature: chat_xdk_core::signatures::ActionSignature = serde_json::from_value(result["action_signatures"][0].clone()).unwrap();
+            let signature: chat_xdk_core::signatures::ActionSignature = fixture_signature(&result["action_signatures"][0], &v);
             let event_type = if action == "leave" { "GroupChangeEvent.GroupMemberRemoveChange" } else { "GroupChangeEvent.GroupInviteDisable" };
             let sender = v["event_sender_id"].as_str().unwrap();
             let expected = format!("{},{},{},g555,{}", event_type, signature.message_id, sender, sender);
-            let bytes = base64::engine::general_purpose::STANDARD_NO_PAD.decode(&signature.signature).unwrap();
+            let bytes = base64::engine::general_purpose::STANDARD_NO_PAD.decode(&signature.message_event_signature.signature).unwrap();
             assert!(s.chat.verify(v["signing_public_b64"].as_str().unwrap(), &bytes, expected.as_bytes()).unwrap());
         }
         assert!(s.call("prepareGroupAction", &json!({"conversation_id":"g555","action":"title","text":"with,comma","key_version":"42"}).to_string()).is_err());
@@ -1065,7 +1269,7 @@ mod tests {
         let v = fixture(); let mut s = loaded(&v);
         let public_keys = json!([
             {"user_id":v["event_sender_id"],"public_key":v["identity_public_b64"],"key_version":v["event_recipient_key_version"]},
-            {"user_id":"new-member","public_key":v["identity_public_b64"],"key_version":"1"}
+            {"user_id":"123456789","public_key":v["identity_public_b64"],"key_version":"1"}
         ]);
         let rotation = s.call("prepareKeyRotation", &json!({"conversation_id":"g555","public_keys":public_keys}).to_string()).unwrap();
         let version = rotation["conversation_key_version"].as_str().unwrap();
@@ -1080,22 +1284,22 @@ mod tests {
         std::fs::write(&plain_path, &image).unwrap();
         s.call("encryptGroupMedia", &json!({"conversation_id":"g555","key_version":version,
             "input_path":plain_path,"output_path":encrypted_path}).to_string()).unwrap();
-        assert_eq!(s.chat.decrypt_stream(&std::fs::read(&encrypted_path).unwrap(), &key).unwrap(), image);
+        assert_eq!(decrypt_stream(&std::fs::read(&encrypted_path).unwrap(), &key).unwrap(), image);
         let args = json!({"conversation_id":"g555","public_keys":public_keys,"key_version":version,
-            "new_member_ids":["new-member"],"current_member_ids":[v["event_sender_id"]],"current_admin_ids":[v["event_sender_id"]],
+            "new_member_ids":["123456789"],"current_member_ids":[v["event_sender_id"]],"current_admin_ids":[v["event_sender_id"]],
             "current_title":title["ciphertext"],"current_description":description["ciphertext"],"current_avatar_url":"https://example.com/new-avatar"});
         let added = s.call("prepareGroupMembers", &args.to_string()).unwrap();
         assert_eq!(added["conversation_key_version"], version);
         assert_eq!(added["participant_keys"], rotation["participant_keys"]);
-        assert_eq!(added["action_signatures"][0], rotation["action_signatures"][0]);
+        assert_eq!(added["action_signatures"][1], rotation["action_signatures"][0]);
         assert_eq!(added["action_signatures"].as_array().unwrap().len(), 2);
         assert!(s.media_keys.get("g555").is_none());
-        assert!(s.chat.encrypt_message(EncryptMessageParams::new("g555", "must not send yet")).is_err());
-        let add_signature: chat_xdk_core::signatures::ActionSignature = serde_json::from_value(added["action_signatures"][1].clone()).unwrap();
+        assert!(s.chat.encrypt_message(&EncryptMessageParams::new("g555", "must not send yet")).is_err());
+        let add_signature: chat_xdk_core::signatures::ActionSignature = fixture_signature(&added["action_signatures"][0], &v);
         let event = chat_xdk_core::internals::frame_action_signature(&add_signature,
             v["event_sender_id"].as_str().unwrap(), "g555").unwrap();
         let signing_keys: Vec<SigningKeyEntry> = serde_json::from_value(json!([signing_key(&v)])).unwrap();
-        assert!(matches!(s.chat.decrypt_event(&event, &HashMap::new(), &signing_keys).unwrap(), Event::GroupChange(g) if g.verified));
+        assert!(matches!(s.chat.decrypt_event(&DecryptEventParams::new(&event, HashMap::new()).with_signing_keys(signing_keys.clone())).unwrap(), Event::GroupChange(g) if g.verified));
         let mut invalid = args.clone(); invalid["key_version"] = json!("wrong");
         assert!(s.call("prepareGroupMembers", &invalid.to_string()).is_err());
         s.call("lock", "{}").unwrap(); assert!(s.pending_rotations.is_empty());
@@ -1144,7 +1348,7 @@ mod tests {
         let action = &result["action_signatures"][0];
         let payload = format!("ConversationDeleteEvent,{},{},{}", action["message_id"].as_str().unwrap(),
             v["event_sender_id"].as_str().unwrap(), conv);
-        let signature = B64.decode(action["signature"].as_str().unwrap()).unwrap();
+        let signature = base64::engine::general_purpose::STANDARD_NO_PAD.decode(action["signature"].as_str().unwrap()).unwrap();
         assert!(s.chat.verify(v["signing_public_b64"].as_str().unwrap(), &signature, payload.as_bytes()).unwrap());
         assert!(!s.chat.verify(v["signing_public_b64"].as_str().unwrap(), &signature, b"changed conversation").unwrap());
         assert!(s.call("prepareConversationDelete", "{\"conversation_id\":\"\"}").is_err());
@@ -1155,11 +1359,19 @@ mod tests {
         let v = fixture(); let mut s = loaded(&v);
         let result = s.call("prepareConversation", &json!({"public_keys": [
             {"user_id": v["event_sender_id"], "public_key": v["identity_public_b64"], "key_version": "1"},
-            {"user_id": "another-user", "public_key": v["identity_public_b64"], "key_version": "1"}
+            {"user_id": "123456789", "public_key": v["identity_public_b64"], "key_version": "1"}
         ]}).to_string()).unwrap();
         assert_eq!(result["participant_keys"].as_array().unwrap().len(), 2);
         assert!(result.get("conversation_key").is_none());
         assert!(result.get("raw_conversation_key").is_none());
+        let conversation = &result["conversation_id"];
+        let draft = json!({"conversation_id": conversation, "text": "hello"}).to_string();
+        assert!(s.call("encrypt", &draft).is_err());
+        assert!(s.call("commitDirectConversation", &json!({"conversation_id": conversation, "key_version": "0"}).to_string()).is_err());
+        let confirmation = json!({"conversation_id": conversation, "key_version": result["conversation_key_version"]}).to_string();
+        s.call("commitDirectConversation", &confirmation).unwrap();
+        assert!(s.call("encrypt", &draft).is_ok());
+        assert!(s.call("commitDirectConversation", &confirmation).is_err());
         let delete = s.call("prepareDelete", &json!({"conversation_id": v["event_conversation_id"], "sequence_ids": ["9007199254740993"],
             "delete_for_all": false}).to_string()).unwrap();
         assert!(!delete["action_signatures"][0]["signature"].as_str().unwrap().is_empty());

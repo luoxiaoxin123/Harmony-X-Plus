@@ -20,7 +20,7 @@ function fixture(options = {}) {
   const page = Object.assign(new Callbacks(), {
     showStartupCover: false, showSideDrawer: false, photoOverlayOpen: false, confirmExitEnabled: true,
     navPathStack: {size: () => options.depth || 0}, photoOverlayStack: {size: () => options.photoDepth || 0},
-    isLargeScreen: () => !!options.large, text: x => x,
+    usesOverlaySideDrawer: () => !options.large, text: x => x,
     getUIContext: () => ({getHostContext: () => context,
       getPromptAction: () => ({showToast: toast => toasts.push(toast), showDialog() {throw Error('No exit dialogs');}}),
       showAlertDialog() {throw Error('No exit dialogs');}})

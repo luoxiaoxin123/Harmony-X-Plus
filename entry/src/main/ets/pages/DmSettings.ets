@@ -149,7 +149,11 @@ struct DmSettingsPage {
         { text: this.text($r('app.string.chat_reset')), color: '' }]
     });
     if (response.index !== 1 || !this.valid()) { return; }
-    xChatMedia.clear(); xChatService.lock();
+    if (!xChatService.lock()) {
+      promptAction.showToast({ message: this.text($r('app.string.chat_action_failed')) });
+      return;
+    }
+    xChatMedia.clear();
     this.pageStack.pop();
   }
   @Builder

@@ -102,7 +102,6 @@ interface GroupEventSignature { signature: string; signature_version: string; pu
 interface GroupActionInput {
   message_id: string;
   encoded_message_event_detail: string;
-  signature_payload: string;
   message_event_signature: GroupEventSignature;
 }
 interface GroupNativeAction {
@@ -260,7 +259,6 @@ export class XChatGroupService {
   private actionInputs(signatures: XChatActionSignature[]): GroupActionInput[] {
     return signatures.map((signature: XChatActionSignature): GroupActionInput => ({
       message_id: signature.message_id, encoded_message_event_detail: signature.encoded_message_event_detail,
-      signature_payload: signature.signature_payload ?? '',
       message_event_signature: { signature: signature.signature, signature_version: signature.signature_version,
         public_key_version: signature.public_key_version }
     }));
@@ -554,37 +552,8 @@ export class XChatGroupService {
     };
     args.current_admin_settings = adminSettings;
     const prepared: XChatNativeData = await xChatService.groupNative('prepareGroupMembers', JSON.stringify(args));
-    const rawSignatures: GroupActionInput[] = this.actionInputs(prepared.action_signatures ?? []);
-    if (rawSignatures.length === 0 || prepared.conversation_key_version !== version) { throw new Error('group_add_signature_failed'); }
-    // The private client submits the group-change signature before the
-    // conversation-key change, so keep that same order on the wire.
-    const signatures: GroupActionInput[] = rawSignatures.filter((entry: GroupActionInput): boolean =>
-      entry.signature_payload.indexOf('ConversationKeyChangeEvent,') !== 0)
-      .concat(rawSignatures.filter((entry: GroupActionInput): boolean =>
-        entry.signature_payload.indexOf('ConversationKeyChangeEvent,') === 0));
-    for (let index: number = 0; index < signatures.length; index++) {
-      hilog.info(0xFF00, 'HarmonyX-Chat', 'group add signed[%{public}d] %{public}s',
-        index, signatures[index].signature_payload);
-    }
-    const signedRaw: XChatActionSignature[] = prepared.action_signatures ?? [];
-    for (let index: number = 0; index < signedRaw.length; index++) {
-      hilog.info(0xFF00, 'HarmonyX-Chat', 'group add key[%{public}d] version=%{public}s public=%{public}s',
-        index, signedRaw[index].signature_version, signedRaw[index].public_key_version);
-    }
-    // Self-check: the server verifies each action signature with the signing
-    // public key it publishes for this exact version. If the key material this
-    // device recovered does not match, every mutation is rejected even though
-    // the payload is correct.
-    const ownPublicKey: string = xChatService.signingPublicKey(xPrivateClient.viewerId());
-    for (let index: number = 0; index < signedRaw.length; index++) {
-      let valid: boolean = false;
-      try {
-        valid = await xChatService.verifyPayload(ownPublicKey, signedRaw[index].signature,
-          signedRaw[index].signature_payload ?? '');
-      } catch (error) { valid = false; }
-      hilog.info(0xFF00, 'HarmonyX-Chat', 'group add selfcheck[%{public}d]=%{public}s keylen=%{public}d',
-        index, valid ? 'ok' : 'MISMATCH', ownPublicKey.length);
-    }
+    const signatures: GroupActionInput[] = this.actionInputs(prepared.action_signatures ?? []);
+    if (signatures.length === 0 || prepared.conversation_key_version !== version) { throw new Error('group_add_signature_failed'); }
     const variables: Record<string, Object> = {
       'conversation_id': state.id, 'user_ids': ids, 'conversation_key_version': version,
       // The request order must match the order inside the signed event detail,
@@ -600,14 +569,6 @@ export class XChatGroupService {
     if (state.inviteEnabled && state.inviteUrl.length > 0) {
       const invite: GroupInviteEnableInput = { invite_url: state.inviteUrl };
       variables['group_invite_enable'] = invite;
-    }
-    // Chunked so the whole request survives the device log for a byte-level
-    // comparison with the private client's captured request.
-    const submitted: string = JSON.stringify(variables);
-    for (let offset: number = 0, part: number = 0; offset < submitted.length; offset += 1200, part++) {
-      const end: number = Math.min(submitted.length, offset + 1200);
-      hilog.info(0xFF00, 'HarmonyX-Chat', 'group add request[%{public}d] %{public}s',
-        part, submitted.substring(offset, end));
     }
     try {
       await this.request(context, identity, 'AddGroupMembersMutation', variables,

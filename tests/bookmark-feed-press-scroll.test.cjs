@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const ts = require(process.env.HARMONYX_TYPESCRIPT ||
+  'D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
 
 const bookmarks = fs.readFileSync('entry/src/main/ets/pages/Bookmarks.ets', 'utf8');
 const feed = fs.readFileSync('entry/src/main/ets/components/AdaptivePostFeed.ets', 'utf8');
@@ -39,6 +41,8 @@ test('bookmarks use the Home List feed for single-column press and drag routing'
   const call = around(bookmarks, "feedId: 'bookmarks-post-feed'");
 
   assert.match(mode, /ResponsiveLayout\.isLarge\(this\.windowBreakpoint\)/);
+  assert.match(mode, /this\.isLandscape\(\)/);
+  assert.match(call, /landscapeColumns:\s*this\.isLandscape\(\)/);
   assert.match(mode, /TIMELINE_COLUMNS_TWO/);
   assert.match(mode, /TIMELINE_COLUMNS_AUTO_TWO/);
   assert.match(call, /useList:\s*this\.useListFeed\(\)/);
@@ -117,4 +121,38 @@ test('the shared List path keeps native scroll ownership during press gestures',
   assert.match(list, /maintainVisibleContentPosition\(true\)/);
   assert.match(list, /EdgeEffect\.Spring/);
   assert.doesNotMatch(list, /contentStartOffset|PanGesture|scrollTo\(/);
+});
+
+test('bookmark prefetch queries a visible cursor once, keeps retained posts, and stops a repeated cursor', async () => {
+  const tree = ts.createSourceFile('Bookmarks.ts', bookmarks.replace('struct BookmarksPage', 'class BookmarksPage'),
+    ts.ScriptTarget.Latest, true);
+  const pageClass = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'BookmarksPage');
+  const methods = ['load', 'prefetchBookmarks'].map(name =>
+    pageClass.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(tree) === name).getText(tree));
+  const code = ts.transpileModule('class Page {' + methods.join('\n') + '}', {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 }
+  }).outputText;
+  const cursors = [];
+  let respond;
+  const client = { load() {}, isSignedIn: () => true, bookmarks: cursor => {
+    cursors.push(cursor);
+    return new Promise(resolve => { respond = resolve; });
+  } };
+  const Page = new Function('xPrivateClient', 'XTimelineParser', 'getContext', 'PAGE_SIZE', '$r',
+    code + '\nreturn Page;')(client, { parse: body => body }, () => ({}), 20, key => key);
+  const retained = { id: 'first', bookmarked: true };
+  const page = Object.assign(new Page(), { posts: [retained], loading: false, loadingMore: false,
+    showCollections: false, nextToken: 'p2', lastAutomaticCursor: '', fetchedCursors: new Set(),
+    feedRequestId: 0, selectedCollectionId: '', submittedSearch: '', text: key => key });
+  page.prefetchBookmarks();
+  page.prefetchBookmarks();
+  assert.deepEqual(cursors, ['p2']);
+  respond({ ok: true, body: { tweets: [{ id: 'first' }, { id: 'second' }], nextToken: 'p2' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(page.posts.map(post => post.id), ['first', 'second']);
+  assert.equal(page.posts[0], retained);
+  assert.equal(page.posts[1].bookmarked, true);
+  assert.equal(page.nextToken, '');
+  page.prefetchBookmarks();
+  assert.deepEqual(cursors, ['p2']);
 });

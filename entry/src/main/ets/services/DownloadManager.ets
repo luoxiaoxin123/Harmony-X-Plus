@@ -103,7 +103,7 @@ export class DownloadManager {
   }
 
   enqueue(context: common.UIAbilityContext, url: string, mediaId: string, isVideo: boolean,
-    onReady: DownloadTaskReadyCallback): string {
+    onReady: DownloadTaskReadyCallback, titleOverride: string = ''): string {
     this.ensureLoaded(context);
     if (url.length === 0) {
       return '';
@@ -111,7 +111,9 @@ export class DownloadManager {
     const id: string = Date.now().toString() + '-' + this.taskSequence.toString();
     this.taskSequence = this.taskSequence + 1;
     const extension: string = this.extensionFor(url, isVideo);
-    const title: string = this.safeName(mediaId) + '-' + id;
+    const customTitle: string = titleOverride.trim().replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g, '_')
+      .replace(/^[. ]+|[. ]+$/g, '').slice(0, 132);
+    const title: string = customTitle || this.safeName(mediaId) + '-' + id;
     const filePath: string = this.directory + '/' + id + '.' + extension + '.part';
     const task: DownloadTask = new DownloadTask(id, url, mediaId, title, extension, filePath, isVideo, onReady);
     this.tasks.push(task);

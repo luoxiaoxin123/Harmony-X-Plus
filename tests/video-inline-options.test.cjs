@@ -20,6 +20,17 @@ function fixture(file) {
   return { exported, disk, published, fail: value => { fail = value; } };
 }
 
+test('scrolling a post video out of view defaults to pausing and preserves explicit PiP opt-in', () => {
+  const h = fixture('MediaSettingsStore');
+  const store = new h.exported.MediaSettingsStore();
+  assert.equal(store.loadVideoAutoPip({}), false);
+  assert.equal(store.saveVideoAutoPip({}, true), true);
+  assert.equal(h.published.get(h.exported.STORAGE_KEY_VIDEO_AUTO_PIP), true);
+  assert.equal(new h.exported.MediaSettingsStore().loadVideoAutoPip({}), true);
+  assert.equal(store.saveVideoAutoPip({}, false), true);
+  assert.equal(new h.exported.MediaSettingsStore().loadVideoAutoPip({}), false);
+});
+
 test('inline controls and return pause are independent, off by default and restored after restart', () => {
   const h = fixture('MediaSettingsStore');
   const store = new h.exported.MediaSettingsStore();

@@ -10,7 +10,7 @@ import { bookmarkCountAfter } from '../utils/PostMetadata';
 import type { Tweet } from '../models/Tweet';
 import { xPrivateClient, XPrivateResult } from '../services/XPrivateClient';
 import { hapticTick } from '../utils/Haptics';
-import { sharePost } from '../utils/SharePost';
+import { openPostShare } from '../services/PostShareRequest';
 import { postLikeStore, STORAGE_KEY_POST_LIKES_REVISION } from '../services/PostLikeStore';
 
 // Builder arguments captured by a nested BuilderParam do not subscribe to
@@ -47,6 +47,7 @@ struct MediaViewerCountPill {
 // like/repost callbacks used by its timeline and opens the conversation sheet.
 @Component
 export struct MediaViewerPostActions {
+  @Consume('pageStack') private pageStack: NavPathStack;
   @StorageProp(APP_FONT_FAMILY_KEY) private appFontFamily: string = DEFAULT_APP_FONT_FAMILY;
   @Prop @Watch('syncPost') tweet: Tweet;
   @Prop adaptiveForeground: boolean = false;
@@ -199,7 +200,7 @@ export struct MediaViewerPostActions {
         this.bookmarked ? $r('app.color.brand') : this.neutralForeground(),
         $r('app.string.action_bookmark'), !this.bookmarkPending, (): void => { void this.toggleBookmark(); })
       this.IconPill($r('sys.symbol.share'), this.neutralForeground(), $r('app.string.action_share'),
-        true, (): void => { sharePost(getContext(this) as common.UIAbilityContext, this.tweet); })
+        true, (): void => { openPostShare(this.tweet, this.pageStack); })
     }
     .width('100%')
   }

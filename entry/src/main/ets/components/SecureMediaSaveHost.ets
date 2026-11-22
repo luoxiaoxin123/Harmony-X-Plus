@@ -30,7 +30,7 @@ export struct SecureMediaSaveHost {
       (outcome: number): void => {
         this.saving = false;
         secureMediaSaveController.complete(request, outcome);
-      }, request.isVideo);
+      }, request.isVideo, request.titleOverride);
   }
 
   @Builder

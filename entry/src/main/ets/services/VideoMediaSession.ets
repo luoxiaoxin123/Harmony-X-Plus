@@ -221,7 +221,7 @@ class VideoMediaSession {
           itemId: 0,
           description: {
             assetId: id, title: this.title, mediaImage: this.cover, mediaUri: this.castMediaUrl,
-            mediaType: 'VIDEO', startPosition: startPosition, duration: this.durationMs, appName: 'Harmony X'
+            mediaType: 'VIDEO', startPosition: startPosition, duration: this.durationMs, appName: 'HarmonyX+'
           }
         };
         await controller.prepare(item);

@@ -30,6 +30,26 @@ function settings(mode = model.TRANSLATION_MODE_X) {
     'openai', '', 'provider-key', 'zh-CN', '');
 }
 
+test('switching to translation-only persists immediately without replacing provider settings', () => {
+  const values = new Map([['provider_id', 'openai'], ['model', 'my-model']]);
+  let saved = false;
+  const { TranslationStore: Store } = load('services/TranslationStore', {
+    '@kit.AbilityKit': {},
+    '@kit.ArkData': { preferences: { getPreferencesSync: () => ({
+      getSync: (key, fallback) => values.get(key) ?? fallback,
+      putSync: (key, value) => values.set(key, value),
+      flushSync: () => { saved = true; }
+    }) } },
+    '../models/Translation': model,
+    '../utils/AppLocale': { effectiveAppLocale: () => currentLocale }
+  });
+  const store = new Store();
+  assert.equal(store.saveReplaceOriginal({}, true), true);
+  assert.equal(saved, true);
+  assert.equal(store.load({}).replaceOriginal, true);
+  assert.equal(store.load({}).model, 'my-model');
+});
+
 function fixture() {
   const calls = [], httpCalls = [], listeners = [];
   let signedIn = true, generation = 1;

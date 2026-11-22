@@ -56,3 +56,9 @@ test('attachment dimensions and key version changes refresh the media card but i
   assert.notEqual(key(photo,false,'',0),key({...photo,keyVersion:'key-2'},false,'',0));
   assert.notEqual(key(photo,false,'',0),key({...photo,attachments:[{...photo.attachments[0],width:480,height:320}]},false,'',0));
 });
+
+test('correcting a Web message direction rebuilds its bubble even when the message id and text stay the same', () => {
+  const unknown = { ...provisional, outgoing: false, directionUnknown: true, webMessageId: 'web-id' };
+  const outgoing = { ...unknown, directionUnknown: false, outgoing: true, senderId: '100' };
+  assert.notEqual(key(unknown, false, '', 0), key(outgoing, false, '', 0));
+});

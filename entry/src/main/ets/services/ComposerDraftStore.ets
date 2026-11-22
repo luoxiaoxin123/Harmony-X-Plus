@@ -1,3 +1,4 @@
+import { ComposerMedia, addComposerMedia, legacyComposerMedia } from '../models/ComposerMedia';
 // Persists one compose draft and independent reply drafts by post id.
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
@@ -5,24 +6,19 @@ import { ComposerOptions } from '../models/ComposerOptions';
 
 export class ComposerDraft {
   text: string;
-  imageUris: string[];
-  gifUri: string;
-  videoUri: string;
+  media: ComposerMedia[];
   updatedAt: number;
   options: ComposerOptions = new ComposerOptions();
 
-  constructor(text: string, imageUris: string[], gifUri: string, videoUri: string, updatedAt: number) {
+  constructor(text: string, media: ComposerMedia[], updatedAt: number) {
     this.text = text;
-    this.imageUris = imageUris;
-    this.gifUri = gifUri;
-    this.videoUri = videoUri;
+    this.media = media;
     this.updatedAt = updatedAt;
   }
 }
 
 export class ComposerDraftStore {
   private static readonly STORE_NAME: string = 'harmonyx_composer';
-  private static readonly MAX_MEDIA_ITEMS: number = 4;
 
   load(context: common.Context, scope: string): ComposerDraft {
     try {
@@ -30,30 +26,31 @@ export class ComposerDraftStore {
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
       const prefix: string = this.prefix(scope);
       const text: string = store.getSync(prefix + 'text', '') as string;
-      const storedGifUri: string = store.getSync(prefix + 'gif', '') as string;
-      const videoUri: string = store.getSync(prefix + 'video', '') as string;
-      const gifUri: string = videoUri.length > 0 ? '' : storedGifUri;
-      const maxImageCount: number = videoUri.length > 0 ? 0 :
-        ComposerDraftStore.MAX_MEDIA_ITEMS - (gifUri.length > 0 ? 1 : 0);
-      const rawImages: string = store.getSync(prefix + 'images', '[]') as string;
-      const parsed: string[] = JSON.parse(rawImages) as string[];
-      const imageUris: string[] = [];
-      for (let i: number = 0; i < parsed.length && imageUris.length < maxImageCount; i++) {
-        const uri: string = String(parsed[i]);
-        if (uri.length > 0 && imageUris.indexOf(uri) < 0) {
-          imageUris.push(uri);
-        }
+      const rawMedia: string = store.getSync(prefix + 'media', '') as string;
+      let entries: ComposerMedia[];
+      if (rawMedia.length > 0) {
+        const decoded: ComposerMedia[] = JSON.parse(rawMedia) as ComposerMedia[];
+        entries = Array.isArray(decoded) ? decoded : [];
+      } else {
+        const rawImages: string = store.getSync(prefix + 'images', '[]') as string;
+        const images: string[] = JSON.parse(rawImages) as string[];
+        entries = legacyComposerMedia(Array.isArray(images) ? images : [],
+          store.getSync(prefix + 'gif', '') as string, store.getSync(prefix + 'video', '') as string);
       }
+      let media: ComposerMedia[] = [];
+      entries.forEach((entry: ComposerMedia): void => {
+        if (entry !== null) { media = addComposerMedia(media, entry); }
+      });
       const updatedAt: number = store.getSync(prefix + 'updated_at', 0) as number;
-      const draft: ComposerDraft = new ComposerDraft(text, imageUris, gifUri, videoUri, updatedAt);
+      const draft: ComposerDraft = new ComposerDraft(text, media, updatedAt);
       draft.options = ComposerOptions.restore(store.getSync(prefix + 'options', '{}') as string);
       // Older drafts can carry attachments; never restore an incompatible poll.
-      if (imageUris.length > 0 || gifUri.length > 0 || videoUri.length > 0) {
+      if (media.length > 0) {
         draft.options.pollChoices = []; draft.options.pollImages = [];
       }
       return draft;
     } catch (error) {
-      return new ComposerDraft('', [], '', '', 0);
+      return new ComposerDraft('', [], 0);
     }
   }
 
@@ -63,9 +60,7 @@ export class ComposerDraftStore {
       const store: preferences.Preferences = preferences.getPreferencesSync(context, options);
       const prefix: string = this.prefix(scope);
       store.putSync(prefix + 'text', draft.text);
-      store.putSync(prefix + 'images', JSON.stringify(draft.imageUris));
-      store.putSync(prefix + 'gif', draft.gifUri);
-      store.putSync(prefix + 'video', draft.videoUri);
+      store.putSync(prefix + 'media', JSON.stringify(draft.media));
       store.putSync(prefix + 'updated_at', draft.updatedAt);
       store.putSync(prefix + 'options', JSON.stringify(draft.options));
       store.flushSync();
@@ -75,7 +70,7 @@ export class ComposerDraftStore {
   }
 
   clear(context: common.Context, scope: string): void {
-    this.save(context, scope, new ComposerDraft('', [], '', '', 0));
+    this.save(context, scope, new ComposerDraft('', [], 0));
   }
 
   private prefix(scope: string): string {

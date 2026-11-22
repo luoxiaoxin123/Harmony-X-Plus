@@ -52,7 +52,7 @@ function rootFixture() {
     'openContentDestination',
     'rootTitleBarOptions', 'syncDesktopRoute', 'effectiveTimelineColumns', 'useTimelineWaterFlow', 'useNarrowTimelineCards', 'syncThreePartWaterFlowSections',
     'desktopAsideVisible', 'closeDesktopRail', 'openDesktopRail', 'onDesktopRailSwipe',
-    'onDesktopRailCloseSwipe', 'sideDrawerWidth']
+    'onDesktopRailCloseSwipe', 'sideDrawerWidth', 'usesOverlaySideDrawer']
     .map(name => rootClass.members.find(node => node.name && node.name.getText(parsed) === name).getText(parsed));
   const output = ts.transpileModule('export class Root {\n' + methods.join('\n') + '\n}', {
     compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS }

@@ -1,4 +1,5 @@
 import { AdaptivePostFeed } from '../components/AdaptivePostFeed';
+import { PostFeedProjection } from '../utils/PostFeedDataSource';
 import { pageTextColor } from '../utils/ThemeColors';
 import { pageBackgroundActive } from '../services/PageBackgroundStore';
 import { appPageBackground } from '../components/PageBackgroundLayer';
@@ -112,6 +113,7 @@ export struct Communities {
   private homeScroller: Scroller = new Scroller();
   private exploreScroller: Scroller = new Scroller();
   private directoryRevision: number = 0;
+  private readonly postProjections: PostFeedProjection[] = [new PostFeedProjection(), new PostFeedProjection()];
 
   aboutToAppear(): void { this.loadFeed(0, true); this.loadDirectory(); }
   private text(resource: Resource): string {
@@ -222,9 +224,10 @@ export struct Communities {
     });
   }
   private orderedPosts(index: number): Tweet[] {
-    const posts: Tweet[] = this.feed(index).posts.slice();
-    if (this.newestFirst) { posts.sort((a: Tweet, b: Tweet): number => Date.parse(b.createdAt) - Date.parse(a.createdAt)); }
-    return posts;
+    const posts: Tweet[] = this.feed(index).posts;
+    if (!this.newestFirst) { return posts; }
+    return this.postProjections[index].get(posts, 'newest', (source: Tweet[]): Tweet[] =>
+      source.slice().sort((a: Tweet, b: Tweet): number => Date.parse(b.createdAt) - Date.parse(a.createdAt)));
   }
   private async sort(): Promise<void> {
     const result: promptAction.ActionMenuSuccessResponse = await promptAction.showActionMenu({
