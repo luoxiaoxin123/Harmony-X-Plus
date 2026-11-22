@@ -3981,6 +3981,26 @@
       "value": "XChatの会話です。このバージョンではスレッドと件数を確認できます。送信と復号には鍵の交換が必要です"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Web 版の X Chat を開く"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "共有するテキストをコピーして X Chat を開く"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat の準備ができていません。Web 版でロックを解除してから再試行してください。"
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "この会話には Web 版の下書きがあります。先に確認してください。"
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Web 版での送信を確認できませんでした。会話を開いて確認してください。"
+    },
+    {
       "name": "dm_web_failed",
       "value": "メッセージを読み込めません。ネットワークやプロキシを確認して再試行してください"
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "この会話の鍵を取得できません。X アプリで会話を開いてから、もう一度お試しください。"
+      "value": "この会話の鍵を取得できません。"
     },
     {
       "name": "xchat_delivery_unconfirmed",

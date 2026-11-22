@@ -3981,6 +3981,26 @@
       "value": "Conversa XChat: esta versão lê o histórico e a contagem de mensagens. Enviar e descriptografar exige a troca de chaves."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Abrir o X Chat na web"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Copiar o texto para partilhar e abrir o X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "O X Chat ainda não está pronto. Desbloqueie-o na web e tente novamente."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Esta conversa já tem um rascunho na web. Reveja-o primeiro."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "O envio pela web não foi confirmado. Abra a conversa para verificar."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Não foi possível carregar as mensagens. Confira a rede ou o proxy e tente novamente."
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "A chave desta conversa não está disponível. Abra a conversa no X e tente novamente."
+      "value": "A chave desta conversa não está disponível."
     },
     {
       "name": "xchat_delivery_unconfirmed",

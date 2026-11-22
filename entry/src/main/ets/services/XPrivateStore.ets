@@ -52,6 +52,12 @@ export class XSession {
 }
 
 export class XPrivateStore {
+  chatOAuthToken(context: common.Context, accountId: string, viewerId: string): string {
+    if (accountId.length === 0 || !/^\d+$/.test(viewerId)) { return ''; }
+    const account: XAccount | null = accountStore.active(context);
+    return account !== null && account.id === accountId && account.userId === viewerId ? account.accessToken : '';
+  }
+
   // The cookie session of one account, in the shape the private client uses.
   static sessionOf(account: XAccount): XSession {
     return new XSession(account.id, account.authToken, account.ct0, account.rawCookie,

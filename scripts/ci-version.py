@@ -11,10 +11,12 @@ def main():
     if base_version is None or base_code is None:
         raise SystemExit("Missing app version in AppScope/app.json5")
     run = int(os.environ["GITHUB_RUN_NUMBER"])
+    run_offset = int(os.environ.get("HARMONYX_VERSION_RUN_OFFSET", "0"))
     attempt = int(os.environ["GITHUB_RUN_ATTEMPT"])
     commit = os.environ["GITHUB_SHA"][:7]
-    if not 0 < attempt < 100 or run < 1 or not re.fullmatch(r"[a-f0-9]{7}", commit):
+    if not 0 < attempt < 100 or run < 1 or run_offset < 0 or not re.fullmatch(r"[a-f0-9]{7}", commit):
         raise SystemExit("Invalid CI build identity")
+    run += run_offset
 
     if os.environ["GITHUB_EVENT_NAME"] == "release":
         version = os.environ["GITHUB_REF_NAME"].removeprefix("v")

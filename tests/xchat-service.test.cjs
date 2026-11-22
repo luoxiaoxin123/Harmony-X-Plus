@@ -14,8 +14,12 @@ new Function('module','exports',movingProtocolCode)(movingProtocol,movingProtoco
 let active = 'account-a', listener;
 let calls = [], nativeCalls = [], queue = [], localWrites = [];
 let legacyResponse, legacyMessages;
+let oauth = false;
 const client = {
   load() {}, viewerId: () => '100',
+  sessionIdentity: () => active,
+  hasChatOAuth: () => oauth,
+  async chatOAuthRequest(path, name, args) { calls.push({name,path,args}); return queue.shift(); },
   onSessionChange(cb) { listener = cb; },
   async graphql(name, args) { calls.push({name,args}); return queue.shift(); }
   , async xChatWebWrite(keys, args) { calls.push({name: keys ? 'WebChatKeys' : 'WebChatSend', args}); return queue.shift(); }
@@ -29,7 +33,12 @@ const rememberedChatKeys = new Map();
 const dependencies = {
   '@kit.AbilityKit': {},
   '@ohos.hilog': {default:{info(){},warn(){}}},
-  'libharmonyx_chat.so': { async invoke(method, input) { nativeCalls.push({method,input:JSON.parse(input)}); return JSON.stringify(nativeByMethod[method] || nativeResult); } },
+  'libharmonyx_chat.so': { async invoke(method, input) {
+    const args = JSON.parse(input);
+    nativeCalls.push({method,input:args});
+    const response = nativeByMethod[method] || nativeResult;
+    return JSON.stringify(typeof response === 'function' ? response(args) : response);
+  } },
   './XPrivateClient': { xPrivateClient: client },
   './XChatWire': require('./post-card-fixture.cjs').load('services/XChatWire'),
   './XPrivateStore': { xPrivateStore: {load() { return {cacheIdentity:()=>active}; }} },
@@ -63,7 +72,26 @@ function user(id, version='1') { return {rest_id:id,result:{core:{name:'User '+i
 }]}}}; }
 const ok=body=>({ok:true,status:200,body:JSON.stringify(body)});
 const message=(id,seq,text='hello')=>({id,sequenceId:seq,conversationId:'100-200',senderId:'200',senderName:'',senderUsername:'',senderAvatarUrl:'',text,time:'',timestampMs:1,outgoing:false,encrypted:false});
-function reset() { calls=[];nativeCalls=[];queue=[];localWrites=[];nativeByMethod={};legacyResponse=undefined;legacyMessages=undefined;systemVpnActive=false;proxySettings={enabled:false,activeProxy:()=>null};nativeResult={ok:true,data:{messages:[],errors:[]}};active='account-a'; rememberedChatKeys.clear(); }
+function reset() { calls=[];nativeCalls=[];queue=[];localWrites=[];nativeByMethod={};legacyResponse=undefined;legacyMessages=undefined;oauth=false;systemVpnActive=false;proxySettings={enabled:false,activeProxy:()=>null};nativeResult={ok:true,data:{messages:[],errors:[]}};active='account-a'; rememberedChatKeys.clear(); }
+
+test('Web history reopens with earlier messages and its cursor, scoped to the signed-in account', () => {
+  reset();
+  const service = new XChatService();
+  const history = { messages: [message('old', '5'), message('new', '10')], oldest: 'old', hasMore: false };
+  service.cacheWebHistory(active, '200:100', history);
+  service.cacheInboxProfiles({}, '{"data":{}}', '100');
+  assert.deepEqual(service.cachedWebHistory(active, '100-200'), history);
+  assert.equal(service.cachedWebHistory(active, '100-300'), undefined);
+  assert.equal(service.cachedWebHistory('account-b', '100-200'), undefined);
+  const revision = service.webHistoryGeneration();
+  active = 'account-b';
+  listener();
+  assert.equal(service.cachedWebHistory(active, '100-200'), undefined);
+  assert.equal(service.webHistoryGeneration(), revision + 1);
+  service.cacheWebHistory(active, '100-200', history);
+  assert.equal(service.lock(), true);
+  assert.equal(service.cachedWebHistory(active, '100-200'), undefined);
+});
 
 test('a new chat service restores the saved identity without sending the PIN and locking removes it', async () => {
   reset();
@@ -88,6 +116,68 @@ test('a new chat service restores the saved identity without sending the PIN and
   assert.equal(rememberedChatKeys.size, 0);
 });
 
+test('OAuth PIN recovery remains available after fetching participant keys fails', async () => {
+  reset(); oauth = true;
+  const service = new XChatService();
+  const backup = { key_store_token_map_json: '{"realms":[]}', token_map: [{ key: 'realm', value: { token: 'fixture' } }] };
+  queue.push(ok({data:[
+    {public_key_version:'10', public_key:'old-key', signing_public_key:'old-sign', juicebox_config:backup},
+    {public_key_version:'11', public_key:'new-key', signing_public_key:'new-sign', juicebox_config:null}
+  ]}), {ok:false,status:503});
+  await assert.rejects(service.prepare({}, ['200']), /public_keys_http_503/);
+  assert.equal(service.hasBackup(), true);
+  await service.prepare({}, []);
+  assert.equal(calls.length, 2);
+  nativeByMethod.unlock = {ok:true,data:{unlocked:true}};
+  await service.unlock('2580');
+  const { input } = nativeCalls.find(call => call.method === 'unlock');
+  assert.deepEqual(input.config, backup);
+  assert.equal(input.public_key, 'old-key');
+  assert.equal(service.isUnlocked(), true);
+});
+
+test('OAuth history decrypts key events with message events and keeps its opaque cursor', async () => {
+  reset(); oauth = true;
+  const service = new XChatService();
+  queue.push(ok({data:[{id:'9007199254740993', conversation_id:'100:200', sender_id:'200', encoded_event:'message'},
+    {id:'8', conversation_id:'100:300', sender_id:'300', encoded_event:'unrelated'}],
+    meta:{conversation_key_events:['key-change'], next_token:'older+/='}}),
+  ok({data:[{user_id:'200', public_key:'identity', public_key_version:'4', signing_public_key:'signer'}]}));
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'m',sequenceId:'9007199254740993',conversationId:'100:200',
+    senderId:'200',type:'message',verified:true,keyVersion:'5',content:{content_type:'Text',text:'older text'}}]}};
+  const page = await service.conversation('100-200');
+  assert.equal(page.messages[0].text, 'older text');
+  assert.equal(page.nextToken, 'older+/=');
+  const { input } = nativeCalls.find(call => call.method === 'decrypt');
+  assert.deepEqual(input.events, ['key-change', 'message']);
+  assert.equal(input.signing_keys[0].public_key, 'signer');
+  queue.push(ok({meta:{result_count:0}}));
+  nativeByMethod.decrypt = {ok:true,data:{messages:[]}};
+  const last = await service.conversation('100-200', page.minSequenceId, page.minKeyVersion, page.nextToken);
+  assert.equal(last.hasMore, false);
+  assert.match(calls.at(-1).path, /pagination_token=older%2B%2F%3D$/);
+});
+
+test('OAuth post delivery retries 503 with the same signed body and verifies the REST receipt', async () => {
+  reset(); oauth = true;
+  const service = new XChatService();
+  nativeByMethod.encrypt = {ok:true,data:{message_id:'post-share',encoded_message_create_event:'ciphertext',
+    encoded_message_event_signature:'signature'}};
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'post-share',conversationId:'100:200',senderId:'100',
+    type:'message',verified:true,content:{content_type:'Text',text:'look'}}]}};
+  queue.push({ok:false,status:503}, {ok:false,status:503},
+    {ok:true,status:201,body:JSON.stringify({data:{encoded_message_event:'receipt'}})});
+  await service.sharePost('200:100', '123', 'https://x.com/user/status/123', 'look');
+  const sends = calls.filter(call => call.name === 'ChatSendMessage');
+  assert.equal(sends.length, 2);
+  assert.equal(sends[0].path, 'chat/conversations/100-200/messages');
+  assert.deepEqual(sends[0].args, {message_id:'post-share',encoded_message_create_event:'ciphertext',
+    encoded_message_event_signature:'signature'});
+  assert.deepEqual(sends[1].args, sends[0].args);
+  assert.equal(nativeCalls.filter(call => call.method === 'encrypt').length, 1);
+  assert.equal(nativeCalls.find(call => call.method === 'encrypt').input.attachments[0].rest_id, '123');
+});
+
 test('post sharing sends the note and an attachment rather than a URL as message text', async () => {
   reset();
   const service = new XChatService();
@@ -102,6 +192,62 @@ test('post sharing sends the note and an attachment rather than a URL as message
   assert.equal(payload.text, 'look');
   assert.deepEqual(payload.attachments, [{attachment_type:'post',rest_id:'123',post_url:url}]);
   assert.equal(calls[0].name, 'SendMessageCreateMutation');
+});
+
+test('a GraphQL dependency failure checks history and preserves the exact signed share on retry', async () => {
+  reset();
+  const service = new XChatService();
+  const dependency = {ok:false,status:200,body:JSON.stringify({errors:[{message:'Dependency: Unspecified'}]})};
+  nativeByMethod.encrypt = {ok:true,data:{message_id:'stable-share',encoded_message_create_event:'cipher',
+    encoded_message_event_signature:'sig'}};
+  queue.push(dependency, {ok:false,status:503}, dependency);
+  await assert.rejects(service.sharePost('100-200','123','https://x.com/i/status/123',''), /send_dependency/);
+  const writes = calls.filter(call => call.name === 'SendMessageCreateMutation' || call.name === 'WebChatSend');
+  assert.deepEqual(writes.map(call => call.name), ['SendMessageCreateMutation', 'WebChatSend']);
+  assert.deepEqual(writes[1].args, writes[0].args);
+  assert.equal(service.pendingSends.size, 1);
+});
+
+test('verified recent inbox events can recover a key for a share without fetching broken history', async () => {
+  reset();
+  const service = new XChatService();
+  service.cacheInboxProfiles({}, JSON.stringify({data:{get_initial_chat_page:{items:[
+    {conversation_id:'100:200',latest_conversation_key_change_events:['key-event']},
+    {conversation_id:'100:300',latest_conversation_key_change_events:['other-key']}
+  ]}}}), '100');
+  let keyReady = false;
+  nativeByMethod.encrypt = () => keyReady ? {ok:true,data:{message_id:'share',encoded_message_create_event:'cipher',
+    encoded_message_event_signature:'sig'}} : {ok:false,error:'missing_conversation_key'};
+  nativeByMethod.decrypt = args => {
+    if (args.events.includes('key-event')) {
+      assert.deepEqual(args.events, ['key-event']);
+      keyReady = true;
+      return {ok:true,data:{messages:[{type:'keyChange',conversationId:'100:200',verified:true}]}};
+    }
+    return {ok:true,data:{messages:[{id:'share',conversationId:'100:200',senderId:'100',type:'message',verified:true,
+      content:{content_type:'Text',text:'here'}}]}};
+  };
+  queue.push(ok({data:{xchat_send_create_message_event:{encoded_message_event:'receipt'}}}));
+  await service.sharePost('100-200','123','https://x.com/i/status/123','here');
+  assert.deepEqual(calls.map(call => call.name), ['SendMessageCreateMutation']);
+});
+
+test('history 503 shows recent inbox messages as partial and does not initialize a replacement key', async () => {
+  reset();
+  const service = new XChatService();
+  service.cacheInboxProfiles({}, JSON.stringify({data:{get_initial_chat_page:{items:[{
+    conversation_detail:{conversation_id:'100-200'}, latest_message_events:['recent']
+  }]}}}), '100');
+  nativeByMethod.decrypt = {ok:true,data:{messages:[{id:'recent',conversationId:'100:200',senderId:'200',
+    type:'message',verified:true,keyVersion:'4',sequenceId:'8',content:{content_type:'Text',text:'recent message'}}]}};
+  nativeByMethod.encrypt = {ok:false,error:'missing_conversation_key'};
+  queue.push({ok:false,status:503}, {ok:false,status:503});
+  const page = await service.conversation('100-200');
+  assert.equal(page.messages[0].text, 'recent message');
+  assert.equal(page.partialHistory, true);
+  assert.equal(page.hasMore, false);
+  await assert.rejects(service.send('100-200','message'), /existing_conversation_key_unavailable/);
+  assert.equal(nativeCalls.some(call => call.method === 'prepareConversation'), false);
 });
 
 test('a first share after a missing conversation uses the newest key for each direct participant', async () => {

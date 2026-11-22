@@ -23,7 +23,7 @@ import { STORAGE_KEY_SYSTEM_EMOJI_ENABLED } from '../services/AppearanceStore';
 import { userAvatarRadius, userVerifiedType, userAvatarShape, verificationBadgeColor } from '../utils/UserIdentity';
 // Reusable post card: X-style row (avatar, header, text, action bar)
 // with HarmonyOS SymbolGlyph icons and theme-resource colors.
-import type { MediaAttachment, Tweet, TweetPoll } from '../models/Tweet';
+import type { MediaAttachment, Tweet, TweetAuthor, TweetPoll } from '../models/Tweet';
 import { formatCount } from '../models/Tweet';
 import { hdsEffect } from '@kit.UIDesignKit';
 import { motionDuration, motionScale, motionDistance, motionCurve } from '../utils/AppMotion';
@@ -422,6 +422,37 @@ export struct TweetCard {
     }
     return (this.tweet.repostText ?? '').length > 0 ? this.tweet.repostText as string :
       this.resourceText($r('app.string.post_reposted'));
+  }
+
+  private openRepostAuthor(): void {
+    const author: TweetAuthor | undefined = this.tweet.repostAuthor;
+    if (author === undefined || (author.id.length === 0 && author.username.length === 0)) { return; }
+    const post: Tweet = {
+      id: this.tweet.id, author: author, text: this.tweet.text, createdAt: this.tweet.createdAt,
+      metrics: this.tweet.metrics, liked: this.tweet.liked, reposted: this.tweet.reposted
+    };
+    this.onAuthorTapped(post);
+  }
+
+  @Builder
+  private RepostAttribution(inset: number): void {
+    Row({ space: 8 }) {
+      SymbolGlyph($r('sys.symbol.repeat'))
+        .fontSize(14)
+        .fontColor([this.readingText($r('app.color.text_secondary'))])
+      Text(this.repostLabel()).fontFamily(this.appFontFamily)
+        .fontSize($r('sys.float.Body_S'))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.readingText($r('app.color.text_secondary')))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .focusable(this.tweet.repostAuthor !== undefined)
+        .monopolizeEvents(this.tweet.repostAuthor !== undefined)
+        .onClick((): void => this.openRepostAuthor())
+        .onKeyEvent((event: KeyEvent): boolean => activateInputKey(event, (): void => this.openRepostAuthor()))
+    }
+    .width('100%')
+    .padding({ start: LengthMetrics.vp(inset), end: LengthMetrics.vp(12), top: LengthMetrics.vp(8) })
   }
 
   @Builder
@@ -859,6 +890,7 @@ export struct TweetCard {
   @Builder
   private NarrowTimelineCard(): void {
     Column({ space: 0 }) {
+      if (this.tweet.isRepost) { this.RepostAttribution(8); }
       if (this.narrowHasMedia()) {
         PostMedia({
           controlsUsePageBackground: !this.transparentBackground, controlSurface: this.readingSurface(),
@@ -1195,19 +1227,7 @@ export struct TweetCard {
         }.width('100%').padding({ start: LengthMetrics.vp(56), top: LengthMetrics.vp(6) })
       }
       if (this.tweet.isRepost) {
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.repeat'))
-            .fontSize(14)
-            .fontColor([this.readingText($r('app.color.text_secondary'))])
-          Text(this.repostLabel()).fontFamily(this.appFontFamily)
-            .fontSize($r('sys.float.Body_S'))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.readingText($r('app.color.text_secondary')))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .padding({ start: LengthMetrics.vp(38), end: LengthMetrics.vp(12), top: LengthMetrics.vp(8) })
+        this.RepostAttribution(38)
       }
       if (this.usesWideCard()) {
         Row({ space: 8 }) {

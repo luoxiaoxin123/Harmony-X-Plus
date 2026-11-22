@@ -4,7 +4,10 @@ export function chatFailureMessage(context: common.Context, reason: string, fall
   const resources = context.resourceManager;
   if (reason === 'recipient_key_unavailable') { return resources.getStringSync($r('app.string.post_share_no_recipient_key')); }
   if (reason === 'existing_conversation_key_unavailable') { return resources.getStringSync($r('app.string.xchat_existing_key_unavailable')); }
-  if (/^(send|keys)_unconfirmed$/.test(reason)) { return resources.getStringSync($r('app.string.xchat_delivery_unconfirmed')); }
+  if (/^(send|keys)_(unconfirmed|dependency)$/.test(reason)) {
+    return resources.getStringSync($r('app.string.xchat_delivery_unconfirmed'));
+  }
+  if (reason === 'conversation_dependency') { return resources.getStringSync($r('app.string.dm_load_failed')); }
   const code: string = /_rejected_([A-Z0-9_-]+)$/.exec(reason)?.[1] ?? '';
   if (code.length > 0) { return resources.getStringSync($r('app.string.xchat_delivery_rejected').id, code); }
   const http: RegExpExecArray | null = /^(public_keys|conversation|keys|send)_http_([45]\d\d)$/.exec(reason);

@@ -3981,6 +3981,26 @@
       "value": "XChat: sohbet ve mesaj sayısı okunabilir; gönderme ve çözme için anahtar değişimi gerekir."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "X Chat'i web'de aç"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Paylaşılacak metni kopyala ve X Chat'i aç"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat hazır değil. Web'de kilidini açıp tekrar deneyin."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Bu konuşmada zaten bir web taslağı var. Önce taslağı inceleyin."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Web üzerinden gönderim doğrulanmadı. Kontrol etmek için konuşmayı açın."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Mesajlar yüklenemedi. Bağlantıyı veya proxy'yi kontrol edip tekrar deneyin."
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "Bu konuşmanın anahtarı kullanılamıyor. Konuşmayı X uygulamasında açıp tekrar deneyin."
+      "value": "Bu konuşmanın anahtarı kullanılamıyor."
     },
     {
       "name": "xchat_delivery_unconfirmed",

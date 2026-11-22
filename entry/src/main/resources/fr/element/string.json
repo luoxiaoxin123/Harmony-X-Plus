@@ -3981,6 +3981,26 @@
       "value": "Conversation XChat : cette version lit le fil et le nombre de messages. L'envoi et le déchiffrement nécessitent l'échange de clés."
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Ouvrir X Chat sur le Web"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Copier le texte à partager et ouvrir X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat est indisponible. Déverrouillez-le sur le Web et réessayez."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Cette conversation contient déjà un brouillon Web. Vérifiez-le d’abord."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "L’envoi Web reste non confirmé. Ouvrez la conversation pour vérifier."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Impossible de charger les messages. Vérifiez le réseau ou le proxy et réessayez."
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "La clé de cette conversation est indisponible. Ouvrez la conversation dans X et réessayez."
+      "value": "La clé de cette conversation est indisponible."
     },
     {
       "name": "xchat_delivery_unconfirmed",

@@ -3981,6 +3981,26 @@
       "value": "Cuộc trò chuyện XChat: phiên bản này đọc được luồng và số tin nhắn; gửi và giải mã cần trao đổi khóa"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Mở X Chat trên web"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Sao chép nội dung chia sẻ và mở X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat chưa sẵn sàng. Hãy mở khóa trên web rồi thử lại."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "Cuộc trò chuyện này đã có bản nháp trên web. Hãy xem bản nháp đó trước."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Chưa xác nhận gửi qua web. Hãy mở cuộc trò chuyện để kiểm tra."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Không tải được tin nhắn. Kiểm tra mạng hoặc proxy rồi thử lại"
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "Không có khóa cho cuộc trò chuyện này. Hãy mở cuộc trò chuyện trong ứng dụng X rồi thử lại."
+      "value": "Không có khóa cho cuộc trò chuyện này."
     },
     {
       "name": "xchat_delivery_unconfirmed",

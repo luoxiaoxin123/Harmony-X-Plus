@@ -3981,6 +3981,26 @@
       "value": "XChat conversation: this version can read the thread and message count; sending and decryption need the key exchange"
     },
     {
+      "name": "dm_open_x_chat",
+      "value": "Open X Chat on the web"
+    },
+    {
+      "name": "dm_share_in_web_chat",
+      "value": "Copy share text and open X Chat"
+    },
+    {
+      "name": "dm_web_send_unavailable",
+      "value": "X Chat is not ready. Make sure it is unlocked on the web and try again."
+    },
+    {
+      "name": "dm_web_draft_occupied",
+      "value": "This conversation already has a web draft. Review that draft first."
+    },
+    {
+      "name": "dm_web_send_unconfirmed",
+      "value": "Web delivery is unconfirmed. Open the conversation to check."
+    },
+    {
       "name": "dm_web_failed",
       "value": "Could not load messages. Check the network or proxy and try again"
     },
@@ -13258,7 +13278,7 @@
     },
     {
       "name": "xchat_existing_key_unavailable",
-      "value": "The key for this conversation is unavailable. Open the conversation in X and try again."
+      "value": "The key for this conversation is unavailable."
     },
     {
       "name": "xchat_delivery_unconfirmed",
