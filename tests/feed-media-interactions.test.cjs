@@ -88,7 +88,10 @@ function home() {
     homeViewportHasAnchor: false, homeViewportRevision: 0, homeViewportMount: 'for-you:flow',
     homeTabIndex: () => 0, homeTabItems: () => [{ key: 'for-you' }],
     getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
-    filteredTimeline() { return this.posts; }, getHomeScroller() { return scroller; } });
+    filteredTimeline() { return this.posts; }, getHomeScroller() { return scroller; },
+    homePageDataSource() {
+      return { postCount: () => this.posts.length, getData: index => ({ tweet: this.posts[index - 1] }) };
+    } });
   return { page, scrolls, timers, scroller, frames, frame() { frames.shift().onFrame(); }, restore() {
     const [id, callback] = timers.entries().next().value; timers.delete(id); callback();
   } };

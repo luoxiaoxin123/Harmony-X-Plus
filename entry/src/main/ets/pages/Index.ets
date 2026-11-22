@@ -1862,8 +1862,8 @@ struct Index {
 
   private rememberHomeVisibleItem(first: number): void {
     if (this.homeViewportChanging || !this.homeViewportReady) { return; }
-    const posts: Tweet[] = this.filteredTimeline();
-    const item: number = Math.max(0, Math.min(first, posts.length));
+    const source: TimelinePageDataSource = this.homePageDataSource(this.homeTabIndex());
+    const item: number = Math.max(0, Math.min(first, source.postCount()));
     // Read while the old layout is still live. During a breakpoint change the
     // old Scroller can already be detached or bound to a new, topmost viewport.
     try {
@@ -1872,7 +1872,7 @@ struct Index {
       this.homeVisiblePostOffset = rect.y;
     } catch (_error) { return; }
     this.homeFirstVisibleItem = item;
-    this.homeVisiblePostId = this.homeFirstVisibleItem > 0 ? posts[this.homeFirstVisibleItem - 1].id : '';
+    this.homeVisiblePostId = source.getData(item).tweet?.id ?? '';
     this.homeViewportHasAnchor = true;
   }
 
@@ -6132,7 +6132,6 @@ struct Index {
         }
         return;
       }
-      this.rememberHomeVisibleItem(this.homeFirstVisibleItem);
     }
     if (this.currentTab !== 0 && this.currentTab !== 1) {
       return;
@@ -6144,24 +6143,20 @@ struct Index {
     // scrollOffset 为正表示内容向上滚动，负值表示内容回到顶部方向滚动。
     const shouldHideFab: boolean = this.currentTab === HOME_TAB_INDEX ? scrollOffset > 0 : scrollOffset < 0;
     this.fabHidden = this.autoHideFab && shouldHideFab;
-    try {
-      this.scrollDepth = this.currentTab === 1 ?
-        Math.max(0, this.getExploreScroller().currentOffset().yOffset) :
-        Math.max(0, this.getHomeScroller().currentOffset().yOffset);
-    } catch (error) {
-      this.scrollDepth = Math.max(0, this.scrollDepth + scrollOffset);
-    }
     if (this.currentTab === HOME_TAB_INDEX) {
       if (!this.homeHeaderCollapseEnabled || scrollOffset < 0) {
         this.setHomeHeaderCollapsed(false);
-      } else {
-        this.setHomeHeaderCollapsed(this.scrollDepth > this.homeHeaderCollapseDepth());
+      } else if (!this.homeHeaderCollapsed && this.currentHomeOffset() > this.homeHeaderCollapseDepth()) {
+        this.setHomeHeaderCollapsed(true);
       }
       this.fabMode = 'compose';
-    } else if (this.scrollDepth >= FAB_SWITCH_DEPTH) {
-      this.fabMode = 'top';
     } else {
-      this.fabMode = 'compose';
+      try {
+        this.scrollDepth = Math.max(0, this.getExploreScroller().currentOffset().yOffset);
+      } catch (error) {
+        this.scrollDepth = Math.max(0, this.scrollDepth + scrollOffset);
+      }
+      this.fabMode = this.scrollDepth >= FAB_SWITCH_DEPTH ? 'top' : 'compose';
     }
     this.onChromeScroll(scrollOffset);
   }
@@ -9139,8 +9134,8 @@ struct Index {
       // The spacer scrolls out with the list. Resizing it when the overlay
       // fades changes the current scroll anchor and can reverse the scroll.
       else { Column().width('100%').height(this.homeContentTopInset(false)) }
-      if (this.filteredTimeline(index).length === 0 &&
-        (index === this.homeTabIndex() ? this.loading : !this.homeSnapshotAt(index).loaded)) {
+      if ((index === this.homeTabIndex() ? this.loading : !this.homeSnapshotAt(index).loaded) &&
+        this.homePageDataSource(index).postCount() === 0) {
         LoadingProgress().width(18).height(18).color(this.accentColor).margin({ top: 32, bottom: 16 })
       }
     }.width('100%').padding({ top: this.isDesktopLayout() ? this.homeContentTopInset() : 0 })
@@ -9154,18 +9149,16 @@ struct Index {
           .width(18)
           .height(18)
           .color(this.accentColor)
-          .margin({ top: 14, bottom: 14 })
-      } else if (this.filteredTimeline(index).length > 0 ||
+      } else if (this.homePageDataSource(index).postCount() > 0 ||
         !(index === this.homeTabIndex() ? this.loading : !this.homeSnapshotAt(index).loaded)) {
-        Text(this.filteredTimeline(index).length === 0 ?
+        Text(this.homePageDataSource(index).postCount() === 0 ?
           ((index === this.homeTabIndex() ? this.statusLine : this.homeSnapshotAt(index).statusLine) || this.text($r('app.string.status_home_empty'))) :
           ((index === this.homeTabIndex() ? this.hasMoreTimeline : this.homeSnapshotAt(index).hasMore) ? $r('app.string.timeline_load_more') : $r('app.string.timeline_no_more'))).fontFamily(this.appFontFamily)
           .fontSize($r('sys.float.Body_S'))
           .fontColor(pageTextColor($r('app.color.text_secondary'), this.pageBackgroundValue, Color.Transparent))
-          .margin({ top: 16, bottom: 16 })
       }
     }
-    .width('100%')
+    .width('100%').height(48)
     .justifyContent(FlexAlign.Center)
     .onClick((): void => {
       if (index !== this.homeTabIndex()) { return; }
@@ -9210,7 +9203,7 @@ struct Index {
       this.onHomeFeedRendered(index, last);
       if (index === this.homeTabIndex()) {
         this.rememberHomeVisibleItem(first);
-        if (!this.homeViewportChanging && last >= this.timeline.length - 6) { this.requestMoreTimeline(); }
+        if (!this.homeViewportChanging && last >= this.homePageDataSource(index).postCount() - 6) { this.requestMoreTimeline(); }
       }
     })
     .onDidScroll((offset: number, state: ScrollState): void => {
@@ -9256,7 +9249,7 @@ struct Index {
       .onScrollIndex((first: number, last: number): void => {
         this.onHomeFeedRendered(index, last);
         if (index === this.homeTabIndex()) { this.rememberHomeVisibleItem(first); }
-        if (index === this.homeTabIndex() && !this.homeViewportChanging && last >= this.timeline.length - 6) {
+        if (index === this.homeTabIndex() && !this.homeViewportChanging && last >= this.homePageDataSource(index).postCount() - 6) {
           this.requestMoreTimeline();
         }
       })

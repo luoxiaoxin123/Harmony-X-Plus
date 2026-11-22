@@ -86,10 +86,11 @@ export struct BookmarksPage {
   @StorageProp(STORAGE_KEY_FILTER_LANGUAGES) private filterLanguages: string = '';
   @StorageLink(STORAGE_KEY_FILTER_KEYWORDS) filterKeywords: string = '';
   @StorageLink(STORAGE_KEY_FILTER_MUTED_USERS) filterMutedUsers: string = '';
-  @StorageLink(STORAGE_KEY_FILTER_REVISION) filterRevision: number = 0;
+  @StorageLink(STORAGE_KEY_FILTER_REVISION) @Watch('updateVisiblePosts') filterRevision: number = 0;
   @State private offlineMode: boolean = false;
   @State private savingOfflineId: string = '';
-  @State private posts: Tweet[] = [];
+  @State @Watch('updateVisiblePosts') private posts: Tweet[] = [];
+  @State private filteredPosts: Tweet[] = [];
   @State private status: string = '';
   @State private loading: boolean = true;
   @State private loadingMore: boolean = false;
@@ -102,7 +103,9 @@ export struct BookmarksPage {
   @State private submittedSearch: string = '';
   @State private selectedCollectionId: string = '';
   @State private selectedCollectionName: string = '';
-  private nextToken: string = '';
+  @State private nextToken: string = '';
+  private lastAutomaticCursor: string = '';
+  private fetchedCursors: Set<string> = new Set<string>();
   // Bookmark searches and collection switches can overlap on a slow private
   // session.  Only the newest reset may update the visible feed.
   private feedRequestId: number = 0;
@@ -164,8 +167,11 @@ export struct BookmarksPage {
   }
 
   private async load(reset: boolean): Promise<void> {
+    if (!reset && (this.loading || this.loadingMore || this.nextToken.length === 0)) { return; }
     if (reset) {
       this.feedRequestId += 1;
+      this.fetchedCursors.clear();
+      this.lastAutomaticCursor = '';
     }
     const requestId: number = this.feedRequestId;
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -177,13 +183,11 @@ export struct BookmarksPage {
     }
     if (reset) {
       this.loading = true;
+      this.loadingMore = false;
       this.nextToken = '';
       this.posts = [];
       this.status = '';
     } else {
-      if (this.loadingMore || this.nextToken.length === 0) {
-        return;
-      }
       this.loadingMore = true;
     }
 
@@ -217,32 +221,35 @@ export struct BookmarksPage {
       this.loadingMore = false;
       return;
     }
-    for (let i: number = 0; i < page.tweets.length; i++) {
-      page.tweets[i].bookmarked = true;
+    const combined: Tweet[] = reset ? [] : this.posts.slice();
+    const ids: Set<string> = new Set<string>(combined.map((tweet: Tweet): string => tweet.id));
+    for (const tweet of page.tweets) {
+      if (ids.has(tweet.id)) { continue; }
+      ids.add(tweet.id);
+      tweet.bookmarked = true;
+      combined.push(tweet);
     }
-    if (reset) {
-      this.posts = page.tweets;
-    } else {
-      const combined: Tweet[] = [];
-      for (let i: number = 0; i < this.posts.length; i++) {
-        combined.push(this.posts[i]);
-      }
-      for (let i: number = 0; i < page.tweets.length; i++) {
-        combined.push(page.tweets[i]);
-      }
-      this.posts = combined;
-    }
-    this.nextToken = page.nextToken;
+    this.fetchedCursors.add(cursor);
+    this.nextToken = this.fetchedCursors.has(page.nextToken) ? '' : page.nextToken;
+    if (reset || combined.length !== this.posts.length) { this.posts = combined; }
     this.status = this.posts.length === 0 ? this.text($r('app.string.bookmarks_empty')) : '';
     this.loading = false;
     this.loadingMore = false;
+  }
+
+  private prefetchBookmarks(): void {
+    if (this.showCollections || this.loading || this.loadingMore ||
+      this.nextToken.length === 0 || this.lastAutomaticCursor === this.nextToken) { return; }
+    this.lastAutomaticCursor = this.nextToken;
+    void this.load(false);
   }
 
   private updateReadAloudFabMode(scrollOffset: number): void {
     if (scrollOffset === 0 || this.refreshing) {
       return;
     }
-    this.readAloudFabMode = scrollOffset > 0 ? 'refresh' : 'read';
+    const mode: string = scrollOffset > 0 ? 'refresh' : 'read';
+    if (mode !== this.readAloudFabMode) { this.readAloudFabMode = mode; }
   }
 
   private refreshBookmarks(): void {
@@ -392,8 +399,8 @@ export struct BookmarksPage {
     );
   }
 
-  private visiblePosts(): Tweet[] {
-    return contentFilterStore.filter(this.posts, this.contentFilterSettings());
+  private updateVisiblePosts(): void {
+    this.filteredPosts = contentFilterStore.filter(this.posts, this.contentFilterSettings());
   }
 
   private async saveOffline(tweet: Tweet): Promise<void> {
@@ -528,7 +535,7 @@ export struct BookmarksPage {
   }
 
   private openReadAloud(): void {
-    const visible: Tweet[] = this.visiblePosts();
+    const visible: Tweet[] = this.filteredPosts;
     if (visible.length === 0) {
       return;
     }
@@ -548,7 +555,7 @@ export struct BookmarksPage {
       }
       .width('100%')
       .padding({ top: 48 })
-    } else if (!this.showCollections && this.visiblePosts().length === 0) {
+    } else if (!this.showCollections && this.filteredPosts.length === 0) {
       Column() {
         Text(this.status.length > 0 ? this.status : this.text($r('app.string.bookmarks_empty'))).fontFamily(this.appFontFamily)
           .fontSize($r('sys.float.Body_L'))
@@ -610,24 +617,20 @@ export struct BookmarksPage {
   @Builder
   private BookmarkFooter(): void {
     if (!this.showCollections && !this.loading) {
-      if (this.nextToken.length > 0) {
-        Column() {
-          Row() {
-            if (this.loadingMore) {
-              LoadingProgress().color(this.accentColor).width(18).height(18)
-            }
+      if (this.filteredPosts.length > 0 || this.nextToken.length > 0) {
+        Row({ space: 8 }) {
+          if (this.loadingMore) {
+            LoadingProgress().color(this.accentColor).width(18).height(18)
+          }
+          if (this.nextToken.length > 0) {
             Text($r('app.string.bookmarks_load_more')).fontFamily(this.appFontFamily)
               .fontSize($r('sys.float.Body_M'))
               .fontColor(pageTextColor($r('app.color.text_accent'), this.pageBackgroundValue, Color.Transparent))
-              .margin({ left: 8 })
           }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding(16)
-          .onClick((): void => {
-            this.load(false);
-          })
         }
+        .width('100%').height(52)
+        .justifyContent(FlexAlign.Center)
+        .onClick((): void => { void this.load(false); })
       }
     }
   }
@@ -646,7 +649,7 @@ export struct BookmarksPage {
           AdaptivePostFeed({ scroller: this.scroller,
             useList: this.useListFeed(),
             landscapeColumns: this.isLandscape(),
-            itemKeys: this.showCollections || this.loading ? [] : this.visiblePosts().map((post: Tweet): string => post.id),
+            itemKeys: this.showCollections || this.loading ? [] : this.filteredPosts.map((post: Tweet): string => post.id),
             lazyItems: true,
             feedId: 'bookmarks-post-feed',
             startOffset: this.feedStartOffset(),
@@ -655,9 +658,14 @@ export struct BookmarksPage {
             backwardMode: NestedScrollMode.SELF_FIRST,
             clipContent: !this.desktopLayout(),
             header: (): void => this.BookmarkFeedHeader(),
-            item: (index: number): void => this.BookmarkPost(this.visiblePosts()[index]),
+            item: (index: number): void => {
+              if (index < this.filteredPosts.length) { this.BookmarkPost(this.filteredPosts[index]) }
+            },
             footer: (): void => this.BookmarkFooter(),
-            onLoadMore: (): void => { if (!this.showCollections) { this.load(false); } },
+            onLoadMore: (): void => this.prefetchBookmarks(),
+            onVisibleItems: (_start: number, end: number): void => {
+              if (end >= 0 && end >= this.filteredPosts.length - 5) { this.prefetchBookmarks(); }
+            },
             onFeedScroll: (offset: number): void => this.updateReadAloudFabMode(offset) })
         }
         .width('100%')
@@ -668,7 +676,7 @@ export struct BookmarksPage {
           })
 
         }
-        if (!this.offlineMode && !this.showCollections && this.readAloudEntryEnabled && this.visiblePosts().length > 0) {
+        if (!this.offlineMode && !this.showCollections && this.readAloudEntryEnabled && this.filteredPosts.length > 0) {
           FloatingComposeButton({
             bottomInset: this.navigationIndicatorHeight,
             mode: this.readAloudFabMode,

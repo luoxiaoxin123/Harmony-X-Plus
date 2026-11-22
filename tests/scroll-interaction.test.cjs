@@ -12,39 +12,35 @@ new Function('exports', 'TouchType', 'HitTestMode', 'ScrollState', ts.transpileM
     compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS }
   }).outputText)(api, touch, hitTest, scrollState);
 
-test('pressing freezes the current position synchronously without starting another animation', () => {
-  const calls = [];
-  const result = api.stopScrollOnTouch({ type: touch.Down }, {
-    currentOffset: () => ({ xOffset: 12.5, yOffset: 8123.75 }),
-    scrollTo: options => calls.push(options)
-  });
-  assert.deepEqual(calls, [{ xOffset: 12.5, yOffset: 8123.75, animation: false }]);
-  assert.equal(result, hitTest.Default);
+test('a press lets native scroll handle its offset without repositioning a deep feed', () => {
+  const scroller = {
+    currentOffset: () => assert.fail('a press must not query the scroll position'),
+    scrollTo: () => assert.fail('a press must not jump the viewport')
+  };
+  assert.equal(api.stopScrollOnTouch({ type: touch.Down }, scroller), hitTest.Default);
+  api.scrollStarted(scroller);
+  assert.equal(api.stopScrollOnTouch({ type: touch.Down }, scroller), hitTest.Block);
+  assert.equal(api.scrollFrame(scroller, 120, scrollState.Fling).offsetRemain, 0);
+  assert.equal(api.scrollFrame(scroller, 80, scrollState.Scroll).offsetRemain, 80);
 });
 
 test('a stopping press blocks child actions, while the next idle press can open them', () => {
-  const positions = [];
-  const scroller = {
-    currentOffset: () => ({ xOffset: 0, yOffset: 16000 }),
-    scrollTo: value => positions.push(value)
-  };
+  const scroller = {};
   api.scrollStarted(scroller);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, scroller), hitTest.Block);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, scroller), hitTest.Default);
   api.scrollStarted(scroller);
   api.scrollStopped(scroller);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, scroller), hitTest.Default);
-  assert.equal(positions.length, 3);
 });
 
 test('a nested profile feed stops together with its parent before child hit testing is blocked', () => {
-  const stopped = [];
-  const parent = { currentOffset: () => ({ xOffset: 0, yOffset: 240 }), scrollTo: () => stopped.push('parent') };
-  const child = { currentOffset: () => ({ xOffset: 0, yOffset: 900 }), scrollTo: () => stopped.push('child') };
+  const parent = {}, child = {};
   api.scrollStarted(parent);
   api.scrollStarted(child);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, parent, [child]), hitTest.Block);
-  assert.deepEqual(stopped, ['parent', 'child']);
+  assert.equal(api.scrollFrame(parent, 40, scrollState.Fling).offsetRemain, 0);
+  assert.equal(api.scrollFrame(child, 40, scrollState.Fling).offsetRemain, 0);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, child), hitTest.Default);
   api.scrollStarted(child);
   assert.equal(api.stopScrollOnTouch({ type: touch.Down }, parent, [child]), hitTest.Block);
