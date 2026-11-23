@@ -3,11 +3,11 @@
 在“设置 → 外观 → 动画与触感 → 启动动画”选择四种模式，
 下次冷启动生效，默认保留“灵动开场”。模式和速度均持久化，并归入华为云同步的外观偏好。
 
-- **直接进入**：不显示应用内图标或启动动画，直接创建首页；也不等待桌面图标查询。
-- **保持图标**：显示当前桌面图标，首页就绪后用 180 ms 淡出，不缩放。
+- **直接进入**：不显示应用内图标或启动动画，直接创建首页。
+- **保持图标**：显示默认图标，首页就绪后用 180 ms 淡出，不缩放。
 - **iOS 风格**：图标保持至少 420 ms，首页就绪后轻缩至 0.82 倍，
   再放大并淡出背景，露出下面已经刷新的首页。仅动画 transform/opacity。
-- **灵动开场**：按当前桌面图标和浅色/深色主题播放原有本地开场动画，
+- **灵动开场**：按浅色或深色主题播放默认图标的本地开场动画，
   结束且首页就绪后淡出，末帧静图保持衔接。选中时可调播放速度：
   0.5×、0.75×、1×、1.25×、1.5×、1.75×、2×，默认 1×；其他模式隐藏此项。
   使用 Video 原生 `currentProgressRate`，不影响帖子视频或其他动画。
@@ -33,9 +33,8 @@
 ## 修改画面
 
 - `components/StartupAnimation.ets`：静音播放本地动画，末帧用于首页衔接。
-- `utils/StartupAnimationSource.ets`：桌面图标与当前浅色/深色主题到 25 个视频的映射。
-- `resources/rawfile/startup/`：原片及精确末帧静图；默认图标在 Harmony X 使用
-  Classic 动画，在 Croak X 使用 Blue Frog 动画。
+- `utils/StartupAnimationSource.ets`：根据主题选择默认图标的浅色或深色视频。
+- `resources/rawfile/startup/`：默认图标的两段视频及对应末帧静图。
 - `startup_animation_size` 和 `startup_animation_*`：动画容器尺寸与背景色。
 - `utils/StartupSession.ets`：展示时间和一次性遮罩状态。
 - `services/StartupSettingsStore.ets`：四种模式、七档速度的持久化与非法值回退。
@@ -43,18 +42,10 @@
 “直接进入”跳过品牌动画层；缓存推荐开屏仍按独立规则判断。
 
 背景色按视频**原始分辨率解码后的外圈 10% 主色**取值，不平均 Logo 像素，
-也不先缩放 YUV 视频再取色（缩放会引入 RGB 舍入偏差）。25 段原片与末帧图
-均已核验：浅色 `#FBFDFA`，深色 `#000000`，蓝色 Twitter `#00A7F0`。
-原生模式的蓝底白鸟保留蓝背景，黑白 X 随主题调整墨色，避免不可见。
-25 段视频的 MP4 `colr/nclx` 和 H.264 VUI 均显式标注 BT.601
-（SMPTE 170M 矩阵，limited range），避免硬件播放器把未标记视频按 BT.709
-解码。蓝色视频用错矩阵时会从 `#00A7F0` 偏到 `#009BF6`，与外围背景形成色块。
-修复仅以 stream copy 补充矩阵和范围元数据，不重新压缩、不改动视频帧；
-`scripts/tag-startup-video-colors.py --backup <目录>` 会保存原片并逐帧核对解码后的
-YUV 校验和。原片未声明的色彩原色和传递函数保持未指定。
-验证脚本：`scripts/verify-startup-video-backgrounds.py`，使用 `--ffmpeg` 指定解码器，
-`--report docs/startup-video-backgrounds.json` 生成逐视频证据；同时核对浅色、深色
-资源、末帧静图和容器/码流的颜色矩阵、范围标记。背景资源覆盖整个启动层和安全区。
+也不先缩放 YUV 视频再取色。浅色背景为 `#FBFDFA`，深色背景为 `#000000`。
+两段 H.264 视频的 MP4 容器与码流都标注 BT.601（SMPTE 170M，limited range）。
+`scripts/verify-startup-video-backgrounds.py` 核对视频、末帧和背景资源，
+用 `--report docs/startup-video-backgrounds.json` 生成验证记录。
 元数据核验及软件解码不能替代真机硬件播放的视觉验收。
 
 路由替换失败时启动页显示现有的“重试”按钮；启动页资源加载失败时

@@ -72,8 +72,7 @@ def main():
         rim[height // 10:height - height // 10, width // 10:width - width // 10] = False
         color, fraction = dominant_rgb(frames[:, rim, :].reshape(-1, 3))
         still_color, _ = dominant_rgb(np.asarray(still)[rim])
-        resource = 'startup_animation_twitter_blue' if clip.stem == 'launch_twitter_blue' else (
-            'startup_animation_dark' if clip.stem.endswith('_dark') else 'startup_animation_light')
+        resource = 'startup_animation_dark' if clip.stem.endswith('_dark') else 'startup_animation_light'
         for palette in palettes:
             assert color == palette[resource], f'{clip.name}: {color} != {resource}: {palette[resource]}'
         assert still_color == color, f'{clip.name}: last frame background {still_color} != video {color}'
@@ -81,7 +80,7 @@ def main():
                                 'resource': resource, 'dominant_fraction': fraction,
                                 'last_frame_background': still_color, 'color_metadata': metadata})
         print(f'{clip.name}: {color}, video/still/light-dark resources and BT.601 limited-range tags match')
-    assert len(report['clips']) == 25, 'Verify coverage when adding or removing startup videos'
+    assert {clip['name'] for clip in report['clips']} == {'launch_default_dark.mp4', 'launch_default_light.mp4'}
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf8')

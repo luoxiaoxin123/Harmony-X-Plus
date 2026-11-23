@@ -1,23 +1,21 @@
 const fs=require('node:fs'),test=require('node:test'),assert=require('node:assert/strict');
 const ts=require(process.env.HARMONYX_TYPESCRIPT || 'D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
 function compile(source,globals){const result={};const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;new Function('exports',...Object.keys(globals),code)(result,...Object.values(globals));return result;}
-test('the header follows the system icon at startup and only publishes successful changes',async()=>{
-  let current='frog_white',fail=false;const storage=new Map();
-  const {AppIconStore,appIconForeground,STORAGE_KEY_CURRENT_APP_ICON}=compile(fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets','utf8'),{
-    require:name=>name==='@kit.AbilityKit'?{bundleManager:{getAlternateIcons:async()=>[{enabled:true,iconName:current}],setAlternateIcon:async name=>{if(fail)throw {code:17700310};current=name;}}}:{deviceInfo:{apiAvailable:()=>true}},
-    AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},$r:value=>value});
-  const store=new AppIconStore();await store.currentName();
-  assert.equal(storage.get(STORAGE_KEY_CURRENT_APP_ICON),'frog_white');
-  assert.equal(appIconForeground('frog_white'),'app.media.frog_foreground');
-  assert.equal(appIconForeground('frog_black'),'app.media.frog_foreground');
-  assert.equal(appIconForeground('milk_frog_black'),'app.media.milk_frog_foreground');
-  assert.equal(appIconForeground('zombie_x'),'app.media.zombie_x_foreground');
-  assert.equal(appIconForeground('spectrum'),'app.media.app_icon_spectrum_foreground');
-  assert.equal((await store.select('spectrum')).ok,true);
-  assert.equal(storage.get(STORAGE_KEY_CURRENT_APP_ICON),'spectrum');
-  fail=true;assert.equal((await store.select('x_black')).ok,false);
-  assert.equal(storage.get(STORAGE_KEY_CURRENT_APP_ICON),'spectrum');
-  assert.equal(appIconForeground(''),'app.media.ui_brand_foreground');
+test('upgrading resets an alternate launcher icon without blocking startup', async () => {
+  const names = [];
+  let supported = true;
+  let rejects = false;
+  const { restoreDefaultAppIcon } = compile(fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8'), {
+    require: name => name === '@kit.AbilityKit'
+      ? { bundleManager: { setAlternateIcon: async icon => { names.push(icon); if (rejects) throw Error(); } } }
+      : { deviceInfo: { apiAvailable: () => supported } }
+  });
+  await restoreDefaultAppIcon();
+  rejects = true;
+  await restoreDefaultAppIcon();
+  supported = false;
+  await restoreDefaultAppIcon();
+  assert.deepEqual(names, ['', '']);
 });
 function profileMethods(){
   const file=fs.readFileSync('entry/src/main/ets/pages/UserDetail.ets','utf8').replace('export struct UserDetail','class UserDetail');

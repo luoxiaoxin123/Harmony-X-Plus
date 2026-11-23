@@ -27,7 +27,7 @@ def main():
         decoder = imageio_ffmpeg.get_ffmpeg_exe()
     root = Path(__file__).resolve().parents[1]
     clips = sorted((root / 'entry/src/main/resources/rawfile/startup').glob('*.mp4'))
-    assert len(clips) == 25, 'Review the source color matrix when changing the supplied clip set'
+    assert {clip.name for clip in clips} == {'launch_default_dark.mp4', 'launch_default_light.mp4'}
     args.backup.mkdir(parents=True, exist_ok=True)
     report = []
     for clip in clips:

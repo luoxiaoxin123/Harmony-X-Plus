@@ -41,27 +41,9 @@
 | **两条登录路径** | 主路径：在应用内登录 x.com，用 Cookie 会话直连 X 私有接口，无需申请开发者应用即可获得时间线、搜索、通知、个人主页、发帖、点赞、转发与回复。可选路径：配置自己的 Client ID 走 OAuth 2.0 PKCE 官方 API v2。 |
 | **诚实的离线降级** | X 不可访问或 API 权限受限时，应用会保留可用界面、可见的实时状态和本地回复草稿。 |
 
-## 界面预览
-
-<p align="center">
-  <img src="docs/screenshots/home-dark.jpg" width="22.5%" alt="首页时间线">
-  <img src="docs/screenshots/explore-dark.jpg" width="22.5%" alt="探索搜索">
-  <img src="docs/screenshots/alerts-dark.jpg" width="22.5%" alt="提醒">
-  <img src="docs/screenshots/messages-dark.jpg" width="22.5%" alt="私信">
-</p>
-
-<p align="center"><sub>首页 · 探索 · 提醒 · 私信</sub></p>
-
-<p align="center">
-  <img src="docs/screenshots/sign-in-dark.jpg" width="23%" alt="Harmony X 登录页">
-  <img src="docs/screenshots/oauth-authorization-dark.jpg" width="23%" alt="系统浏览器中的 X.com 授权页">
-</p>
-
-<p align="center"><sub>Harmony X 登录页 · 系统浏览器中的 X.com 授权页</sub></p>
-
 ## 设计说明
 
-- **实际应用图标**：页首直接使用 `AppScope/resources/base/media/app_icon.png`；已安装应用使用配套的分层资源——不透明黑色背景和透明的蓝白前景标识，均为 1024 × 1024。
+- **实际应用图标**：页首直接使用 `AppScope/resources/base/media/app_icon.png`，安装包也使用这一默认图标。
 - **遵循系统设计语言**：使用 HarmonyOS Sans 和系统 `SymbolGlyph` 图标；颜色通过资源文件统一管理，不在页面中硬编码。
 - **多设备自适应**：面向手机、平板和二合一设备，通过 Stage 模型组织界面与状态。
 

@@ -10,7 +10,6 @@ import { ProxyAvatar } from './ProxyAvatar';
 import { ComponentHdrHighlight } from '../utils/ComponentHdrHighlight';
 import { common } from '@kit.AbilityKit';
 import { XAccount, accountStore, STORAGE_KEY_ACCOUNTS_CHANGED } from '../services/AccountStore';
-import { appIconForeground, STORAGE_KEY_CURRENT_APP_ICON } from '../services/AppIconStore';
 
 @Component
 export struct DesktopNavRail {
@@ -25,7 +24,6 @@ export struct DesktopNavRail {
   @Prop selected: string = 'home';
   @Prop profile: UserProfile | null = null;
   @StorageProp(STORAGE_KEY_ACCOUNTS_CHANGED) @Watch('loadCachedAccount') private accountsChanged: number = 0;
-  @StorageProp(STORAGE_KEY_CURRENT_APP_ICON) private currentAppIcon: string = '';
   @State private cachedAccount: XAccount | null = null;
   @Prop handle: string = '';
   @Prop unread: number = 0;
@@ -108,7 +106,7 @@ export struct DesktopNavRail {
   build(): void {
     Column({ space: 8 }) {
       Button({ type: ButtonType.Circle }) {
-        Image(appIconForeground(this.currentAppIcon)).width(38).height(38).objectFit(ImageFit.Contain)
+        Image($r('app.media.ui_brand_foreground')).width(38).height(38).objectFit(ImageFit.Contain)
       }.width(52).height(52).backgroundColor(Color.Transparent)
         .align(Alignment.Start).accessibilityText($r('app.string.home_title'))
         .onClick((): void => this.onSelect('home'))

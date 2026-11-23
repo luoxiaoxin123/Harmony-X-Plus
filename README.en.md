@@ -41,27 +41,9 @@
 | **Live X capabilities when configured** | Configure the Client ID in Settings, then use OAuth 2.0 PKCE in the system browser. After sign-in, the app can use live timelines, search, posting, likes, reposts, and replies. |
 | **Honest offline fallback** | When X is unavailable or API access is restricted, the interface stays usable with visible live-state feedback and local reply drafts. |
 
-## Screens
-
-<p align="center">
-  <img src="docs/screenshots/home-dark.jpg" width="22.5%" alt="Home timeline">
-  <img src="docs/screenshots/explore-dark.jpg" width="22.5%" alt="Explore search">
-  <img src="docs/screenshots/alerts-dark.jpg" width="22.5%" alt="Alerts">
-  <img src="docs/screenshots/messages-dark.jpg" width="22.5%" alt="Messages">
-</p>
-
-<p align="center"><sub>Home · Explore · Alerts · Messages</sub></p>
-
-<p align="center">
-  <img src="docs/screenshots/sign-in-dark.jpg" width="23%" alt="Harmony X sign-in screen">
-  <img src="docs/screenshots/oauth-authorization-dark.jpg" width="23%" alt="X.com authorization screen in the system browser">
-</p>
-
-<p align="center"><sub>Harmony X sign-in · X.com authorization in the system browser</sub></p>
-
 ## Design notes
 
-- **Actual app icon** — the header uses `AppScope/resources/base/media/app_icon.png`. The installed app uses paired layered resources: an opaque black background and a transparent blue-and-white foreground mark, both at 1024 × 1024.
+- **Actual app icon** — the header uses `AppScope/resources/base/media/app_icon.png`. The installed app uses the same default icon.
 - **System-first design** — HarmonyOS Sans and system `SymbolGlyph` icons are used throughout. Colors are defined in resources rather than hard-coded in pages.
 - **Adaptive layout** — the Stage model organizes interface and state for phones, tablets, and 2-in-1 devices.
 

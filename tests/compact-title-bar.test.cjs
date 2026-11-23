@@ -250,53 +250,23 @@ test('existing installations retain the logo and compact choice survives other a
   assert.equal(f.store.load({}).titleBarLogoAutoContrast, true);
 });
 
-test('title-bar logo uses matching transparent SVG marks for light and dark modes', () => {
-  const logoSource = fs.readFileSync('entry/src/main/ets/components/RootTitleBarLogo.ets', 'utf8');
-  const iconSource = fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8');
-  assert.match(logoSource, /titleBarLogoForeground\(this\.iconName\)/);
-  assert.match(logoSource, /STORAGE_KEY_TITLE_BAR_LOGO_AUTO_CONTRAST/);
-  assert.match(logoSource, /APP_ICON_X_BLACK/);
-  assert.match(logoSource, /APP_ICON_X_WHITE/);
-  assert.match(logoSource, /if \(this\.shouldTintX\(\)\)/);
-  assert.match(logoSource, /titleBarLogoForeground\(this\.isDarkMode\(\) \? APP_ICON_X_WHITE : APP_ICON_X_BLACK\)/);
-  assert.match(iconSource, /if \(name === APP_ICON_DEFAULT \|\| name === APP_ICON_X_BLACK\) \{\s*return \$r\('app\.media\.title_bar_logo_foreground'\);/);
-  const dark = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_foreground.svg', 'utf8');
-  const light = fs.readFileSync('entry/src/main/resources/base/media/title_bar_logo_white.svg', 'utf8');
-  assert.match(dark, /<path d="[^"]+" fill="#000000"/);
-  assert.equal(dark.replace('fill="#000000"', 'fill="white"'), light);
+test('the title bar applies theme contrast to the default brand artwork', () => {
+  const logo = fs.readFileSync('entry/src/main/ets/components/RootTitleBarLogo.ets', 'utf8');
+  assert.match(logo, /Image\(\$r\('app\.media\.ui_brand_foreground'\)\)/);
+  assert.match(logo, /STORAGE_KEY_TITLE_BAR_LOGO_AUTO_CONTRAST/);
+  assert.match(logo, /this\.isDarkMode\(\) \? 1 : 0/);
 });
 
-test('special icon foregrounds bypass the X-only monochrome filter', () => {
-  const logoSource = fs.readFileSync('entry/src/main/ets/components/RootTitleBarLogo.ets', 'utf8');
-  assert.match(logoSource, /return this\.autoContrast && \(this\.iconName === APP_ICON_DEFAULT/);
-  assert.match(logoSource, /this\.iconName === APP_ICON_X_BLACK/);
-  assert.match(logoSource, /this\.iconName === APP_ICON_X_WHITE/);
-  assert.match(logoSource, /else \{\s*Image\(titleBarLogoForeground\(this\.iconName\)\)/s);
-});
-
-test('every selectable app icon has a packaged foreground for title-bar tinting', () => {
-  const source = fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8');
-  const mappings = [
-    ['classic', 'app_icon_classic_foreground'],
-    ['spectrum', 'app_icon_spectrum_foreground'],
-    ['outline', 'app_icon_outline_foreground'],
-    ['brush', 'app_icon_brush_foreground'],
-    ['blossom', 'app_icon_blossom_foreground'],
-    ['blue_bird', 'app_icon_blue_bird_foreground'],
-    ['twitter_blue', 'app_icon_twitter_blue_foreground'],
-    ['twitter_white', 'app_icon_twitter_white_foreground'],
-    ['x_black', 'app_icon_x_black_foreground'],
-    ['x_white', 'app_icon_x_white_foreground'],
-    ['frog_white', 'frog_foreground'],
-    ['frog_black', 'frog_foreground'],
-    ['zombie_x', 'zombie_x_foreground'],
-    ['mid_autumn', 'app_icon_mid_autumn_foreground']
-  ];
-  for (const [name, resource] of mappings) {
-    assert.match(source, new RegExp(name));
-    assert.match(source, new RegExp(`app\.media\.${resource}`));
-    assert.ok(fs.existsSync(`AppScope/resources/base/media/${resource}.png`), resource);
-  }
+test('app icon settings preview only the default packaged launcher icon', () => {
+  const manifest = fs.readFileSync('AppScope/app.json5', 'utf8');
+  const settings = fs.readFileSync('entry/src/main/ets/pages/Settings.ets', 'utf8');
+  const preview = settings.slice(settings.indexOf('private AppIconContent'), settings.indexOf('private DisplayContent'));
+  assert.doesNotMatch(manifest, /alternateIcons/);
+  assert.match(manifest, /"icon": "\$media:app_icon"/);
+  assert.match(preview, /settings_app_icon_default/);
+  assert.match(preview, /Image\(\$r\('app\.media\.app_icon'\)\)/);
+  assert.doesNotMatch(preview, /ForEach|onClick|Schedule/);
+  assert.ok(fs.existsSync('AppScope/resources/base/media/app_icon.png'));
 });
 
 test('adaptive logo color resources exist in every locale', () => {

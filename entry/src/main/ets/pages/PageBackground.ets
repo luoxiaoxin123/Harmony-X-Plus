@@ -160,7 +160,6 @@ struct PageBackgroundPage {
       { id: 'popular_apps_global', title: $r('app.string.page_background_set_popular_apps_global') },
       { id: 'mobile_brands_systems', title: $r('app.string.page_background_set_mobile_brands_systems') },
       { id: 'ai_assistants', title: $r('app.string.page_background_set_ai_assistants') },
-      { id: 'signature_icons', title: $r('app.string.page_background_set_signature_icons') },
       { id: 'garden_defense', title: $r('app.string.page_background_set_garden_defense') }
     ];
     this.patterns().forEach((preset: ChatBackgroundPreset): void => { sets.push({ id: preset.id, title: preset.title }); });

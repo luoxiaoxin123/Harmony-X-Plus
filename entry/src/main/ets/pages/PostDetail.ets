@@ -2460,7 +2460,7 @@ export struct PostDetail {
     if (this.tweet !== null) {
       Column({ space: 12 }) {
         Row({ space: 10 }) {
-          Image($r('app.media.icon'))
+          Image($r('app.media.app_icon'))
             .width(32)
             .height(32)
             .borderRadius(8)
