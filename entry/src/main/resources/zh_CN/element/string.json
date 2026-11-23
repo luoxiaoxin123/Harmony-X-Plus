@@ -1022,11 +1022,11 @@
     },
     {
       "name": "bookmarks_all",
-      "value": "全部"
+      "value": "全部书签"
     },
     {
       "name": "bookmarks_collections",
-      "value": "合集"
+      "value": "书签合集"
     },
     {
       "name": "bookmarks_search_placeholder",
@@ -11682,7 +11682,7 @@
     },
     {
       "name": "offline_title",
-      "value": "离线与稍后读"
+      "value": "离线阅读"
     },
     {
       "name": "offline_online",

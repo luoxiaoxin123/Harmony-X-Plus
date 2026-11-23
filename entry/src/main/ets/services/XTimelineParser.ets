@@ -1741,12 +1741,6 @@ export class XTimelineParser {
     const details: Record<string, Object> = XTimelineParser.obj(result, 'details');
     const rawRange: Object | undefined = details['display_text_range'] ?? legacy['display_text_range'];
     const offsets: number[] = XTimelineParser.codePointOffsets(text);
-    const tailCodes: string[] = [];
-    for (let diagnosticIndex: number = Math.max(0, text.length - 8); diagnosticIndex < text.length; diagnosticIndex++) {
-      tailCodes.push(text.charCodeAt(diagnosticIndex).toString(16));
-    }
-    hilog.warn(0xFF00, 'HarmonyX-Emoji-Diag', 'id=%{public}s rawUnits=%{public}d points=%{public}d range=%{public}s tail=%{public}s',
-      String(result['rest_id'] ?? ''), text.length, offsets.length - 1, JSON.stringify(rawRange), tailCodes.join(','));
     if (rawRange instanceof Array) {
       const range: number[] = rawRange as number[];
       if (range.length >= 2 && Number.isInteger(range[0]) && Number.isInteger(range[1]) &&

@@ -53,18 +53,23 @@ export class PostFeedDataSource implements IDataSource {
     const footerIndex: number = previous.length - 1;
     const appended: boolean = footerIndex >= 1 && next.length > previous.length &&
       previous.every((item: PostFeedItem, index: number): boolean => index === footerIndex || item.key === next[index].key);
-    this.items = next;
-    for (const listener of this.listeners) {
-      if (appended) {
-        // Insert before the existing footer to retain the cards already on screen.
-        for (let index: number = footerIndex; index < next.length - 1; index++) { listener.onDataAdded(index); }
-      } else if (previous.length !== next.length) {
-        listener.onDataReloaded();
-      } else {
-        for (let index: number = 0; index < next.length; index++) {
-          if (previous[index].key !== next[index].key) { listener.onDataChanged(index); }
+    const changes: DataOperation[] = [];
+    if (appended) {
+      // Move the existing footer past the entire page in one dataset update.
+      changes.push({ type: DataOperationType.ADD, index: footerIndex, count: next.length - previous.length });
+    } else if (previous.length !== next.length) {
+      changes.push({ type: DataOperationType.RELOAD });
+    } else {
+      for (let index: number = 0; index < next.length; index++) {
+        if (previous[index].key !== next[index].key) {
+          changes.push({ type: DataOperationType.CHANGE, index: index });
         }
       }
+    }
+    this.items = next;
+    if (changes.length === 0) { return; }
+    for (const listener of this.listeners) {
+      listener.onDatasetChange(changes);
     }
   }
 }

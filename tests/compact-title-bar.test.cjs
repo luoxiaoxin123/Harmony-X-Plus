@@ -120,6 +120,7 @@ test('home chrome finishes fading before the native title slot is hidden', () =>
 });
 
 test('rightward drags open the drawer from For You in portrait without claiming a photo strip', () => {
+  assert.match(indexSource, /\.priorityGesture\(PanGesture\([^\n]+\.tag\('home-open-drawer'\)/);
   const Harness = indexHarness(['canOpenDrawerFromHome', 'judgeHomeDrawerSwipe', 'finishHomeDrawerSwipe',
     'updateHomeDrawerSwipe', 'visibleSideDrawerWidth', 'cancelHomeDrawerSwipe'], {
     HOME_TAB_INDEX: 0, POST_SWIPE_OFF: 0, SourceType: { TouchScreen: 'touch' },

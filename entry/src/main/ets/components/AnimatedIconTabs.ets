@@ -49,6 +49,8 @@ export struct AnimatedIconTabs {
   @Prop equalWidth: boolean = false;
   @Prop @Watch('selectionChanged') buttonStyle: boolean = false;
   @Prop @Watch('selectionChanged') segmentedStyle: boolean = false;
+  @Prop segmentedMinWidth: number = 0;
+  @Prop buttonHeightLimit: number = 0;
   // Explore's category row sizes every slot from its own label. The active
   // icon unfolds inside that slot instead of taking width away from the text.
   @Prop contentSized: boolean = false;
@@ -129,7 +131,9 @@ export struct AnimatedIconTabs {
     // Native segments share a width: a long list title must not stretch every
     // source. The control ellipsizes that title and keeps its accessible label.
     slot = Math.min(slot, this.segmentMaxSlot);
-    return slot * this.items.length + this.segmentPadding * 2;
+    const minimum: number = this.viewportWidth > 0 ? Math.min(this.segmentedMinWidth, this.viewportWidth) :
+      this.segmentedMinWidth;
+    return Math.max(minimum, slot * this.items.length + this.segmentPadding * 2);
   }
 
   private segmentViewportWidth(): number {
@@ -368,7 +372,9 @@ export struct AnimatedIconTabs {
     this.revealSelected();
   }
 
-  private buttonHeight(): number { return Math.min(this.buttonMaxHeight, this.barHeight - 4); }
+  private buttonHeight(): number {
+    return Math.min(this.buttonHeightLimit > 0 ? this.buttonHeightLimit : this.buttonMaxHeight, this.barHeight - 4);
+  }
 
   @Builder
   private TabIcon(index: number): void {
