@@ -123,9 +123,12 @@ test('stable previews remain mounted and the search flow uses lazy rendering wit
   assert.match(video, /if \(this\.usesStableInlineLayout\(\) \|\| !this\.showsPlayer\(media\)\)/);
   assert.match(video, /\.opacity\(this\.showsPlayer\(media\) && this\.inlinePreviewHidden\(media\.id\) \? 0 : 1\)/);
   const flow = fs.readFileSync('entry/src/main/ets/components/AdaptivePostFeed.ets', 'utf8');
-  assert.match(flow, /layoutMode: WaterFlowLayoutMode\.ALWAYS_TOP_DOWN/);
+  assert.match(flow, /waterFlowLayoutMode: WaterFlowLayoutMode = WaterFlowLayoutMode\.ALWAYS_TOP_DOWN/);
+  assert.match(flow, /layoutMode: this\.waterFlowLayoutMode/);
   const index = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8');
-  assert.match(index.slice(index.indexOf('private SearchResultsContent(')), /lazyItems: true/);
+  const search = index.slice(index.indexOf('private SearchResultsContent('), index.indexOf('private searchLandscape('));
+  assert.match(search, /lazyItems: true/);
+  assert.doesNotMatch(search, /waterFlowLayoutMode/);
 });
 
 test('a seek ignores native progress from the previous position', () => {

@@ -245,7 +245,7 @@ export struct BookmarksPage {
   }
 
   private updateReadAloudFabMode(scrollOffset: number): void {
-    if (scrollOffset === 0 || this.refreshing) {
+    if (!this.readAloudEntryEnabled || scrollOffset === 0 || this.refreshing) {
       return;
     }
     const mode: string = scrollOffset > 0 ? 'refresh' : 'read';
@@ -418,14 +418,17 @@ export struct BookmarksPage {
   @Builder
   private LibraryTabs(): void {
     Row() {
-      AnimatedIconTabs({ items: [
-        { key: 'all', label: $r('app.string.bookmarks_all') },
-        { key: 'collections', label: $r('app.string.bookmarks_collections') },
-        { key: 'offline', label: $r('app.string.offline_title') }
-      ], selected: this.offlineMode ? 2 : (this.showCollections ? 1 : 0),
-        barHeight: 48, segmentedStyle: true,
-        onSelect: (index: number): void => this.selectLibrary(index) })
-        .constraintSize({ maxWidth: 640 })
+      Column() {
+        AnimatedIconTabs({ items: [
+          { key: 'all', label: $r('app.string.bookmarks_all') },
+          { key: 'collections', label: $r('app.string.bookmarks_collections') },
+          { key: 'offline', label: $r('app.string.offline_title') }
+        ], selected: this.offlineMode ? 2 : (this.showCollections ? 1 : 0),
+          barHeight: 48, segmentedStyle: true,
+          segmentedMinWidth: this.isLandscape() ? 432 : 0,
+          buttonHeightLimit: this.isLandscape() ? 44 : 0,
+          onSelect: (index: number): void => this.selectLibrary(index) })
+      }.width('100%').constraintSize({ maxWidth: 640 })
     }.width('100%').justifyContent(FlexAlign.Center).padding({ left: 16, right: 16, top: 6, bottom: 6 })
   }
 
@@ -648,6 +651,8 @@ export struct BookmarksPage {
         Refresh({ refreshing: $$this.refreshing }) {
           AdaptivePostFeed({ scroller: this.scroller,
             useList: this.useListFeed(),
+            waterFlowLayoutMode: WaterFlowLayoutMode.SLIDING_WINDOW,
+            waterFlowCacheCount: 4,
             landscapeColumns: this.isLandscape(),
             itemKeys: this.showCollections || this.loading ? [] : this.filteredPosts.map((post: Tweet): string => post.id),
             lazyItems: true,

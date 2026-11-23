@@ -9114,7 +9114,11 @@ struct Index {
       onLikeChanged: (tt: Tweet, liked: boolean) => this.onLike(tt, liked),
       onRepostChanged: (tt: Tweet, reposted: boolean) => this.onRepost(tt, reposted),
       onReply: (tt: Tweet) => this.onReply(tt),
-      onOpen: (tt: Tweet): void => this.openPost(tt),
+      onOpen: (tt: Tweet): void => {
+        if (!this.homeDrawerSwipeStarted && !(this.usesOverlaySideDrawer() && this.showSideDrawer)) {
+          this.openPost(tt);
+        }
+      },
       onVideoOpen: (tt: Tweet, media: MediaAttachment): void => this.openVideoFeed(tt, media),
       onAuthorTapped: (tt: Tweet) => this.openUser(tt),
       onMentionTapped: (handle: string) => this.openMention(handle)
@@ -9346,7 +9350,7 @@ struct Index {
         .duration(280).curve(Curve.EaseOut).clip(true).disableSwipe(this.refreshing || this.postSwipeLeft !== POST_SWIPE_OFF || this.postSwipeRight !== POST_SWIPE_OFF)
         .onGestureRecognizerJudgeBegin((event: BaseGestureEvent, current: GestureRecognizer,
           others: GestureRecognizer[]): GestureJudgeResult => this.judgeHomeDrawerSwipe(event, current, others))
-        .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.Right, distance: 10 }).tag('home-open-drawer')
+        .priorityGesture(PanGesture({ fingers: 1, direction: PanDirection.Right, distance: 10 }).tag('home-open-drawer')
           .onActionStart((event: GestureEvent): void => {
             this.homeDrawerSwipeStarted = this.canOpenDrawerFromHome();
             this.updateHomeDrawerSwipe(event);

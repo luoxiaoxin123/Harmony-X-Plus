@@ -13,6 +13,8 @@ export struct AdaptivePostFeed {
   @Prop @Watch('syncSections') landscapeColumns: boolean = false;
   @Prop @Watch('syncSections') lazyItems: boolean = false;
   @Prop useList: boolean = false;
+  @Prop waterFlowLayoutMode: WaterFlowLayoutMode = WaterFlowLayoutMode.ALWAYS_TOP_DOWN;
+  @Prop waterFlowCacheCount: number = 8;
   @Prop @Watch('syncSections') singleColumnGap: number = 0;
   @StorageProp(STORAGE_KEY_TIMELINE_COLUMNS) @Watch('syncSections') private preferredColumns: number = 0;
   scroller: Scroller = new Scroller();
@@ -108,9 +110,7 @@ export struct AdaptivePostFeed {
 
   @Builder
   private WaterFlowFeed(): void {
-    // Keep column assignments stable on return instead of rebalancing the
-    // visible section after media playback changes a card's contents.
-    WaterFlow({ scroller: this.scroller, sections: this.sections, layoutMode: WaterFlowLayoutMode.ALWAYS_TOP_DOWN }) {
+    WaterFlow({ scroller: this.scroller, sections: this.sections, layoutMode: this.waterFlowLayoutMode }) {
       if (this.lazyItems) {
         LazyForEach(this.lazySource, (row: PostFeedItem) => {
           FlowItem() {
@@ -137,7 +137,7 @@ export struct AdaptivePostFeed {
     .id(this.feedId).width('100%').height('100%')
     .columnsTemplate(PostFeedLayout.template(this.columns()))
     .contentStartOffset(this.startOffset).contentEndOffset(this.endOffset)
-    .cachedCount(8).clip(this.clipContent).scrollBar(BarState.Auto)
+    .cachedCount(this.waterFlowCacheCount).clip(this.clipContent).scrollBar(BarState.Auto)
     .nestedScroll({ scrollForward: this.forwardMode, scrollBackward: this.backwardMode })
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .onAreaChange((_old: Area, area: Area): void => {

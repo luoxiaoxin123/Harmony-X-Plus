@@ -9,7 +9,7 @@ const source = fs.readFileSync('entry/src/main/ets/components/AnimatedIconTabs.e
 const tree = ts.createSourceFile('tabs.ts', source, ts.ScriptTarget.Latest, true);
 const root = tree.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'AnimatedIconTabs');
 const names = ['selectSegment', 'clickSegment', 'segmentContentWidth', 'segmentViewportWidth', 'measureSegment',
-  'beginSegmentScroll', 'scrollSegments', 'endSegmentScroll', 'tapSegment', 'revealSelected'];
+  'beginSegmentScroll', 'scrollSegments', 'endSegmentScroll', 'tapSegment', 'revealSelected', 'buttonHeight'];
 const methods = names.map(name => root.members.find(node => node.name && node.name.getText(tree) === name).getText(tree));
 const output = ts.transpileModule(`class Tabs { ${methods.join('\n')} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2020 }
@@ -22,7 +22,8 @@ function fixture(count = 3) {
   const component = Object.assign(new Tabs(), {
     items: Array.from({ length: count }, (_, index) => ({ key: `source-${index}` })),
     selected: 0, segmentedStyle: true, viewportWidth: 240, segmentAreas: [], appLocale: 'en',
-    segmentMinSlot: 64, segmentMaxSlot: 96, segmentPadding: 2, segmentLabelPadding: 12,
+    segmentMinSlot: 64, segmentMaxSlot: 96, segmentPadding: 2, segmentLabelPadding: 12, segmentedMinWidth: 0,
+    buttonMaxHeight: 32, buttonHeightLimit: 0, barHeight: 48,
     onSelect: index => selections.push(index), onOptions: index => options.push(index),
     scroller: { currentOffset: () => ({ xOffset: 0 }), scrollTo: value => scrolls.push(value) }
   });
@@ -110,6 +111,20 @@ test('one long source title cannot stretch every native segment beyond the maxim
   assert.ok(width <= f.component.segmentMaxSlot * f.component.items.length + f.component.segmentPadding * 2);
   f.component.measureSegment(3, { width: 1200 });
   assert.equal(f.component.segmentContentWidth(), width);
+});
+
+test('landscape bookmarks widen all three hit areas and fit a resized pane', () => {
+  const { component, selections } = fixture();
+  component.viewportWidth = 600;
+  component.segmentedMinWidth = 432;
+  component.buttonHeightLimit = 44;
+  assert.equal(component.segmentViewportWidth(), 432);
+  assert.equal(component.buttonHeight(), 44);
+  component.viewportWidth = 320;
+  assert.equal(component.segmentContentWidth(), 320);
+  assert.equal(component.segmentViewportWidth(), 320);
+  component.tapSegment({ fingerList: [{ localX: 269 }] });
+  assert.deepEqual(selections, [2]);
 });
 
 test('the visible segmented frame stays fixed while overflowing content remains inside it', () => {

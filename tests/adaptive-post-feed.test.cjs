@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require(process.env.HARMONYX_TYPESCRIPT ||
   'D:/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js');
+const dataOperations = { DataOperationType: { ADD: 'add', CHANGE: 'change', RELOAD: 'reload' } };
 
 function evaluate(source, dependencies = {}, globals = {}) {
   const exports = {};
@@ -64,8 +65,9 @@ function feedHarness() {
     update(index, row) { updates.push(index); this.rows[index] = row; }
   }
   const Feed = evaluate(source, { '../utils/PostFeedLayout': { PostFeedLayout: layout },
-    '../utils/PostFeedDataSource': evaluate(fs.readFileSync('entry/src/main/ets/utils/PostFeedDataSource.ets', 'utf8')) }, {
-    WaterFlowSections: Sections, Scroller: class {}, NestedScrollMode: { SELF_ONLY: 0 }, $r: name => ({ id: name })
+    '../utils/PostFeedDataSource': evaluate(fs.readFileSync('entry/src/main/ets/utils/PostFeedDataSource.ets', 'utf8'), {}, dataOperations) }, {
+    WaterFlowSections: Sections, WaterFlowLayoutMode: { ALWAYS_TOP_DOWN: 0 },
+    Scroller: class {}, NestedScrollMode: { SELF_ONLY: 0 }, $r: name => ({ id: name })
   }).AdaptivePostFeed;
   const feed = new Feed();
   feed.getUIContext = () => ({ px2vp: value => value / 2,
@@ -115,22 +117,27 @@ test('history can opt into lazy cards and a single-column gap without changing o
 });
 
 test('lazy feed enrichment invalidates only the changed card and keeps unchanged keys on append', () => {
-  const { PostFeedDataSource } = evaluate(fs.readFileSync('entry/src/main/ets/utils/PostFeedDataSource.ets', 'utf8'));
-  const source = new PostFeedDataSource(), changed = [], inserted = []; let reloads = 0;
+  const { PostFeedDataSource } = evaluate(fs.readFileSync('entry/src/main/ets/utils/PostFeedDataSource.ets', 'utf8'), {}, dataOperations);
+  const source = new PostFeedDataSource(), notifications = [];
   source.replace(['10-preview', '11-preview']);
   const firstKey = source.getData(1).key;
-  const listener = { onDataReloaded() { reloads++; }, onDataChanged(i) { changed.push(i); },
-    onDataAdded(i) { inserted.push([i, source.getData(i).key]); } };
+  const listener = { onDatasetChange(operations) { notifications.push(operations); } };
   source.registerDataChangeListener(listener); source.registerDataChangeListener(listener);
   source.replace(['10-preview', '11-enriched']);
-  assert.deepEqual(changed, [2]); assert.equal(reloads, 0);
+  assert.deepEqual(notifications.shift(), [{ type: 'change', index: 2 }]);
   source.replace(['10-preview', '11-enriched', '12-preview', '13-preview']);
-  assert.deepEqual(inserted, [[3, 'post:2:12-preview'], [4, 'post:3:13-preview']]);
+  assert.deepEqual(notifications.shift(), [{ type: 'add', index: 3, count: 2 }]);
+  assert.equal(source.getData(3).key, 'post:2:12-preview');
+  assert.equal(source.getData(4).key, 'post:3:13-preview');
   assert.equal(source.getData(5).key, 'footer');
-  assert.equal(reloads, 0); assert.equal(source.getData(1).key, firstKey);
+  assert.equal(source.getData(1).key, firstKey);
+  source.replace(['10-preview', '11-enriched', '12-preview', '13-preview']);
+  assert.deepEqual(notifications, []);
   source.replace(['new', 'other']);
-  assert.equal(reloads, 1);
-  source.unregisterDataChangeListener(listener); source.replace([]); assert.equal(reloads, 1);
+  assert.deepEqual(notifications.shift(), [{ type: 'reload' }]);
+  source.unregisterDataChangeListener(listener);
+  source.replace([]);
+  assert.deepEqual(notifications, []);
 });
 
 test('search rows reuse the filtered posts, preserve payload type and ignore stale indexes', () => {
