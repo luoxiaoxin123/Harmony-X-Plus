@@ -1,8 +1,4 @@
-import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { STORAGE_KEY_CURRENT_APP_ICON, APP_ICON_X_BLACK, APP_ICON_X_WHITE,
-  appIconForeground } from '../services/AppIconStore';
-import { ColorMetrics } from '@kit.ArkUI';
 import { STARTUP_MODE_VIDEO, STORAGE_KEY_STARTUP_SPEED,
   normaliseStartupSpeed } from '../services/StartupSettingsStore';
 import { STORAGE_KEY_SYSTEM_DARK } from '../services/AppearanceStore';
@@ -18,7 +14,6 @@ export struct StartupAnimation {
   @Prop backgroundOpacity: number = 1;
   @Prop markOpacity: number = 1;
   onFinished: () => void = (): void => {};
-  @StorageProp(STORAGE_KEY_CURRENT_APP_ICON) private iconName: string = '';
   @StorageProp('harmonyx.display_mode') private displayMode: string = '';
   @StorageProp(STORAGE_KEY_SYSTEM_DARK) private systemDark: boolean = false;
   @StorageProp(STORAGE_KEY_STARTUP_SPEED) private playbackSpeed: number = 1;
@@ -32,9 +27,8 @@ export struct StartupAnimation {
   aboutToAppear(): void {
     this.alive = true;
     this.completed = false;
-    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
     const dark: boolean = this.displayMode === 'dark' || (this.displayMode !== 'light' && this.systemDark);
-    this.artwork = startupAnimationName(this.iconName, dark, context.applicationInfo.name);
+    this.artwork = startupAnimationName(dark);
     if (!this.play || this.mode !== STARTUP_MODE_VIDEO) { return; }
     // The watchdog covers decoder failure, a missing finish callback and a
     // paused player. It never depends on authentication or network responses.
@@ -66,7 +60,6 @@ export struct StartupAnimation {
   }
 
   private launchBackground(): ResourceColor {
-    if (this.artwork === 'launch_twitter_blue') { return $r('app.color.startup_animation_twitter_blue'); }
     if (this.mode !== STARTUP_MODE_VIDEO) { return $r('app.color.start_window_background'); }
     // Values come from the dominant outer-rim color decoded at the original
     // resolution. Never average the logo or sample a resized YUV thumbnail.
@@ -74,24 +67,14 @@ export struct StartupAnimation {
       $r('app.color.startup_animation_light');
   }
 
-  private markColorFilter(): ColorFilter {
-    if (this.iconName === APP_ICON_X_BLACK || this.iconName === APP_ICON_X_WHITE) {
-      const ink: ColorMetrics = ColorMetrics.resourceColor($r('app.color.text_primary'));
-      return new ColorFilter([0, 0, 0, ink.red / 255, 0, 0, 0, 0, ink.green / 255, 0,
-        0, 0, 0, ink.blue / 255, 0, 0, 0, 0, 1, 0]);
-    }
-    return new ColorFilter([1, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-      0, 0, 1, 0, 0, 0, 0, 0, 1, 0]);
-  }
-
   build(): void {
     Stack() {
       Column().width('100%').height('100%').backgroundColor(this.launchBackground())
         .opacity(this.backgroundOpacity)
       if (this.mode !== STARTUP_MODE_VIDEO || this.reduceMotion) {
-        Image(appIconForeground(this.iconName))
+        Image($r('app.media.ui_brand_foreground'))
           .width($r('app.float.startup_mark_size')).height($r('app.float.startup_mark_size'))
-          .objectFit(ImageFit.Contain).colorFilter(this.markColorFilter())
+          .objectFit(ImageFit.Contain)
           .scale({ x: this.markScale, y: this.markScale }).opacity(this.markOpacity)
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None)
       } else if (this.artwork.length > 0 && !this.initialFrame) {

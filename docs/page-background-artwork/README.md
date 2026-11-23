@@ -1,22 +1,17 @@
 # Generated wallpaper motifs
 
-100 transparent outline motifs, generated with the built-in imagegen tool in generate mode. The signature set used the application's alternate icons as visual references. The Plants vs. Zombies set was generated from a text description. Source atlases remain unchanged; the prep script trims each isolated cell and preserves alpha, then makes matching black and white ink variants for theme-aware rendering.
+88 transparent outline motifs generated with ImageGen. The prep script crops the source atlases and makes matching black and white ink variants.
 
 - [Selection preview](selection-preview.png)
-- [Signature source atlas](alternate-atlas.png)
 - [Plants vs. Zombies source atlas](pvz-atlas.png)
 - [AI assistant atlas, prompt and preview](ai-generation.md)
 - [Mobile brand/system atlas, prompt and preview](mobile-generation.md)
 - [Popular app atlases, prompts and previews](apps-generation.md)
 - [Crop manifest](motifs.json)
 - Preparation: `tools/Prepare-PageSignatureMotifs.cjs` (Sharp; set HARMONYX_SHARP to its installed module path).
-- Production files: `entry/src/main/resources/{base,dark}/media/page_motif_{signature_icons,garden_defense}_*.png`, 256 by 256, transparent PNG.
+- Production files: `entry/src/main/resources/{base,dark}/media/page_motif_garden_defense_*.png`, 256 by 256, transparent PNG.
 
-All six sets are available in Page background > Individual motifs. Each motif can be selected separately, mixed with any other set, and included in portable .hxb schemes. Full-pattern collections remain available separately.
-
-## Signature atlas prompt
-
-Use case: logo-brand. Create one production sprite atlas for subtle app wallpaper motifs, transparent background. Reference images are visual identity references only: the app's blue smiling frog, yellow milk-frog mascot, zombie X alternate icon, bird alternate icon, blossom X alternate icon. Do not edit or replace the originals. Canvas landscape, exactly 4 columns and 3 rows, 12 isolated motifs, evenly spaced regular grid, one fully-contained motif centered in each equal cell with generous transparent gutters. Pure black rounded monoline outline artwork only, transparent interiors (except small black eyes), no white fill, no gray shading, no colors, no scene, no text, no labels, no cell borders, no background, no shadows. Consistent 7-9 px stroke at approximately 1536x1152 canvas; clean readable at 40vp, each silhouette about 210-250px. Order left to right top to bottom: (1) smiling blue-frog mascot face with two bulging eye domes and broad cheeks, (2) same frog sitting on a lily pad, (3) yellow milk-frog mascot bust with its distinctive rounded tall forehead and big eyes, (4) same milk-frog waving, (5) small upward-flying bird matching reference shape, (6) friendly bird with outspread wings, (7) simple double-ribbon geometric X emblem, (8) X intertwined with a single cherry blossom twig, (9) expressive brushstroke-style outlined X, (10) three parallel folded ribbon strips forming X, (11) playful dripping slime X with a little goofy zombie head peeking from its upper right matching reference, (12) lily pad and small blossom. Keep all motifs detached from one another and entirely inside their cell; generous margins.
+All five sets are available in Page background > Individual motifs. Each motif can be selected separately, mixed with any other set, and included in portable .hxb schemes. Full-pattern collections remain available separately.
 
 ## Plants vs. Zombies atlas prompt
 

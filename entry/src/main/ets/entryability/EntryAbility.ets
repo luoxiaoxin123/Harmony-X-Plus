@@ -152,7 +152,7 @@ import { dnsSettingsStore } from '../services/DnsSettingsStore';
 import { GROK_WEB_SESSION_ORIGINS, webSessionStore } from '../services/WebSessionStore';
 import { continuationStore } from '../services/ContinuationState';
 import { downloadManager } from '../services/DownloadManager';
-import { AppIconScheduleStore } from '../services/AppIconScheduleStore';
+import { restoreDefaultAppIcon } from '../services/AppIconStore';
 import { STORAGE_KEY_POST_TIME_NOW } from '../utils/PostTime';
 import { accountStore } from '../services/AccountStore';
 import { spacePreferencesStore } from '../services/SpacePreferencesStore';
@@ -201,9 +201,7 @@ export default class EntryAbility extends UIAbility {
     DEFAULT_ACCENT_COLOR, FONT_MODE_SYSTEM, DEFAULT_FONT_SCALE);
   private languageStore: LanguageStore = new LanguageStore();
   private pressEffectSettingsStore: PressEffectSettingsStore = new PressEffectSettingsStore();
-  private appIconScheduleStore: AppIconScheduleStore = new AppIconScheduleStore();
-  private startupIconReady: Promise<void> = Promise.resolve();
-  private appIconScheduleRefreshTimerId: number = -1;
+  private postTimeRefreshTimerId: number = -1;
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     crashDiagnostics.initialize(this.context);
@@ -211,7 +209,7 @@ export default class EntryAbility extends UIAbility {
     startupSession.cancel();
     removeLegacyInstallId(this.context);
     removeLegacySupportData().catch((): void => {});
-    this.startupIconReady = this.appIconScheduleStore.applyIfEnabled(this.context);
+    void restoreDefaultAppIcon();
     try { huaweiCloudSyncService.initialize(this.context); }
     catch (error) { hilog.warn(DOMAIN, TAG, '%{public}s', 'Cloud preferences are temporarily unavailable'); }
     huaweiAccountService.initialize(this.context).catch((): void => {});
@@ -470,9 +468,9 @@ export default class EntryAbility extends UIAbility {
     antiPeepProtection.detachWindow();
     this.releaseWindowListeners();
     this.windowStage = null;
-    if (this.appIconScheduleRefreshTimerId >= 0) {
-      clearInterval(this.appIconScheduleRefreshTimerId);
-      this.appIconScheduleRefreshTimerId = -1;
+    if (this.postTimeRefreshTimerId >= 0) {
+      clearInterval(this.postTimeRefreshTimerId);
+      this.postTimeRefreshTimerId = -1;
     }
     this.persistGrokWebSession();
   }
@@ -515,7 +513,7 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
-  private async showInitialPage(windowStage: window.WindowStage): Promise<void> {
+  private showInitialPage(windowStage: window.WindowStage): void {
     if (this.callbackUri.length > 0) {
       this.openOAuthCallback(this.callbackUri);
       return;
@@ -527,11 +525,6 @@ export default class EntryAbility extends UIAbility {
       }
       return;
     }
-    // Prime the actual system selection before painting the launch mark. This
-    // local lookup has a deadline and never holds startup on an unresponsive IPC.
-    await Promise.race<void>([this.startupIconReady, new Promise<void>((resolve): void => {
-      setTimeout(resolve, 120);
-    })]);
     if (this.windowStage === windowStage) { this.loadHomePage(windowStage, true); }
   }
 
@@ -818,13 +811,11 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<number>('harmonyx.foreground_tick', Date.now());
     AppStorage.setOrCreate<number>(STORAGE_KEY_POST_TIME_NOW, Date.now());
     ArticleCardPublisher.publish(this.context);
-    this.refreshScheduledAppIcon();
-    if (this.appIconScheduleRefreshTimerId >= 0) {
-      clearInterval(this.appIconScheduleRefreshTimerId);
+    if (this.postTimeRefreshTimerId >= 0) {
+      clearInterval(this.postTimeRefreshTimerId);
     }
-    this.appIconScheduleRefreshTimerId = setInterval((): void => {
+    this.postTimeRefreshTimerId = setInterval((): void => {
       AppStorage.setOrCreate<number>(STORAGE_KEY_POST_TIME_NOW, Date.now());
-      this.refreshScheduledAppIcon();
     }, 60 * 1000);
   }
 
@@ -835,9 +826,9 @@ export default class EntryAbility extends UIAbility {
     huaweiCloudSyncService.onBackground();
     antiPeepProtection.setForeground(false);
     downloadManager.onBackground(this.context);
-    if (this.appIconScheduleRefreshTimerId >= 0) {
-      clearInterval(this.appIconScheduleRefreshTimerId);
-      this.appIconScheduleRefreshTimerId = -1;
+    if (this.postTimeRefreshTimerId >= 0) {
+      clearInterval(this.postTimeRefreshTimerId);
+      this.postTimeRefreshTimerId = -1;
     }
     this.persistGrokWebSession();
     // The video player reads this when a picture-in-picture window closes: a
@@ -855,7 +846,4 @@ export default class EntryAbility extends UIAbility {
     }, 520);
   }
 
-  private refreshScheduledAppIcon(): void {
-    this.appIconScheduleStore.applyIfEnabled(this.context);
-  }
 }

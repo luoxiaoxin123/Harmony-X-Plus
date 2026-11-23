@@ -265,7 +265,7 @@ struct ArticleCard {
   @Builder
   private Header(): void {
     Row({ space: 7 }) {
-      Image($r('app.media.icon'))
+      Image($r('app.media.app_icon'))
         .width($r('app.float.article_card_brand_size'))
         .height($r('app.float.article_card_brand_size'))
         .borderRadius($r('app.float.article_card_brand_radius'))

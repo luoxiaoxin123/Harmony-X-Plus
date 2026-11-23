@@ -125,16 +125,16 @@ test('saving and restarting retains mixed motifs, density, photo adjustments and
   assert.equal(f.control.closed, 1); assert.equal(f.control.released, 2);
 });
 
-test('all 196 motifs survive saving and portable sharing, including mixtures of all six generated sets', () => {
+test('all 184 motifs survive saving and portable sharing, including mixtures of all five generated sets', () => {
   const f = fixture();
   const catalog = compile('entry/src/main/ets/models/PageBackgroundMotifs.ets');
-  assert.equal(catalog.pageBackgroundMotifs('signature_icons').length, 12);
+  assert.equal(catalog.pageBackgroundMotifs('signature_icons').length, 0);
   assert.equal(catalog.pageBackgroundMotifs('garden_defense').length, 12);
   assert.equal(catalog.pageBackgroundMotifs('ai_assistants').length, 12);
   assert.equal(catalog.pageBackgroundMotifs('mobile_brands_systems').length, 16);
   assert.equal(catalog.pageBackgroundMotifs('popular_apps_cn').length, 24);
   assert.equal(catalog.pageBackgroundMotifs('popular_apps_global').length, 24);
-  assert.equal(new Set(f.motifs).size, 196);
+  assert.equal(new Set(f.motifs).size, 184);
   const state = f.normalizePageBackground({ motifIds: f.motifs, density: 80 });
   assert.deepEqual(state.motifIds, f.motifs, 'selecting more than 100 motifs must not silently truncate the selection');
   f.pageBackgroundStore.save(f.context, state);
@@ -143,7 +143,9 @@ test('all 196 motifs survive saving and portable sharing, including mixtures of 
   const api = compile('entry/src/main/ets/services/PageBackgroundScheme.ets', { './PageBackgroundStore': f });
   assert.deepEqual(api.decodePageBackgroundScheme(api.encodePageBackgroundScheme(state, '')).state.motifIds, f.motifs);
   const editor = fs.readFileSync('entry/src/main/ets/pages/PageBackground.ets', 'utf8');
-  assert.match(editor, /id: 'signature_icons', title:/);
+  assert.doesNotMatch(editor, /id: 'signature_icons', title:/);
+  assert.deepEqual(f.normalizePageBackground({motifIds:['signature_icons_frog_face','garden_defense_peashooter']}).motifIds,
+    ['garden_defense_peashooter']);
   assert.match(editor, /id: 'garden_defense', title:/);
   assert.match(editor, /id: 'ai_assistants', title:/);
   assert.match(editor, /id: 'mobile_brands_systems', title:/);
@@ -476,7 +478,7 @@ test('shared schemes round-trip complete mixed settings and embedded photos with
   const f=fixture();
   const api=compile('entry/src/main/ets/services/PageBackgroundScheme.ets', {'./PageBackgroundStore':f});
   const state=f.normalizePageBackground({mode:'photo',path:'/private/device/photo.img',texture:'parchment',
-    motifIds:['petrel_cats_0','signature_icons_frog_face','garden_defense_peashooter'],density:72,transparentPosts:true,inboxOpacity:.42,contentOpacity:.65,
+    motifIds:['petrel_cats_0','ai_assistants_gpt','garden_defense_peashooter'],density:72,transparentPosts:true,inboxOpacity:.42,contentOpacity:.65,
     photoTonePath:'/private/device/photo.img',photoAverage:'#123456'});
   const photo=Buffer.from([137,80,78,71,13,10,26,10]).toString('base64');
   const raw=api.encodePageBackgroundScheme(state,photo), restored=api.decodePageBackgroundScheme(raw);

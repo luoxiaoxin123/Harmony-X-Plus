@@ -217,7 +217,7 @@ test('every playback speed receives enough time to finish before either watchdog
     const clock = timers();
     const Animation = component('components/StartupAnimation', 'StartupAnimation', '', {
       ...clock, ...constants, STARTUP_MODE_VIDEO: 'video', normaliseStartupSpeed: value => speeds.includes(value) ? value : 1,
-      startupAnimationName: () => 'launch_twitter_blue'
+      startupAnimationName: () => 'launch_default_light'
     });
     const animation = new Animation();
     Object.assign(animation, {play: true, mode: 'video', reduceMotion: false, foreground: true,
@@ -253,23 +253,15 @@ test('leaving startup cancels delayed navigation and ignores late rejection', as
   assert.equal(second.page.failed, false);
 });
 
-test('all supplied launch clips map by icon and resolved light/dark theme', () => {
-  const expected = {
-    classic: 'launch_classic', spectrum: 'launch_spectrum', outline: 'launch_outline',
-    brush: 'launch_brush', blossom: 'launch_blossom', blue_bird: 'launch_blue_bird',
-    x_black: 'launch_x', x_white: 'launch_x', frog_white: 'launch_blue_frog',
-    frog_black: 'launch_blue_frog', milk_frog_white: 'launch_milk_frog',
-    milk_frog_black: 'launch_milk_frog', zombie_x: 'launch_zombie_x', mid_autumn: 'launch_mid_autumn'
-  };
-  for (const name of Object.keys(expected)) {
-    assert.equal(animationSource.startupAnimationName(name, false, 'com.harmony.x'), expected[name] + '_light');
-    assert.equal(animationSource.startupAnimationName(name, true, 'com.harmony.x'), expected[name] + '_dark');
+test('only the default launcher mark is packaged for startup', () => {
+  for (const [dark, theme] of [[false, 'light'], [true, 'dark']]) {
+    const name = animationSource.startupAnimationName(dark);
+    assert.equal(name, 'launch_default_' + theme);
+    for (const extension of ['.mp4', '.webp']) {
+      assert.ok(fs.existsSync('entry/src/main/resources/rawfile/startup/' + name + extension));
+    }
   }
-  assert.equal(animationSource.startupAnimationName('twitter_white', false, 'com.harmony.x'), 'launch_twitter_white');
-  assert.equal(animationSource.startupAnimationName('twitter_white', true, 'com.harmony.x'), 'launch_twitter_dark');
-  assert.equal(animationSource.startupAnimationName('twitter_blue', false, 'com.harmony.x'), 'launch_twitter_blue');
-  assert.equal(animationSource.startupAnimationName('', false, 'com.harmony.x'), 'launch_classic_light');
-  assert.equal(animationSource.startupAnimationName('', true, 'com.haohaoai0.CroakX'), 'launch_blue_frog_dark');
+  assert.equal(fs.readdirSync('entry/src/main/resources/rawfile/startup').length, 4);
 });
 
 test('OAuth callback bypasses startup and a normal cold launch selects it', async () => {
@@ -277,7 +269,7 @@ test('OAuth callback bypasses startup and a normal cold launch selects it', asyn
     AppStorage: {get: () => 'video'}, STORAGE_KEY_STARTUP_MODE: 'mode', STARTUP_MODE_NONE: 'none'
   }).prototype;
   const calls = [];
-  const entry = { callbackUri: '', windowStage: 'stage', startupIconReady: Promise.resolve(),
+  const entry = { callbackUri: '', windowStage: 'stage',
     loadHomePage: (stage, startup) => calls.push([stage, startup]),
     openOAuthCallback: uri => calls.push(uri) };
   await Entry.showInitialPage.call(entry, 'stage');
@@ -294,7 +286,7 @@ test('direct entry opens Home without waiting for the launcher icon or painting 
     startupSession: session
   }).prototype;
   const calls = [];
-  const entry = {callbackUri: '', windowStage: 'stage', startupIconReady: new Promise(() => {}),
+  const entry = {callbackUri: '', windowStage: 'stage',
     loadHomePage: (stage, bridge = false) => calls.push([stage, bridge]), openOAuthCallback: uri => calls.push(uri)};
   await Entry.showInitialPage.call(entry, 'stage');
   assert.deepEqual(calls, [['stage', false]]);
@@ -307,21 +299,12 @@ test('direct entry opens Home without waiting for the launcher icon or painting 
   assert.equal(calls.length, 2);
 });
 
-test('startup mark uses the launcher foreground for every selectable icon and updates on change', () => {
-  const icons = load(fs.readFileSync('entry/src/main/ets/services/AppIconStore.ets', 'utf8'), {
-    require: () => ({}), $r: value => value
-  });
-  const Brand = component('components/StartupBrand', 'StartupBrand', '', {
-    appIconForeground: icons.appIconForeground, APP_ICON_X_BLACK: icons.APP_ICON_X_BLACK,
-    APP_ICON_X_WHITE: icons.APP_ICON_X_WHITE
-  });
-  const brand = new Brand();
-  for (const name of ['', ...icons.APP_ICON_NAMES]) {
-    brand.iconName = name;
-    assert.equal(brand.foreground(), icons.appIconForeground(name), name);
+test('static startup uses the default launcher mark for both themes', () => {
+  const brand = fs.readFileSync('entry/src/main/ets/components/StartupBrand.ets', 'utf8');
+  assert.match(brand, /Image\(\$r\('app\.media\.ui_brand_foreground'\)\)/);
+  for (const theme of ['base', 'light']) {
+    assert.ok(fs.existsSync('AppScope/resources/' + theme + '/media/ui_brand_foreground.png'));
   }
-  brand.iconName = 'frog_black'; assert.equal(brand.foreground(), 'app.media.frog_foreground');
-  brand.iconName = 'spectrum'; assert.equal(brand.foreground(), 'app.media.app_icon_spectrum_foreground');
 });
 
 test('unavailable startup content falls back to home once; home failure does not loop', () => {
@@ -334,21 +317,6 @@ test('unavailable startup content falls back to home once; home failure does not
   entry.windowStage = stage; session.begin(); entry.loadHomePage(stage, true);
   assert.deepEqual(routes, ['pages/Startup', 'pages/Index']);
   assert.equal(session.claimCover(), false);
-});
-
-test('system icon query has a deadline and cannot load a destroyed window stage', async () => {
-  const clock = timers(), calls = [];
-  const Entry = component('entryability/EntryAbility', 'EntryAbility', '', {
-    ...clock, AppStorage: {get: () => 'video'}, STORAGE_KEY_STARTUP_MODE: 'mode', STARTUP_MODE_NONE: 'none'
-  });
-  const entry = { callbackUri: '', windowStage: 'stage', startupIconReady: new Promise(() => {}),
-    loadHomePage: (...args) => calls.push(args) };
-  const first = Entry.prototype.showInitialPage.call(entry, 'stage');
-  assert.equal(clock.fire(), 120); await first;
-  assert.deepEqual(calls, [['stage', true]]);
-  const second = Entry.prototype.showInitialPage.call(entry, 'stage');
-  entry.windowStage = null; clock.fire(); await second;
-  assert.equal(calls.length, 1);
 });
 
 test('startup mode persists across store instances and defaults to the existing video', () => {

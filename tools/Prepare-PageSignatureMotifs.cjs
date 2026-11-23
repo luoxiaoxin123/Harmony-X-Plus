@@ -18,7 +18,6 @@ function clearCut(atlas,axis,nominal,from,to,radius){
  throw Error('No clear gutter near '+axis+'='+nominal);
 }
 const sets=[
- {id:'signature_icons',atlas:'alternate',names:['frog_face','frog_lily','milk_frog','milk_frog_wave','bird','bird_wings','ribbon_x','blossom_x','brush_x','prism_x','zombie_x','lily_blossom']},
  {id:'garden_defense',atlas:'pvz',names:['peashooter','sunflower','wallnut','cherry_bomb','snow_pea','potato_mine','chomper','squash','zombie','conehead','buckethead','lawnmower']},
  {id:'ai_assistants',atlas:'ai',rows:3,names:['gpt','claude','gemini','deepseek','grok','qwen','kimi','doubao','copilot','perplexity','mistral','robot']},
  {id:'mobile_brands_systems',atlas:'mobile',rows:4,names:['apple','huawei','xiaomi','samsung','oppo','vivo','honor','oneplus','meizu','harmonyos','android','ios','hyperos','coloros','originos','oneui']},
@@ -40,7 +39,6 @@ const sets=[
    // The cone tip is taller than its row; use the clean gap above it.
    if(set.id==='garden_defense'&&col===1){if(row===1)bottom=700;if(row===2)top=700;}
    if(set.id==='garden_defense'&&col===2){if(row===0)bottom=386;if(row===1)top=386;}
-   if(set.id==='signature_icons'&&col===2){if(row===1)bottom=710;if(row===2)top=710;}
    if(set.id==='mobile_brands_systems'){if(row===0)bottom=335;if(row===1)top=335;}
    let left=Math.round(col*meta.width/4),right=Math.round((col+1)*meta.width/4);
    if(set.id==='mobile_brands_systems'&&row===0){if(col===2)right=925;if(col===3)left=925;}

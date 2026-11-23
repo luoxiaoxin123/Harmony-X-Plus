@@ -10,7 +10,6 @@ import { RootBottomTabItem } from './RootBottomTabItem';
 import { HdsButton } from './HdsButton';
 import { SystemMaterialUtil } from '../utils/SystemMaterial';
 import { TitleBarGlassMaterialCache, customTitleBarGlassEnabled, rootTitleBarStyle } from '../utils/DestinationTitleBar';
-import { STORAGE_KEY_CURRENT_APP_ICON } from '../services/AppIconStore';
 import { sheetBlurStyle, sheetMaterialOptions } from '../utils/SheetMaterial';
 import { fieldSurfaceColor, pageTextColor } from '../utils/ThemeColors';
 import { mixedAccentRoleColor } from '../utils/AccentPalette';
@@ -49,7 +48,6 @@ export struct AppearancePreview {
   @StorageProp('harmonyx.title_bar_style_mode') private titleStyle: number = 0;
   @StorageProp('harmonyx.title_bar_glass_material_level') private titleLevel: number = 0;
   @StorageProp(STORAGE_KEY_TITLE_BAR_LOGO) private titleLogo: boolean = true;
-  @StorageProp(STORAGE_KEY_CURRENT_APP_ICON) private currentAppIcon: string = '';
   @StorageProp(STORAGE_KEY_COMPACT_SWITCH_STYLE) private compactSwitchStyle: string = 'tabs';
   @StorageProp('harmonyx.home_tab_material_level') private tabLevel: number = 10;
   @StorageProp('harmonyx.classic_bottom_bar') private classicTabs: boolean = false;
@@ -317,7 +315,7 @@ export struct AppearancePreview {
   private titlePreviewKey(): string {
     // HDS retains its custom title builder. A structural settings change must
     // mount fresh native slots rather than leave the previous logo arrangement.
-    return this.titleLogo.toString() + '|' + this.compactSwitchStyle + '|' + this.currentAppIcon + '|' +
+    return this.titleLogo.toString() + '|' + this.compactSwitchStyle + '|' +
       this.titleStyle.toString() + '|' + this.titleLevel.toString();
   }
 
